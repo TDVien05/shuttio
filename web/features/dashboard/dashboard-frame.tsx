@@ -39,9 +39,9 @@ export function DashboardFrame({ children }: { children: React.ReactNode }) {
             isPlayerPlay ||
             isPlayerBook ||
             isPlayerPayment
-              ? "min-h-0 flex-1 overflow-y-auto bg-white"
+              ? "min-h-0 flex-1 overflow-y-auto bg-white pb-16 md:pb-0"
               : isPlayerChat
-                ? "min-h-0 min-w-0 flex-1 overflow-hidden bg-background"
+                ? "min-h-0 min-w-0 flex-1 overflow-hidden bg-background pb-16 md:pb-0"
                 : isVenueMessages
                   ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
                   : "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"

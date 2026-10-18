@@ -767,6 +767,7 @@ export function sessionToBooking(courts: Court[], s: PlaySession): Booking {
     transferMemo: s.transferMemo,
     result: s.result,
     score: s.score,
+    groupSession: s.groupSession,
   }
 }
 

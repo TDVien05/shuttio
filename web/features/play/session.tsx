@@ -89,6 +89,7 @@ function applyServerSessions(
   prev: PlaySession[],
   server: PlaySession[]
 ): PlaySession[] {
+  const prevIds = new Set(prev.map((s) => s.id))
   const byId = new Map(server.map((s) => [s.id, s]))
   let dirty = false
   const next = prev.map((s) => {
@@ -123,6 +124,9 @@ function applyServerSessions(
       refundConfirmation: remote.refundConfirmation,
     }
   })
+  // Append group sessions from server that are new to local state.
+  const newGroup = server.filter((s) => s.groupSession && !prevIds.has(s.id))
+  if (newGroup.length > 0) return [...next, ...newGroup]
   return dirty ? next : prev
 }
 

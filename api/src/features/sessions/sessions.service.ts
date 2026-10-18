@@ -100,14 +100,32 @@ export class SessionsService {
     })
   }
 
-  /** Every PlaySession this user has persisted, oldest first. */
+  /** Every PlaySession this user has persisted + sessions they joined as a member, oldest first. */
   async listUserSessions(userId: string): Promise<PlaySessionData[]> {
-    const docs = await this.sessionModel.find({ userId }).sort(ORDER).lean()
-    const linkedIds = docs
+    const [ownDocs, memberDocs] = await Promise.all([
+      this.sessionModel.find({ userId }).sort(ORDER).lean(),
+      this.sessionModel
+        .find({
+          userId: { $ne: userId },
+          "data.roster": {
+            $elemMatch: { userId, rsvp: { $in: ["going", "host"] } },
+          },
+        })
+        .sort(ORDER)
+        .lean(),
+    ])
+    const allDocs = [...ownDocs, ...memberDocs]
+    const linkedIds = allDocs
       .map((d) => d.data.reservationId)
       .filter((id): id is string => Boolean(id))
     const statuses = await this.bookings.statusFor(linkedIds)
-    return docs.map((d) => this.withBookingStatus(d.data, statuses))
+    return [
+      ...ownDocs.map((d) => this.withBookingStatus(d.data, statuses)),
+      ...memberDocs.map((d) => ({
+        ...this.withBookingStatus(d.data, statuses),
+        groupSession: true as const,
+      })),
+    ]
   }
 
   /**
