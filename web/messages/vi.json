@@ -709,6 +709,8 @@
     "empty": "Chưa có gì ở đây. Đặt một sân để thêm trận kế tiếp vào lịch.",
     "manage": "Quản lý",
     "rebook": "Đặt lại",
+    "groupSession": "Lịch nhóm",
+    "groupSessionHost": "Chủ phòng: {name}",
     "addTeam": "Tìm đồng đội",
     "messageVenue": "Nhắn tin cho sân",
     "messageVenueFailed": "Không mở được cuộc trò chuyện với sân",

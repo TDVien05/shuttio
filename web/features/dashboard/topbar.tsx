@@ -1,6 +1,12 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import {
+  CalendarCheck,
+  LayoutDashboard,
+  MessageSquare,
+  Sparkles,
+} from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Logo } from "@/components/logo"
@@ -15,11 +21,50 @@ import { Link, usePathname } from "@/i18n/navigation"
 
 /** Primary links in the shared blue player header. */
 const PLAYER_HEADER_NAV = [
-  { key: "dashboard", href: "/app" },
-  { key: "play", href: "/app/play" },
-  { key: "chat", href: "/app/chat" },
-  { key: "bookings", href: "/app/bookings" },
+  { key: "dashboard", href: "/app", icon: LayoutDashboard },
+  { key: "play", href: "/app/play", icon: Sparkles },
+  { key: "chat", href: "/app/chat", icon: MessageSquare },
+  { key: "bookings", href: "/app/bookings", icon: CalendarCheck },
 ] as const
+
+/** Fixed bottom tab bar shown only on mobile for the player surface. */
+function MobilePlayerNav({
+  activeKey,
+}: {
+  activeKey: string | undefined
+}) {
+  const tPlayerNav = useTranslations("Nav")
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-white/10 bg-[#2046ed] md:hidden">
+      {PLAYER_HEADER_NAV.map((item) => {
+        const Icon = item.icon
+        const isActive = item.key === activeKey
+        return (
+          <Link
+            key={item.key}
+            href={item.href}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] transition-colors",
+              isActive
+                ? "font-bold text-[#a5ff12]"
+                : "text-white/70 hover:text-white"
+            )}
+          >
+            <Icon
+              className={cn(
+                "size-5",
+                isActive ? "text-[#a5ff12]" : "text-white/70"
+              )}
+              aria-hidden
+            />
+            <span>{tPlayerNav(`${item.key}.label`)}</span>
+          </Link>
+        )
+      })}
+    </nav>
+  )
+}
 
 /** Header icon buttons — same 44px circle as the avatar so the three line up. */
 const HEADER_ICON_BUTTON =
@@ -62,6 +107,7 @@ export function DashboardTopbar() {
             markClassName="size-12 !text-[#a5ff12]"
           />
         </Link>
+        <MobilePlayerNav activeKey={activeKey} />
         <nav className="hidden items-center gap-9 text-sm md:flex">
           {PLAYER_HEADER_NAV.map((item) => (
             <Link

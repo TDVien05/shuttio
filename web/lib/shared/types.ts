@@ -205,6 +205,8 @@ export interface Booking {
   transferMemo?: string
   result?: "W" | "L"
   score?: string
+  /** True when this booking belongs to a room the viewer joined but does not host. */
+  groupSession?: boolean
 }
 
 // ── Play sessions ────────────────────────────────────────────────────────────
@@ -326,6 +328,13 @@ export interface PlaySession {
    * asking to join such a room pays this up front.
    */
   sharePrice?: number
+  /**
+   * True when this session is returned to a non-host member (read-only view
+   * for the calendar). Set server-side in `GET /api/sessions` when the
+   * session is owned by another user who has the viewer in their roster.
+   * Never persisted — only attached on the read projection.
+   */
+  groupSession?: boolean
 }
 
 export type Conflict = "court-taken" | "self-overlap" | null

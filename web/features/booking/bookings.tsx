@@ -887,6 +887,11 @@ function CalendarEvent({
                 <Users className="size-2.5" />
                 {courtLabel}
               </span>
+              {booking.groupSession ? (
+                <span className="text-[9px] font-semibold uppercase tracking-wide opacity-75">
+                  {t("groupSession")}
+                </span>
+              ) : null}
             </>
           ) : null}
         </PopoverTrigger>
@@ -913,6 +918,13 @@ function CalendarEvent({
                 bookingStatus={booking.bookingStatus}
               />
             </div>
+
+            {booking.groupSession ? (
+              <div className="flex w-fit items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-xs font-medium text-brand">
+                <Users className="size-3.5" />
+                {t("groupSession")}
+              </div>
+            ) : null}
 
             <div className="flex items-center gap-2">
               <SportTag sport={booking.sport} />
@@ -1072,15 +1084,17 @@ function CalendarEvent({
                     {t("messageVenue")}
                   </Button>
                 ) : null}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full justify-start rounded-full"
-                  onClick={() => rebookFrom(booking.id)}
-                >
-                  <RotateCcw />
-                  {t("rebook")}
-                </Button>
+                {!booking.groupSession ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full justify-start rounded-full"
+                    onClick={() => rebookFrom(booking.id)}
+                  >
+                    <RotateCcw />
+                    {t("rebook")}
+                  </Button>
+                ) : null}
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
@@ -1106,7 +1120,7 @@ function CalendarEvent({
                     {t("messageVenue")}
                   </Button>
                 ) : null}
-                {solo ? (
+                {solo && !booking.groupSession ? (
                   <Button
                     size="sm"
                     variant="outline"
@@ -1117,7 +1131,7 @@ function CalendarEvent({
                     {t("addTeam")}
                   </Button>
                 ) : null}
-                {unpaid || !booking.reservationId ? (
+                {!booking.groupSession && (unpaid || !booking.reservationId) ? (
                   <AlertDialog>
                     <AlertDialogTrigger
                       render={

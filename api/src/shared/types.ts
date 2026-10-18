@@ -320,6 +320,12 @@ export interface PlaySession {
    * asking to join such a room pays this up front.
    */
   sharePrice?: number
+  /**
+   * True when this session is returned to a non-host member (read-only view
+   * for the calendar). Never persisted — only attached on the read projection
+   * by `listUserSessions` when the session is owned by another user.
+   */
+  groupSession?: boolean
 }
 
 export type Conflict = "court-taken" | "self-overlap" | null

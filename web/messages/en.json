@@ -709,6 +709,8 @@
     "empty": "Nothing here yet. Book a court to get your next match on the calendar.",
     "manage": "Manage",
     "rebook": "Rebook",
+    "groupSession": "Group booking",
+    "groupSessionHost": "Host: {name}",
     "addTeam": "Find teammates",
     "messageVenue": "Message the venue",
     "messageVenueFailed": "Couldn't open the venue chat",
