@@ -2397,6 +2397,14 @@
       "confirm": "Xoá vĩnh viễn",
       "done": "Đã xoá chủ sân và các sân của họ"
     },
+    "deleteVenue": {
+      "button": "Xóa sân",
+      "title": "Xóa sân \"{name}\"?",
+      "body": "Sân và toàn bộ dữ liệu liên quan sẽ bị xóa vĩnh viễn. Mọi lượt đặt sân đang hoạt động sẽ bị hủy và người chơi bị ảnh hưởng sẽ được thông báo ngay.",
+      "cancel": "Quay lại",
+      "confirm": "Xóa vĩnh viễn",
+      "done": "Đã xóa sân thành công"
+    },
     "suspend": "Tạm ngưng",
     "restore": "Khôi phục",
     "empty": "Chưa có venue nào",

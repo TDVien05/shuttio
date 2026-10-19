@@ -2397,6 +2397,14 @@
       "confirm": "Delete permanently",
       "done": "Owner and their venues deleted"
     },
+    "deleteVenue": {
+      "button": "Delete venue",
+      "title": "Delete venue \"{name}\"?",
+      "body": "The venue and all its data will be permanently deleted. Active bookings will be cancelled and affected players notified immediately.",
+      "cancel": "Cancel",
+      "confirm": "Delete permanently",
+      "done": "Venue deleted successfully"
+    },
     "suspend": "Suspend",
     "restore": "Restore",
     "empty": "No venues yet",

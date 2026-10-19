@@ -158,4 +158,13 @@ export class AdminController {
     await this.admin.deleteDiscount(param.code)
     return { ok: true }
   }
+
+  /**
+   * Hard-delete a venue and cancel all its live bookings. Players with active
+   * bookings receive a cancellation notification. Irreversible.
+   */
+  @Delete("venues/:venueId")
+  deleteVenue(@Param() param: VenueIdParamDto) {
+    return this.admin.deleteVenue(param.venueId)
+  }
 }

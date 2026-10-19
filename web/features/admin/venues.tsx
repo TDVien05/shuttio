@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
+  deleteVenue,
   removeVenueOwner,
   restoreVenue,
   suspendVenue,
@@ -53,6 +54,11 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
 
   const [removing, setRemoving] = React.useState<{
     ownerId: string
+    name: string
+  } | null>(null)
+
+  const [deletingVenue, setDeletingVenue] = React.useState<{
+    id: string
     name: string
   } | null>(null)
 
@@ -86,6 +92,16 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
 
   const handleRestore = (venue: AdminVenueRow) =>
     void run(venue.id, () => restoreVenue(venue.id))
+
+  const confirmDeleteVenue = async () => {
+    if (!deletingVenue) return
+    const ok = await run(
+      `delete-${deletingVenue.id}`,
+      () => deleteVenue(deletingVenue.id),
+      t("deleteVenue.done")
+    )
+    if (ok) setDeletingVenue(null)
+  }
 
   const confirmRemove = async () => {
     if (!removing) return
@@ -197,27 +213,40 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
                       {formatVndText(venue.revenue)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {venue.archived ? (
+                      <div className="flex items-center justify-end gap-2">
+                        {venue.archived ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full"
+                            disabled={pending === venue.id}
+                            onClick={() => handleRestore(venue)}
+                          >
+                            {t("restore")}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="rounded-full"
+                            disabled={pending === venue.id}
+                            onClick={() => handleSuspend(venue)}
+                          >
+                            {t("suspend")}
+                          </Button>
+                        )}
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="rounded-full"
-                          disabled={pending === venue.id}
-                          onClick={() => handleRestore(venue)}
+                          variant="ghost"
+                          className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          disabled={pending === `delete-${venue.id}`}
+                          onClick={() =>
+                            setDeletingVenue({ id: venue.id, name: venue.name })
+                          }
                         >
-                          {t("restore")}
+                          {t("deleteVenue.button")}
                         </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="rounded-full"
-                          disabled={pending === venue.id}
-                          onClick={() => handleSuspend(venue)}
-                        >
-                          {t("suspend")}
-                        </Button>
-                      )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -227,6 +256,35 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
         ))
       )}
       <AdminPagination pagination={pagination} />
+      <AlertDialog
+        open={deletingVenue !== null}
+        onOpenChange={(open) => {
+          if (!open && !pending) setDeletingVenue(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("deleteVenue.title", { name: deletingVenue?.name ?? "" })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("deleteVenue.body")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending !== null}>
+              {t("deleteVenue.cancel")}
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={pending !== null}
+              onClick={() => void confirmDeleteVenue()}
+            >
+              {t("deleteVenue.confirm")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={removing !== null}
         onOpenChange={(open) => {

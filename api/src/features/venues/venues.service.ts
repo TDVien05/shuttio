@@ -696,6 +696,15 @@ export class VenuesService implements OnModuleInit {
   }
 
   /**
+   * Hard-delete a venue document — admin-only, called after all its live
+   * bookings have been cancelled. No seeding or ownership check; idempotent
+   * (no error when the document is already gone).
+   */
+  async hardDeleteVenue(id: string): Promise<void> {
+    await this.venueModel.deleteOne({ venueId: id })
+  }
+
+  /**
    * Archive (soft-delete) one branch — `DELETE /api/venues/:venueId` (decision
    * #11), replacing a hard delete. Guarded on a future pending/confirmed
    * booking anywhere in the venue; idempotent on an already-archived venue.

@@ -1355,6 +1355,63 @@ export class BookingsService {
     }
   }
 
+  /**
+   * Cancel every live booking at `venueId` as a venue-fault cancel — used when
+   * admin hard-deletes a venue. Sends player notifications and SSE signals for
+   * each cancelled booking; swallows per-booking errors so one stale doc never
+   * aborts the rest.
+   */
+  async bulkCancelLiveForVenue(
+    venueId: string,
+    reason: string
+  ): Promise<Array<{ bookingId: string; userId?: string }>> {
+    const live = await this.bookingModel
+      .find({
+        venueId,
+        status: {
+          $in: [
+            "awaiting_payment",
+            "awaiting_venue_confirmation",
+            "pending",
+            "confirmed",
+          ],
+        },
+      })
+      .select("bookingId status userId")
+      .lean<Array<{ bookingId: string; status: BookingRecordStatus; userId?: string }>>()
+
+    const affected: Array<{ bookingId: string; userId?: string }> = []
+    for (const b of live) {
+      try {
+        const { doc, prevStatus } = await this.setStatus(
+          venueId,
+          b.bookingId,
+          "cancelled",
+          reason,
+          (d, prev) => {
+            if (
+              prev === "awaiting_venue_confirmation" ||
+              prev === "pending" ||
+              prev === "confirmed"
+            ) {
+              this.applyVenueFaultCancel(d, reason)
+            } else if (reason) {
+              d.declineReason = reason
+            }
+          }
+        )
+        await this.notifyDecision(doc, prevStatus, "cancelled", reason)
+        if (doc.userId) this.sessionEvents.emit(doc.userId)
+        affected.push({ bookingId: b.bookingId, userId: b.userId })
+      } catch (err) {
+        this.logger.warn(
+          `bulkCancelLiveForVenue: failed to cancel booking ${b.bookingId}: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+    }
+    return affected
+  }
+
   /** Admin force-cancel across venues — the player is owed a full refund when money moved. */
   async adminForceCancel(
     bookingId: string,

@@ -277,4 +277,21 @@ export class AdminService {
   async deleteDiscount(code: string): Promise<void> {
     await this.discounts.deleteCode(code)
   }
+
+  /**
+   * Hard-delete a venue, cancelling every live booking first (venue-fault
+   * cancel so players are owed refunds) and sending each a notification.
+   * The deletion proceeds even when bookings exist — the admin accepted the
+   * consequences from the UI confirmation dialog.
+   */
+  async deleteVenue(
+    venueId: string
+  ): Promise<{ cancelledBookings: number }> {
+    const affected = await this.bookings.bulkCancelLiveForVenue(
+      venueId,
+      "Địa điểm này đã bị quản trị viên xóa vĩnh viễn"
+    )
+    await this.venues.hardDeleteVenue(venueId)
+    return { cancelledBookings: affected.length }
+  }
 }

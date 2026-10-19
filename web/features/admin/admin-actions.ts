@@ -153,6 +153,13 @@ export async function setAppReviewHidden(
   revalidatePath("/[locale]", "page")
 }
 
+/** Hard-delete a venue; cancels all live bookings and notifies affected players. */
+export async function deleteVenue(venueId: string): Promise<AdminActionResult> {
+  return toResult(() =>
+    api(`/api/admin/venues/${venueId}`, { method: "DELETE" })
+  )
+}
+
 /** Settle a room-share complaint: refund the member's share or dismiss it. */
 export async function resolveComplaint(
   id: string,
