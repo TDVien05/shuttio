@@ -1377,6 +1377,9 @@
     "accountNamePlaceholder": "e.g. NGUYEN VAN A",
     "accountNameHint": "Exactly as your banking app shows it, without accents. Upper-cased automatically.",
     "accountNameInvalid": "Letters and spaces only (2–60 characters).",
+    "lookupPending": "Looking up account holder…",
+    "lookupVerified": "Account name verified automatically.",
+    "lookupFailed": "Auto-lookup failed — please enter the account holder name.",
     "notice": "A venue without a payout account can't take online bookings yet. Players pay you directly; you check the transfer, then approve or refund.",
     "save": "Save account",
     "saved": "Payout account saved"

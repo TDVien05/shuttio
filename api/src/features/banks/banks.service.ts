@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Inject,
   Injectable,
   Logger,
@@ -11,10 +12,16 @@ import type { BankInfo } from "../../shared/index.js"
 export const BANKS_FETCH = Symbol("BANKS_FETCH")
 export type BanksFetch = (
   url: string,
-  init?: { signal?: AbortSignal }
+  init?: {
+    signal?: AbortSignal
+    method?: string
+    body?: string
+    headers?: Record<string, string>
+  }
 ) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>
 
 const BANKS_URL = "https://api.vietqr.io/v2/banks"
+const LOOKUP_URL = "https://api.vietqr.io/v2/lookup"
 /** The bank list changes rarely — refetch at most once a day. */
 const TTL_MS = 24 * 60 * 60 * 1000
 const TIMEOUT_MS = 8000
@@ -26,6 +33,12 @@ interface VietQrBank {
   shortName?: string
   logo?: string
   transferSupported?: number
+}
+
+interface VietQrLookupResponse {
+  code?: string
+  desc?: string
+  data?: { accountName?: string; accountNumber?: string }
 }
 
 /**
@@ -62,6 +75,42 @@ export class BanksService {
   /** One bank by its NAPAS bin, or undefined when it isn't on the list. */
   async find(bin: string): Promise<BankInfo | undefined> {
     return (await this.list()).find((bank) => bank.bin === bin)
+  }
+
+  /**
+   * Look up the account holder name for a given bank (by NAPAS bin) and account
+   * number via VietQR's lookup API. Throws `BadRequestException` when VietQR
+   * doesn't find the account; throws `ServiceUnavailableException` on network
+   * or credential issues so callers can surface a user-friendly message.
+   */
+  async lookup(bin: string, accountNumber: string): Promise<string> {
+    const clientId = process.env.VIETQR_CLIENT_ID ?? ""
+    const apiKey = process.env.VIETQR_API_KEY ?? ""
+    let res: Awaited<ReturnType<BanksFetch>>
+    try {
+      res = await this.fetcher(LOOKUP_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-client-id": clientId,
+          "x-api-key": apiKey,
+        },
+        body: JSON.stringify({ bin, accountNumber }),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      })
+    } catch (err) {
+      this.logger.warn(`VietQR lookup network error: ${String(err)}`)
+      throw new ServiceUnavailableException(
+        "Không thể tra cứu tên tài khoản — vui lòng thử lại"
+      )
+    }
+    const body = (await res.json()) as VietQrLookupResponse
+    if (!res.ok || body.code !== "00" || !body.data?.accountName) {
+      throw new BadRequestException(
+        "Không tìm được tên tài khoản — kiểm tra lại số tài khoản và ngân hàng"
+      )
+    }
+    return body.data.accountName
   }
 
   private async fetchBanks(): Promise<BankInfo[]> {

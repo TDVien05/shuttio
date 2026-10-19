@@ -113,6 +113,26 @@ export async function listBanks(): Promise<BankInfo[]> {
   return api<BankInfo[]>("/api/banks")
 }
 
+/**
+ * Resolve an account holder name from the bank's NAPAS bin and account number.
+ * Returns the name (UPPERCASE, accent-free) on success, or null when the
+ * account isn't found or the lookup service is unavailable.
+ */
+export async function lookupBankAccount(
+  bin: string,
+  accountNumber: string
+): Promise<string | null> {
+  try {
+    const res = await api<{ accountName: string }>("/api/banks/lookup", {
+      method: "POST",
+      body: JSON.stringify({ bin, accountNumber }),
+    })
+    return res.accountName ?? null
+  } catch {
+    return null
+  }
+}
+
 /** The signed-in owner's saved payout account, or null while none is set. */
 export async function getPayout(): Promise<BankAccount | null> {
   const res = await api<{ payout: BankAccount | null }>("/api/brands/me/payout")

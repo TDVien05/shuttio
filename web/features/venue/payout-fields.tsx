@@ -3,6 +3,7 @@
 import * as React from "react"
 import { toast } from "sonner"
 import { useTranslations } from "next-intl"
+import { CheckCircle2, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -27,7 +28,9 @@ import {
   type PayoutDraft,
 } from "@/lib/bank-account"
 import type { BankInfo } from "@/lib/shared"
-import { listBanks, savePayout } from "@/features/venue/venue-actions"
+import { listBanks, lookupBankAccount, savePayout } from "@/features/venue/venue-actions"
+
+type LookupState = "idle" | "loading" | "verified" | "failed"
 
 /**
  * The bank list for the picker, loaded once when the form mounts. `error` is
@@ -76,6 +79,38 @@ export function PayoutFields({
     value.accountNo.trim() !== "" &&
     !/^\d{6,20}$/.test(normalizeAccountNo(value.accountNo))
 
+  const [lookupState, setLookupState] = React.useState<LookupState>("idle")
+
+  const normNo = normalizeAccountNo(value.accountNo)
+  const validPair =
+    /^\d{6}$/.test(value.bankBin) && /^\d{6,20}$/.test(normNo)
+  const pairKey = validPair ? `${value.bankBin}:${normNo}` : ""
+
+  React.useEffect(() => {
+    if (!pairKey) {
+      setLookupState("idle")
+      return
+    }
+    setLookupState("loading")
+    const bin = value.bankBin
+    const no = normNo
+    const id = setTimeout(() => {
+      lookupBankAccount(bin, no)
+        .then((name) => {
+          if (name) {
+            onChange({ ...value, accountName: toBankAccountName(name) })
+            setLookupState("verified")
+          } else {
+            setLookupState("failed")
+          }
+        })
+        .catch(() => setLookupState("failed"))
+    }, 600)
+    return () => clearTimeout(id)
+    // Only re-run when the bank/account pair changes, not on every value change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pairKey])
+
   return (
     <div className="flex flex-col gap-5">
       <Field>
@@ -119,16 +154,39 @@ export function PayoutFields({
       </Field>
       <Field data-invalid={nameInvalid || undefined}>
         <FieldLabel htmlFor={`${idPrefix}-name`}>{t("accountName")}</FieldLabel>
-        <Input
-          id={`${idPrefix}-name`}
-          autoComplete="off"
-          value={value.accountName}
-          aria-invalid={nameInvalid || undefined}
-          placeholder={t("accountNamePlaceholder")}
-          onChange={(e) => onChange({ ...value, accountName: e.target.value })}
-        />
+        <div className="relative">
+          <Input
+            id={`${idPrefix}-name`}
+            autoComplete="off"
+            readOnly={lookupState === "loading"}
+            value={value.accountName}
+            aria-invalid={nameInvalid || undefined}
+            placeholder={
+              lookupState === "loading"
+                ? t("lookupPending")
+                : t("accountNamePlaceholder")
+            }
+            className={lookupState === "loading" ? "pr-9 opacity-60" : "pr-9"}
+            onChange={(e) => {
+              if (lookupState === "verified") setLookupState("idle")
+              onChange({ ...value, accountName: e.target.value })
+            }}
+          />
+          {lookupState === "loading" && (
+            <Loader2 className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          )}
+          {lookupState === "verified" && (
+            <CheckCircle2 className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-green-500" />
+          )}
+        </div>
         {nameInvalid ? (
           <FieldError>{t("accountNameInvalid")}</FieldError>
+        ) : lookupState === "verified" ? (
+          <FieldDescription className="text-green-600 dark:text-green-400">
+            {t("lookupVerified")}
+          </FieldDescription>
+        ) : lookupState === "failed" ? (
+          <FieldDescription>{t("lookupFailed")}</FieldDescription>
         ) : (
           <FieldDescription>{t("accountNameHint")}</FieldDescription>
         )}

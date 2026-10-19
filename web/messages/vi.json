@@ -1377,6 +1377,9 @@
     "accountNamePlaceholder": "VD: NGUYEN VAN A",
     "accountNameHint": "Đúng như tên hiển thị trong app ngân hàng, không dấu. Hệ thống tự viết hoa.",
     "accountNameInvalid": "Tên chỉ gồm chữ cái và khoảng trắng (2–60 ký tự).",
+    "lookupPending": "Đang tra cứu tên tài khoản…",
+    "lookupVerified": "Tên tài khoản đã được xác minh tự động.",
+    "lookupFailed": "Không thể tra cứu tự động — vui lòng nhập tên chủ tài khoản.",
     "notice": "Sân chưa khai báo tài khoản nhận tiền sẽ chưa nhận được đặt sân trực tuyến. Người chơi chuyển khoản thẳng cho Quý khách, và chính Quý khách đối chiếu rồi duyệt hoặc hoàn tiền.",
     "save": "Lưu tài khoản",
     "saved": "Đã lưu tài khoản nhận tiền"
