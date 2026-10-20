@@ -80,6 +80,9 @@ importers:
       ai:
         specifier: ^7.0.143
         version: 7.0.143(zod@4.6.7)
+      better-themes:
+        specifier: ^1.1.1
+        version: 1.1.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -98,9 +101,6 @@ importers:
       mapbox-gl:
         specifier: ^3.33.0
         version: 3.33.0
-      next-themes:
-        specifier: ^0.4.6
-        version: 0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       nitro:
         specifier: 3.0.260610-beta
         version: 3.0.260610-beta(chokidar@5.0.0)(dotenv@17.4.2)(jiti@2.7.0)(vite@8.3.4(@types/node@22.20.5)(jiti@2.7.0))
@@ -2122,6 +2122,12 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  better-themes@1.1.1:
+    resolution: {integrity: sha512-xVOtj2mbLAh3yfKxc2S1I61kipjHPDAjwcJxu8SxA0XlXU6c69mz2o/RLtZlTGkd51K+2c2ipzGqx8V63aG6NA==}
+    peerDependencies:
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
+
   binaryen@130.0.0:
     resolution: {integrity: sha512-XDrb+zql0RbFPKgj7MuH9zOc78R3Fa/P/VSGnnpdwYsvNZPWjcMYMdAkKCOQEL2A7yqgjSMTDRFp6gfSDW+/QQ==}
     hasBin: true
@@ -3550,12 +3556,6 @@ packages:
   negotiator@1.1.0:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
-
-  next-themes@0.4.6:
-    resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
-    peerDependencies:
-      react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
-      react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
 
   nf3@0.3.24:
     resolution: {integrity: sha512-HxLK4bo+5jNsEETZp4w3tJblHOA9MCBY14IN9nZJJV8JDxt9yNIYxuBuLMjTAR5GFa3HL61+8VQDUrXv3/C8fw==}
@@ -6576,6 +6576,11 @@ snapshots:
 
   baseline-browser-mapping@2.11.29: {}
 
+  better-themes@1.1.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+    dependencies:
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
   binaryen@130.0.0: {}
 
   body-parser@2.3.0(supports-color@7.2.0):
@@ -8068,11 +8073,6 @@ snapshots:
   negotiator@1.1.0:
     dependencies:
       content-type: 2.1.0
-
-  next-themes@0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
-    dependencies:
-      react: 19.3.1
-      react-dom: 19.3.1(react@19.3.1)
 
   nf3@0.3.24: {}
 

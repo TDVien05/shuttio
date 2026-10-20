@@ -4,7 +4,6 @@ import { Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button, LinkButton } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { m } from "@/paraglide/messages"
 
 const navMessages = {
@@ -87,7 +86,6 @@ export function SiteHeader({ className }: { className?: string }) {
         </nav>
 
         <div className="flex items-center gap-1.5">
-          <ThemeToggle className={cn("cursor-pointer", HEADER_ICON_BUTTON)} />
           <LinkButton
             href={authCta.href}
             variant="lime"

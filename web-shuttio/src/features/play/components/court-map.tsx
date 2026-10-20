@@ -1,7 +1,6 @@
 import * as React from "react"
 import Map, { Marker, NavigationControl } from "react-map-gl/mapbox"
 import type { MapRef, MarkerEvent } from "react-map-gl/mapbox"
-import { useTheme } from "next-themes"
 import { MapPin } from "lucide-react"
 
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -59,7 +58,6 @@ function CourtMapImpl({
 }) {
   const mapRef = React.useRef<MapRef>(null)
   const fittedRef = React.useRef(false)
-  const { resolvedTheme } = useTheme()
   const [hoverVenueId, setHoverVenueId] = React.useState<string | null>(null)
   const onSelectRef = React.useRef(onSelect)
   React.useEffect(() => {
@@ -119,16 +117,16 @@ function CourtMapImpl({
     )
   }
 
-  const dark = forceDark || resolvedTheme === "dark"
-
   return (
     <Map
       ref={mapRef}
       reuseMaps
       mapboxAccessToken={TOKEN}
       initialViewState={HCMC}
+      // Light-only product; `forceDark` is for the few designs that
+      // intentionally ask for the dark basemap regardless of theme.
       mapStyle={
-        dark
+        forceDark
           ? "mapbox://styles/mapbox/dark-v11"
           : "mapbox://styles/mapbox/light-v11"
       }

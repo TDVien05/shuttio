@@ -37,16 +37,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: m.meta_twitter_title() },
       { name: "twitter:description", content: m.meta_twitter_description() },
-      {
-        name: "theme-color",
-        media: "(prefers-color-scheme: light)",
-        content: "#ffffff",
-      },
-      {
-        name: "theme-color",
-        media: "(prefers-color-scheme: dark)",
-        content: "#0a0a0a",
-      },
+      // Light-only product: keep the browser chrome light even when the OS
+      // prefers a dark color scheme.
+      { name: "theme-color", content: "#ffffff" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -78,9 +71,7 @@ function RootComponent() {
         navigate={(href, options) => router.navigate({ ...options, href })}
         useHref={(href) => href}
       >
-        <ThemeProvider>
-          <Outlet />
-        </ThemeProvider>
+        <Outlet />
       </RouterProvider>
     </ClerkProvider>
   )
@@ -98,7 +89,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
         {import.meta.env.DEV && (
           <TanStackDevtools
             config={{ position: "bottom-right" }}

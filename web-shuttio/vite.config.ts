@@ -21,10 +21,16 @@ export default defineConfig({
     nitro(),
     tailwindcss(),
     tanstackStart({
-      // Everything except the landing page renders client-side: the build
-      // emits one SPA shell for the dashboard/auth routes and prerenders `/`
-      // to static HTML. Routes opt into SSR individually (see `src/start.ts`).
-      spa: { enabled: true, maskPath: "/app" },
+      // Only the landing page is static. `/app` is the SPA fallback route:
+      // TanStack writes its masked shell to `_shell.html` (a loading state,
+      // not rendered page content) and Nitro serves that file for every
+      // client-side route. `defaultSsr: false` in `src/start.ts` keeps all
+      // other pages client-only; only `/` opts into SSR.
+      spa: {
+        enabled: true,
+        maskPath: "/app",
+        prerender: { outputPath: "/_shell", crawlLinks: false },
+      },
       pages: [{ path: "/", prerender: { enabled: true, crawlLinks: false } }],
     }),
     viteReact(),

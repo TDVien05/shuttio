@@ -5,8 +5,10 @@ done and deletion is approved.
 
 ## Done
 
-1. **Foundation**: TanStack Start (prerendered `/`, SPA shell elsewhere via
-   `defaultSsr: false`), React Query with the browser api client
+1. **Foundation**: TanStack Start (only `/` is prerendered to `index.html`;
+   every other route is client-only via `defaultSsr: false`, served the
+   `_shell.html` SPA loading shell — the `/app` entry in the build log is that
+   shell, not server-rendered page content), React Query with the browser api client
    (`src/lib/api.ts`, Clerk bearer token), Clerk (`@clerk/react`, vi), Paraglide
    (`messages/vi.json`, flat snake_case keys, Vietnamese only), shadcn
    `aria-luma` (React Aria), TanStack Form kit (`src/components/form.tsx`).
