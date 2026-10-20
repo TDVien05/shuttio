@@ -100,3 +100,8 @@ Create an **Application** with build type **Dockerfile**:
 `VITE_*` are public values, but they only take effect at build time: change
 one and redeploy (a rebuild), not just restart. Also add the frontend domain
 to the api's `WEB_URL` and to Clerk's allowed origins.
+
+To deploy the api and this app together instead, create a **Compose** service
+with Compose Path `./compose.dokploy.yml` (repo root): put the api's variables
+and the `VITE_*` values in its Environment tab, then add one domain per
+service in the Domains tab (`web-shuttio` → 3000, `api` → 6969).

@@ -1,0 +1,30 @@
+# Production stack for Dokploy (Compose type, Compose Path ./compose.dokploy.yml).
+#
+# - Environment tab → Dokploy writes the variables to `.env` next to this
+#   file: the api's runtime config plus the VITE_* build args below.
+# - Domains tab → add a domain per service (web-shuttio :3000, api :6969);
+#   Dokploy generates the Traefik labels, so nothing is published here.
+# Both images build from their Dockerfile's final (production) stage.
+
+services:
+  api:
+    build: ./api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 6969
+    expose: ["6969"]
+
+  web-shuttio:
+    build:
+      context: ./web-shuttio
+      # Inlined into the client bundle at build time (public values): change
+      # one and redeploy to rebuild.
+      args:
+        VITE_API_URL: ${VITE_API_URL:?set VITE_API_URL to the api's public URL}
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?}
+        VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN:-}
+        VITE_CLOUDINARY_CLOUD_NAME: ${VITE_CLOUDINARY_CLOUD_NAME:-}
+    restart: unless-stopped
+    expose: ["3000"]
