@@ -11,7 +11,9 @@ import {
   TriangleAlert,
 } from "lucide-react"
 import { toast } from "sonner"
+import { z } from "zod"
 
+import { useAppForm } from "@/components/form"
 import { cn } from "@/lib/utils"
 import { Button, LinkButton } from "@/components/ui/button"
 import {
@@ -94,26 +96,26 @@ function CopyRow({
  * A full-screen gate asking for a phone number on first booking. Saves it via
  * server action, then tells the caller to proceed.
  */
-function PhoneGate({ onDone }: { onDone: () => void }) {
-  const [phone, setPhone] = React.useState("")
-  const [saving, setSaving] = React.useState(false)
+const phoneSchema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .min(9, { error: () => m.payment_viet_qr_phone_error() }),
+})
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const trimmed = phone.trim()
-    if (trimmed.length < 9) {
-      toast.error(m.payment_viet_qr_phone_error())
-      return
-    }
-    setSaving(true)
-    try {
-      await savePlayerPhone(trimmed)
-      onDone()
-    } catch {
-      toast.error(m.payment_viet_qr_submit_failed())
-      setSaving(false)
-    }
-  }
+function PhoneGate({ onDone }: { onDone: () => void }) {
+  const form = useAppForm({
+    defaultValues: { phone: "" },
+    validators: { onChange: phoneSchema },
+    onSubmit: async ({ value }) => {
+      try {
+        await savePlayerPhone(value.phone.trim())
+        onDone()
+      } catch {
+        toast.error(m.payment_viet_qr_submit_failed())
+      }
+    },
+  })
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6 px-4 py-16 text-center">
@@ -129,31 +131,46 @@ function PhoneGate({ onDone }: { onDone: () => void }) {
         </p>
       </div>
       <form
-        onSubmit={(e) => void submit(e)}
+        onSubmit={(e) => {
+          e.preventDefault()
+          void form.handleSubmit()
+        }}
         className="flex w-full flex-col gap-3"
       >
-        <input
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder={m.payment_viet_qr_phone_placeholder()}
-          autoFocus
-          className="w-full rounded-full border border-input bg-background px-4 py-2.5 text-center text-base ring-offset-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        />
-        <Button
-          type="submit"
-          className="h-11 rounded-full text-base"
-          isDisabled={saving || phone.trim().length < 9}
-        >
-          {saving ? (
-            <>
-              <Loader2 className="animate-spin" />
-              {m.payment_viet_qr_phone_saving()}
-            </>
-          ) : (
-            m.payment_viet_qr_phone_continue()
+        <form.Field name="phone">
+          {(field) => (
+            <input
+              type="tel"
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              onBlur={field.handleBlur}
+              placeholder={m.payment_viet_qr_phone_placeholder()}
+              aria-label={m.payment_viet_qr_phone_title()}
+              autoFocus
+              className="w-full rounded-full border border-input bg-background px-4 py-2.5 text-center text-base ring-offset-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
           )}
-        </Button>
+        </form.Field>
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting] as const}
+        >
+          {([canSubmit, isSubmitting]) => (
+            <Button
+              type="submit"
+              className="h-11 rounded-full text-base"
+              isDisabled={!canSubmit || isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  {m.payment_viet_qr_phone_saving()}
+                </>
+              ) : (
+                m.payment_viet_qr_phone_continue()
+              )}
+            </Button>
+          )}
+        </form.Subscribe>
       </form>
     </div>
   )

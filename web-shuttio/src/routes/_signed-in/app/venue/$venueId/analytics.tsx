@@ -1,10 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { z } from "zod"
+import { VenueInsightsWorkspace } from "@/features/venue/insights-workspace"
+import { pageTitle } from "@/lib/head"
+import { m } from "@/paraglide/messages"
 
-// Replaced in the venue phase.
 export const Route = createFileRoute(
   "/_signed-in/app/venue/$venueId/analytics"
 )({
-  validateSearch: z.object({ tab: z.string().optional() }),
-  component: () => null,
+  validateSearch: z.object({
+    tab: z.enum(["performance", "players"]).optional(),
+  }),
+  head: () =>
+    pageTitle(
+      m.venue_insights_meta_title(),
+      m.venue_insights_meta_description()
+    ),
+  component: InsightsPage,
 })
+
+function InsightsPage() {
+  const { tab } = Route.useSearch()
+  return <VenueInsightsWorkspace initialTab={tab} />
+}
