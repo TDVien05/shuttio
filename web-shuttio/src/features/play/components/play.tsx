@@ -1,0 +1,149 @@
+import * as React from "react"
+import { MapPin, Plus, Search, Users, X, Zap } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useMatchmaking } from "@/features/play/components/matchmaking"
+import { RoomsView } from "@/features/play/components/match-maker"
+import {
+  CourtFilterPanel,
+  DEFAULT_COURT_FILTERS,
+  FindCourtsView,
+} from "@/features/play/components/find-courts"
+import type { CourtFilterState } from "@/features/play/components/find-courts"
+import { ActiveRoomPill } from "@/features/play/components/active-room"
+import { m } from "@/paraglide/messages"
+
+export type PlayTab = "rooms" | "courts"
+
+/**
+ * The unified "Play" surface. Browsing open rooms and finding a court are the
+ * same intent — "I want to play" — so they live behind one segmented toggle.
+ * Each panel only mounts when active so they don't double-subscribe to filters.
+ */
+export function PlayView({ initialTab = "courts" }: { initialTab?: PlayTab }) {
+  const [tab, setTab] = React.useState<PlayTab>(initialTab)
+  const [query, setQuery] = React.useState("")
+  const [courtFilters, setCourtFilters] = React.useState<CourtFilterState>(
+    DEFAULT_COURT_FILTERS
+  )
+  const { openQuickJoin, openCreateRoom } = useMatchmaking()
+
+  return (
+    <div className="player-play flex min-h-full flex-col bg-surface-cool-2 text-foreground lg:h-full lg:overflow-hidden">
+      <div className="mx-auto flex w-full max-w-450 flex-1 flex-col gap-4 px-4 py-5 sm:px-6 lg:min-h-0 lg:px-7">
+        {/* Page header */}
+        <header className="grid shrink-0 items-center gap-3 lg:grid-cols-workspace lg:gap-4">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-8 lg:col-span-2">
+            <h1 className="font-heading text-2xl font-black tracking-tight sm:text-3xl">
+              {m.play_meta_title()}
+            </h1>
+            <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
+              {m.play_meta_description()}
+            </p>
+          </div>
+          {tab === "courts" ? (
+            <div className="relative min-w-0">
+              <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                surface="field"
+                elevation="raised"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={m.find_courts_search_placeholder()}
+                aria-label={m.find_courts_search_placeholder()}
+                className="h-10 pr-10 pl-10"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label={m.find_courts_clear_search()}
+                  className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                >
+                  <X className="size-4" />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </header>
+
+        {/* Segmented toggle + shared filters + contextual actions */}
+        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-sidebar">
+          <aside className="flex flex-col gap-5 rounded-2xl border border-line bg-white p-3.5 shadow-card lg:min-h-0 lg:overflow-y-auto">
+            <Tabs
+              selectedKey={tab}
+              onSelectionChange={(key) => {
+                setTab(key === "rooms" ? "rooms" : "courts")
+                setQuery("")
+              }}
+            >
+              <TabsList className="h-10! w-full gap-1 bg-surface-cool p-1">
+                <TabsTrigger
+                  id="courts"
+                  className="h-full flex-1 gap-2 rounded-full px-3 text-xs font-semibold data-selected:bg-brand! data-selected:text-brand-foreground! data-selected:shadow-sm"
+                >
+                  <MapPin />
+                  {m.play_courts()}
+                </TabsTrigger>
+                <TabsTrigger
+                  id="rooms"
+                  className="h-full flex-1 gap-2 rounded-full px-3 text-xs font-semibold data-selected:bg-brand! data-selected:text-brand-foreground! data-selected:shadow-sm"
+                >
+                  <Users />
+                  {m.play_rooms()}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {tab === "courts" ? (
+              <div className="border-t border-line pt-4">
+                <CourtFilterPanel
+                  value={courtFilters}
+                  onChange={setCourtFilters}
+                />
+              </div>
+            ) : null}
+
+            {/* Active room pill lives in the shared toolbar, visible on both
+                tabs, so the manager sheet stays reachable while restyling. */}
+            <ActiveRoomPill />
+
+            {tab === "rooms" ? (
+              <div className="flex flex-col gap-2">
+                <Button
+                  shape="pill"
+                  size="sm"
+                  variant="outline"
+                  className="h-10 px-4"
+                  onPress={openQuickJoin}
+                >
+                  <Zap />
+                  {m.match_maker_find_match()}
+                </Button>
+                <Button
+                  variant="lime"
+                  shape="pill"
+                  size="sm"
+                  className="h-10 px-5"
+                  onPress={openCreateRoom}
+                >
+                  <Plus />
+                  {m.match_maker_create_room()}
+                </Button>
+              </div>
+            ) : null}
+          </aside>
+          <div className="flex min-h-0 min-w-0 flex-col">
+            {tab === "rooms" ? (
+              <RoomsView />
+            ) : (
+              <FindCourtsView query={query} filters={courtFilters} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

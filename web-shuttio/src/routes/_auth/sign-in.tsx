@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 
-import { SignInForm } from "@/features/auth/sign-in-form"
+import { SignInForm } from "@/features/auth/components/sign-in-form"
 import { pageTitle } from "@/lib/head"
 import { m } from "@/paraglide/messages"
 

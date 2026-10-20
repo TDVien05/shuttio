@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 
-import { ForgotPasswordForm } from "@/features/auth/forgot-password-form"
+import { ForgotPasswordForm } from "@/features/auth/components/forgot-password-form"
 import { pageTitle } from "@/lib/head"
 import { m } from "@/paraglide/messages"
 

@@ -11,41 +11,41 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/_auth'
-import { Route as SignedInRouteImport } from './routes/_signed-in'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SsoCallbackRouteImport } from './routes/sso-callback'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
-import { Route as SignedInAppRouteRouteImport } from './routes/_signed-in/app/route'
-import { Route as SignedInAssessmentRouteImport } from './routes/_signed-in/assessment'
-import { Route as SignedInOnboardingRouteImport } from './routes/_signed-in/onboarding'
-import { Route as SignedInSetupRouteImport } from './routes/_signed-in/setup'
+import { Route as AuthenticatedAppRouteRouteImport } from './routes/_authenticated/app/route'
+import { Route as AuthenticatedAssessmentRouteImport } from './routes/_authenticated/assessment'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
 import { Route as AuthAdminSignInRouteImport } from './routes/_auth/admin/sign-in'
-import { Route as SignedInAppIndexRouteImport } from './routes/_signed-in/app/index'
-import { Route as SignedInAppAdminRouteRouteImport } from './routes/_signed-in/app/admin/route'
-import { Route as SignedInAppBookRouteImport } from './routes/_signed-in/app/book'
-import { Route as SignedInAppBookingsRouteImport } from './routes/_signed-in/app/bookings'
-import { Route as SignedInAppChatRouteImport } from './routes/_signed-in/app/chat'
-import { Route as SignedInAppPlayRouteImport } from './routes/_signed-in/app/play'
-import { Route as SignedInAppAdminIndexRouteImport } from './routes/_signed-in/app/admin/index'
-import { Route as SignedInAppAdminApprovalsRouteImport } from './routes/_signed-in/app/admin/approvals'
-import { Route as SignedInAppAdminBookingsRouteImport } from './routes/_signed-in/app/admin/bookings'
-import { Route as SignedInAppAdminComplaintsRouteImport } from './routes/_signed-in/app/admin/complaints'
-import { Route as SignedInAppAdminDiscountsRouteImport } from './routes/_signed-in/app/admin/discounts'
-import { Route as SignedInAppAdminRefundsRouteImport } from './routes/_signed-in/app/admin/refunds'
-import { Route as SignedInAppAdminReviewsRouteImport } from './routes/_signed-in/app/admin/reviews'
-import { Route as SignedInAppAdminVenuesRouteImport } from './routes/_signed-in/app/admin/venues'
-import { Route as SignedInAppPaymentBookingIdRouteImport } from './routes/_signed-in/app/payment/$bookingId'
-import { Route as SignedInAppVenueIndexRouteImport } from './routes/_signed-in/app/venue/index'
-import { Route as SignedInAppVenueVenueIdRouteRouteImport } from './routes/_signed-in/app/venue/$venueId/route'
-import { Route as SignedInAppVenueVenueIdIndexRouteImport } from './routes/_signed-in/app/venue/$venueId/index'
-import { Route as SignedInAppVenueVenueIdAnalyticsRouteImport } from './routes/_signed-in/app/venue/$venueId/analytics'
-import { Route as SignedInAppVenueVenueIdCourtsRouteImport } from './routes/_signed-in/app/venue/$venueId/courts'
-import { Route as SignedInAppVenueVenueIdCustomersRouteImport } from './routes/_signed-in/app/venue/$venueId/customers'
-import { Route as SignedInAppVenueVenueIdManageRouteImport } from './routes/_signed-in/app/venue/$venueId/manage'
-import { Route as SignedInAppVenueVenueIdMessagesRouteImport } from './routes/_signed-in/app/venue/$venueId/messages'
-import { Route as SignedInAppVenueVenueIdScheduleRouteImport } from './routes/_signed-in/app/venue/$venueId/schedule'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
+import { Route as AuthenticatedAppAdminRouteRouteImport } from './routes/_authenticated/app/admin/route'
+import { Route as AuthenticatedAppBookRouteImport } from './routes/_authenticated/app/book'
+import { Route as AuthenticatedAppBookingsRouteImport } from './routes/_authenticated/app/bookings'
+import { Route as AuthenticatedAppChatRouteImport } from './routes/_authenticated/app/chat'
+import { Route as AuthenticatedAppPlayRouteImport } from './routes/_authenticated/app/play'
+import { Route as AuthenticatedAppAdminIndexRouteImport } from './routes/_authenticated/app/admin/index'
+import { Route as AuthenticatedAppAdminApprovalsRouteImport } from './routes/_authenticated/app/admin/approvals'
+import { Route as AuthenticatedAppAdminBookingsRouteImport } from './routes/_authenticated/app/admin/bookings'
+import { Route as AuthenticatedAppAdminComplaintsRouteImport } from './routes/_authenticated/app/admin/complaints'
+import { Route as AuthenticatedAppAdminDiscountsRouteImport } from './routes/_authenticated/app/admin/discounts'
+import { Route as AuthenticatedAppAdminRefundsRouteImport } from './routes/_authenticated/app/admin/refunds'
+import { Route as AuthenticatedAppAdminReviewsRouteImport } from './routes/_authenticated/app/admin/reviews'
+import { Route as AuthenticatedAppAdminVenuesRouteImport } from './routes/_authenticated/app/admin/venues'
+import { Route as AuthenticatedAppPaymentBookingIdRouteImport } from './routes/_authenticated/app/payment/$bookingId'
+import { Route as AuthenticatedAppVenueIndexRouteImport } from './routes/_authenticated/app/venue/index'
+import { Route as AuthenticatedAppVenueVenueIdRouteRouteImport } from './routes/_authenticated/app/venue/$venueId/route'
+import { Route as AuthenticatedAppVenueVenueIdIndexRouteImport } from './routes/_authenticated/app/venue/$venueId/index'
+import { Route as AuthenticatedAppVenueVenueIdAnalyticsRouteImport } from './routes/_authenticated/app/venue/$venueId/analytics'
+import { Route as AuthenticatedAppVenueVenueIdCourtsRouteImport } from './routes/_authenticated/app/venue/$venueId/courts'
+import { Route as AuthenticatedAppVenueVenueIdCustomersRouteImport } from './routes/_authenticated/app/venue/$venueId/customers'
+import { Route as AuthenticatedAppVenueVenueIdManageRouteImport } from './routes/_authenticated/app/venue/$venueId/manage'
+import { Route as AuthenticatedAppVenueVenueIdMessagesRouteImport } from './routes/_authenticated/app/venue/$venueId/messages'
+import { Route as AuthenticatedAppVenueVenueIdScheduleRouteImport } from './routes/_authenticated/app/venue/$venueId/schedule'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -56,8 +56,8 @@ const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SignedInRoute = SignedInRouteImport.update({
-  id: '/_signed-in',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -85,201 +85,208 @@ const AuthSignUpRoute = AuthSignUpRouteImport.update({
   path: '/sign-up',
   getParentRoute: () => AuthRoute,
 } as any)
-const SignedInAppRouteRoute = SignedInAppRouteRouteImport.update({
+const AuthenticatedAppRouteRoute = AuthenticatedAppRouteRouteImport.update({
   id: '/app',
   path: '/app',
-  getParentRoute: () => SignedInRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const SignedInAssessmentRoute = SignedInAssessmentRouteImport.update({
+const AuthenticatedAssessmentRoute = AuthenticatedAssessmentRouteImport.update({
   id: '/assessment',
   path: '/assessment',
-  getParentRoute: () => SignedInRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const SignedInOnboardingRoute = SignedInOnboardingRouteImport.update({
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
-  getParentRoute: () => SignedInRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const SignedInSetupRoute = SignedInSetupRouteImport.update({
+const AuthenticatedSetupRoute = AuthenticatedSetupRouteImport.update({
   id: '/setup',
   path: '/setup',
-  getParentRoute: () => SignedInRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthAdminSignInRoute = AuthAdminSignInRouteImport.update({
   id: '/admin/sign-in',
   path: '/admin/sign-in',
   getParentRoute: () => AuthRoute,
 } as any)
-const SignedInAppIndexRoute = SignedInAppIndexRouteImport.update({
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => SignedInAppRouteRoute,
+  getParentRoute: () => AuthenticatedAppRouteRoute,
 } as any)
-const SignedInAppAdminRouteRoute = SignedInAppAdminRouteRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => SignedInAppRouteRoute,
-} as any)
-const SignedInAppBookRoute = SignedInAppBookRouteImport.update({
+const AuthenticatedAppAdminRouteRoute =
+  AuthenticatedAppAdminRouteRouteImport.update({
+    id: '/admin',
+    path: '/admin',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppBookRoute = AuthenticatedAppBookRouteImport.update({
   id: '/book',
   path: '/book',
-  getParentRoute: () => SignedInAppRouteRoute,
+  getParentRoute: () => AuthenticatedAppRouteRoute,
 } as any)
-const SignedInAppBookingsRoute = SignedInAppBookingsRouteImport.update({
-  id: '/bookings',
-  path: '/bookings',
-  getParentRoute: () => SignedInAppRouteRoute,
-} as any)
-const SignedInAppChatRoute = SignedInAppChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
-  getParentRoute: () => SignedInAppRouteRoute,
-} as any)
-const SignedInAppPlayRoute = SignedInAppPlayRouteImport.update({
-  id: '/play',
-  path: '/play',
-  getParentRoute: () => SignedInAppRouteRoute,
-} as any)
-const SignedInAppAdminIndexRoute = SignedInAppAdminIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SignedInAppAdminRouteRoute,
-} as any)
-const SignedInAppAdminApprovalsRoute =
-  SignedInAppAdminApprovalsRouteImport.update({
-    id: '/approvals',
-    path: '/approvals',
-    getParentRoute: () => SignedInAppAdminRouteRoute,
-  } as any)
-const SignedInAppAdminBookingsRoute =
-  SignedInAppAdminBookingsRouteImport.update({
+const AuthenticatedAppBookingsRoute =
+  AuthenticatedAppBookingsRouteImport.update({
     id: '/bookings',
     path: '/bookings',
-    getParentRoute: () => SignedInAppAdminRouteRoute,
+    getParentRoute: () => AuthenticatedAppRouteRoute,
   } as any)
-const SignedInAppAdminComplaintsRoute =
-  SignedInAppAdminComplaintsRouteImport.update({
-    id: '/complaints',
-    path: '/complaints',
-    getParentRoute: () => SignedInAppAdminRouteRoute,
-  } as any)
-const SignedInAppAdminDiscountsRoute =
-  SignedInAppAdminDiscountsRouteImport.update({
-    id: '/discounts',
-    path: '/discounts',
-    getParentRoute: () => SignedInAppAdminRouteRoute,
-  } as any)
-const SignedInAppAdminRefundsRoute = SignedInAppAdminRefundsRouteImport.update({
-  id: '/refunds',
-  path: '/refunds',
-  getParentRoute: () => SignedInAppAdminRouteRoute,
+const AuthenticatedAppChatRoute = AuthenticatedAppChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AuthenticatedAppRouteRoute,
 } as any)
-const SignedInAppAdminReviewsRoute = SignedInAppAdminReviewsRouteImport.update({
-  id: '/reviews',
-  path: '/reviews',
-  getParentRoute: () => SignedInAppAdminRouteRoute,
+const AuthenticatedAppPlayRoute = AuthenticatedAppPlayRouteImport.update({
+  id: '/play',
+  path: '/play',
+  getParentRoute: () => AuthenticatedAppRouteRoute,
 } as any)
-const SignedInAppAdminVenuesRoute = SignedInAppAdminVenuesRouteImport.update({
-  id: '/venues',
-  path: '/venues',
-  getParentRoute: () => SignedInAppAdminRouteRoute,
-} as any)
-const SignedInAppPaymentBookingIdRoute =
-  SignedInAppPaymentBookingIdRouteImport.update({
-    id: '/payment/$bookingId',
-    path: '/payment/$bookingId',
-    getParentRoute: () => SignedInAppRouteRoute,
-  } as any)
-const SignedInAppVenueIndexRoute = SignedInAppVenueIndexRouteImport.update({
-  id: '/venue/',
-  path: '/venue/',
-  getParentRoute: () => SignedInAppRouteRoute,
-} as any)
-const SignedInAppVenueVenueIdRouteRoute =
-  SignedInAppVenueVenueIdRouteRouteImport.update({
-    id: '/venue/$venueId',
-    path: '/venue/$venueId',
-    getParentRoute: () => SignedInAppRouteRoute,
-  } as any)
-const SignedInAppVenueVenueIdIndexRoute =
-  SignedInAppVenueVenueIdIndexRouteImport.update({
+const AuthenticatedAppAdminIndexRoute =
+  AuthenticatedAppAdminIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => SignedInAppVenueVenueIdRouteRoute,
+    getParentRoute: () => AuthenticatedAppAdminRouteRoute,
   } as any)
-const SignedInAppVenueVenueIdAnalyticsRoute =
-  SignedInAppVenueVenueIdAnalyticsRouteImport.update({
+const AuthenticatedAppAdminApprovalsRoute =
+  AuthenticatedAppAdminApprovalsRouteImport.update({
+    id: '/approvals',
+    path: '/approvals',
+    getParentRoute: () => AuthenticatedAppAdminRouteRoute,
+  } as any)
+const AuthenticatedAppAdminBookingsRoute =
+  AuthenticatedAppAdminBookingsRouteImport.update({
+    id: '/bookings',
+    path: '/bookings',
+    getParentRoute: () => AuthenticatedAppAdminRouteRoute,
+  } as any)
+const AuthenticatedAppAdminComplaintsRoute =
+  AuthenticatedAppAdminComplaintsRouteImport.update({
+    id: '/complaints',
+    path: '/complaints',
+    getParentRoute: () => AuthenticatedAppAdminRouteRoute,
+  } as any)
+const AuthenticatedAppAdminDiscountsRoute =
+  AuthenticatedAppAdminDiscountsRouteImport.update({
+    id: '/discounts',
+    path: '/discounts',
+    getParentRoute: () => AuthenticatedAppAdminRouteRoute,
+  } as any)
+const AuthenticatedAppAdminRefundsRoute =
+  AuthenticatedAppAdminRefundsRouteImport.update({
+    id: '/refunds',
+    path: '/refunds',
+    getParentRoute: () => AuthenticatedAppAdminRouteRoute,
+  } as any)
+const AuthenticatedAppAdminReviewsRoute =
+  AuthenticatedAppAdminReviewsRouteImport.update({
+    id: '/reviews',
+    path: '/reviews',
+    getParentRoute: () => AuthenticatedAppAdminRouteRoute,
+  } as any)
+const AuthenticatedAppAdminVenuesRoute =
+  AuthenticatedAppAdminVenuesRouteImport.update({
+    id: '/venues',
+    path: '/venues',
+    getParentRoute: () => AuthenticatedAppAdminRouteRoute,
+  } as any)
+const AuthenticatedAppPaymentBookingIdRoute =
+  AuthenticatedAppPaymentBookingIdRouteImport.update({
+    id: '/payment/$bookingId',
+    path: '/payment/$bookingId',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppVenueIndexRoute =
+  AuthenticatedAppVenueIndexRouteImport.update({
+    id: '/venue/',
+    path: '/venue/',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppVenueVenueIdRouteRoute =
+  AuthenticatedAppVenueVenueIdRouteRouteImport.update({
+    id: '/venue/$venueId',
+    path: '/venue/$venueId',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppVenueVenueIdIndexRoute =
+  AuthenticatedAppVenueVenueIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppVenueVenueIdRouteRoute,
+  } as any)
+const AuthenticatedAppVenueVenueIdAnalyticsRoute =
+  AuthenticatedAppVenueVenueIdAnalyticsRouteImport.update({
     id: '/analytics',
     path: '/analytics',
-    getParentRoute: () => SignedInAppVenueVenueIdRouteRoute,
+    getParentRoute: () => AuthenticatedAppVenueVenueIdRouteRoute,
   } as any)
-const SignedInAppVenueVenueIdCourtsRoute =
-  SignedInAppVenueVenueIdCourtsRouteImport.update({
+const AuthenticatedAppVenueVenueIdCourtsRoute =
+  AuthenticatedAppVenueVenueIdCourtsRouteImport.update({
     id: '/courts',
     path: '/courts',
-    getParentRoute: () => SignedInAppVenueVenueIdRouteRoute,
+    getParentRoute: () => AuthenticatedAppVenueVenueIdRouteRoute,
   } as any)
-const SignedInAppVenueVenueIdCustomersRoute =
-  SignedInAppVenueVenueIdCustomersRouteImport.update({
+const AuthenticatedAppVenueVenueIdCustomersRoute =
+  AuthenticatedAppVenueVenueIdCustomersRouteImport.update({
     id: '/customers',
     path: '/customers',
-    getParentRoute: () => SignedInAppVenueVenueIdRouteRoute,
+    getParentRoute: () => AuthenticatedAppVenueVenueIdRouteRoute,
   } as any)
-const SignedInAppVenueVenueIdManageRoute =
-  SignedInAppVenueVenueIdManageRouteImport.update({
+const AuthenticatedAppVenueVenueIdManageRoute =
+  AuthenticatedAppVenueVenueIdManageRouteImport.update({
     id: '/manage',
     path: '/manage',
-    getParentRoute: () => SignedInAppVenueVenueIdRouteRoute,
+    getParentRoute: () => AuthenticatedAppVenueVenueIdRouteRoute,
   } as any)
-const SignedInAppVenueVenueIdMessagesRoute =
-  SignedInAppVenueVenueIdMessagesRouteImport.update({
+const AuthenticatedAppVenueVenueIdMessagesRoute =
+  AuthenticatedAppVenueVenueIdMessagesRouteImport.update({
     id: '/messages',
     path: '/messages',
-    getParentRoute: () => SignedInAppVenueVenueIdRouteRoute,
+    getParentRoute: () => AuthenticatedAppVenueVenueIdRouteRoute,
   } as any)
-const SignedInAppVenueVenueIdScheduleRoute =
-  SignedInAppVenueVenueIdScheduleRouteImport.update({
+const AuthenticatedAppVenueVenueIdScheduleRoute =
+  AuthenticatedAppVenueVenueIdScheduleRouteImport.update({
     id: '/schedule',
     path: '/schedule',
-    getParentRoute: () => SignedInAppVenueVenueIdRouteRoute,
+    getParentRoute: () => AuthenticatedAppVenueVenueIdRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sso-callback': typeof SsoCallbackRoute
-  '/app': typeof SignedInAppRouteRouteWithChildren
+  '/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
-  '/assessment': typeof SignedInAssessmentRoute
-  '/onboarding': typeof SignedInOnboardingRoute
-  '/setup': typeof SignedInSetupRoute
-  '/app/admin': typeof SignedInAppAdminRouteRouteWithChildren
+  '/assessment': typeof AuthenticatedAssessmentRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/setup': typeof AuthenticatedSetupRoute
+  '/app/admin': typeof AuthenticatedAppAdminRouteRouteWithChildren
   '/admin/sign-in': typeof AuthAdminSignInRoute
-  '/app/book': typeof SignedInAppBookRoute
-  '/app/bookings': typeof SignedInAppBookingsRoute
-  '/app/chat': typeof SignedInAppChatRoute
-  '/app/play': typeof SignedInAppPlayRoute
-  '/app/': typeof SignedInAppIndexRoute
-  '/app/venue/$venueId': typeof SignedInAppVenueVenueIdRouteRouteWithChildren
-  '/app/admin/approvals': typeof SignedInAppAdminApprovalsRoute
-  '/app/admin/bookings': typeof SignedInAppAdminBookingsRoute
-  '/app/admin/complaints': typeof SignedInAppAdminComplaintsRoute
-  '/app/admin/discounts': typeof SignedInAppAdminDiscountsRoute
-  '/app/admin/refunds': typeof SignedInAppAdminRefundsRoute
-  '/app/admin/reviews': typeof SignedInAppAdminReviewsRoute
-  '/app/admin/venues': typeof SignedInAppAdminVenuesRoute
-  '/app/payment/$bookingId': typeof SignedInAppPaymentBookingIdRoute
-  '/app/admin/': typeof SignedInAppAdminIndexRoute
-  '/app/venue/': typeof SignedInAppVenueIndexRoute
-  '/app/venue/$venueId/analytics': typeof SignedInAppVenueVenueIdAnalyticsRoute
-  '/app/venue/$venueId/courts': typeof SignedInAppVenueVenueIdCourtsRoute
-  '/app/venue/$venueId/customers': typeof SignedInAppVenueVenueIdCustomersRoute
-  '/app/venue/$venueId/manage': typeof SignedInAppVenueVenueIdManageRoute
-  '/app/venue/$venueId/messages': typeof SignedInAppVenueVenueIdMessagesRoute
-  '/app/venue/$venueId/schedule': typeof SignedInAppVenueVenueIdScheduleRoute
-  '/app/venue/$venueId/': typeof SignedInAppVenueVenueIdIndexRoute
+  '/app/book': typeof AuthenticatedAppBookRoute
+  '/app/bookings': typeof AuthenticatedAppBookingsRoute
+  '/app/chat': typeof AuthenticatedAppChatRoute
+  '/app/play': typeof AuthenticatedAppPlayRoute
+  '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/venue/$venueId': typeof AuthenticatedAppVenueVenueIdRouteRouteWithChildren
+  '/app/admin/approvals': typeof AuthenticatedAppAdminApprovalsRoute
+  '/app/admin/bookings': typeof AuthenticatedAppAdminBookingsRoute
+  '/app/admin/complaints': typeof AuthenticatedAppAdminComplaintsRoute
+  '/app/admin/discounts': typeof AuthenticatedAppAdminDiscountsRoute
+  '/app/admin/refunds': typeof AuthenticatedAppAdminRefundsRoute
+  '/app/admin/reviews': typeof AuthenticatedAppAdminReviewsRoute
+  '/app/admin/venues': typeof AuthenticatedAppAdminVenuesRoute
+  '/app/payment/$bookingId': typeof AuthenticatedAppPaymentBookingIdRoute
+  '/app/admin/': typeof AuthenticatedAppAdminIndexRoute
+  '/app/venue/': typeof AuthenticatedAppVenueIndexRoute
+  '/app/venue/$venueId/analytics': typeof AuthenticatedAppVenueVenueIdAnalyticsRoute
+  '/app/venue/$venueId/courts': typeof AuthenticatedAppVenueVenueIdCourtsRoute
+  '/app/venue/$venueId/customers': typeof AuthenticatedAppVenueVenueIdCustomersRoute
+  '/app/venue/$venueId/manage': typeof AuthenticatedAppVenueVenueIdManageRoute
+  '/app/venue/$venueId/messages': typeof AuthenticatedAppVenueVenueIdMessagesRoute
+  '/app/venue/$venueId/schedule': typeof AuthenticatedAppVenueVenueIdScheduleRoute
+  '/app/venue/$venueId/': typeof AuthenticatedAppVenueVenueIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -288,72 +295,72 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
-  '/assessment': typeof SignedInAssessmentRoute
-  '/onboarding': typeof SignedInOnboardingRoute
-  '/setup': typeof SignedInSetupRoute
+  '/assessment': typeof AuthenticatedAssessmentRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/setup': typeof AuthenticatedSetupRoute
   '/admin/sign-in': typeof AuthAdminSignInRoute
-  '/app/book': typeof SignedInAppBookRoute
-  '/app/bookings': typeof SignedInAppBookingsRoute
-  '/app/chat': typeof SignedInAppChatRoute
-  '/app/play': typeof SignedInAppPlayRoute
-  '/app': typeof SignedInAppIndexRoute
-  '/app/admin/approvals': typeof SignedInAppAdminApprovalsRoute
-  '/app/admin/bookings': typeof SignedInAppAdminBookingsRoute
-  '/app/admin/complaints': typeof SignedInAppAdminComplaintsRoute
-  '/app/admin/discounts': typeof SignedInAppAdminDiscountsRoute
-  '/app/admin/refunds': typeof SignedInAppAdminRefundsRoute
-  '/app/admin/reviews': typeof SignedInAppAdminReviewsRoute
-  '/app/admin/venues': typeof SignedInAppAdminVenuesRoute
-  '/app/payment/$bookingId': typeof SignedInAppPaymentBookingIdRoute
-  '/app/admin': typeof SignedInAppAdminIndexRoute
-  '/app/venue': typeof SignedInAppVenueIndexRoute
-  '/app/venue/$venueId/analytics': typeof SignedInAppVenueVenueIdAnalyticsRoute
-  '/app/venue/$venueId/courts': typeof SignedInAppVenueVenueIdCourtsRoute
-  '/app/venue/$venueId/customers': typeof SignedInAppVenueVenueIdCustomersRoute
-  '/app/venue/$venueId/manage': typeof SignedInAppVenueVenueIdManageRoute
-  '/app/venue/$venueId/messages': typeof SignedInAppVenueVenueIdMessagesRoute
-  '/app/venue/$venueId/schedule': typeof SignedInAppVenueVenueIdScheduleRoute
-  '/app/venue/$venueId': typeof SignedInAppVenueVenueIdIndexRoute
+  '/app/book': typeof AuthenticatedAppBookRoute
+  '/app/bookings': typeof AuthenticatedAppBookingsRoute
+  '/app/chat': typeof AuthenticatedAppChatRoute
+  '/app/play': typeof AuthenticatedAppPlayRoute
+  '/app': typeof AuthenticatedAppIndexRoute
+  '/app/admin/approvals': typeof AuthenticatedAppAdminApprovalsRoute
+  '/app/admin/bookings': typeof AuthenticatedAppAdminBookingsRoute
+  '/app/admin/complaints': typeof AuthenticatedAppAdminComplaintsRoute
+  '/app/admin/discounts': typeof AuthenticatedAppAdminDiscountsRoute
+  '/app/admin/refunds': typeof AuthenticatedAppAdminRefundsRoute
+  '/app/admin/reviews': typeof AuthenticatedAppAdminReviewsRoute
+  '/app/admin/venues': typeof AuthenticatedAppAdminVenuesRoute
+  '/app/payment/$bookingId': typeof AuthenticatedAppPaymentBookingIdRoute
+  '/app/admin': typeof AuthenticatedAppAdminIndexRoute
+  '/app/venue': typeof AuthenticatedAppVenueIndexRoute
+  '/app/venue/$venueId/analytics': typeof AuthenticatedAppVenueVenueIdAnalyticsRoute
+  '/app/venue/$venueId/courts': typeof AuthenticatedAppVenueVenueIdCourtsRoute
+  '/app/venue/$venueId/customers': typeof AuthenticatedAppVenueVenueIdCustomersRoute
+  '/app/venue/$venueId/manage': typeof AuthenticatedAppVenueVenueIdManageRoute
+  '/app/venue/$venueId/messages': typeof AuthenticatedAppVenueVenueIdMessagesRoute
+  '/app/venue/$venueId/schedule': typeof AuthenticatedAppVenueVenueIdScheduleRoute
+  '/app/venue/$venueId': typeof AuthenticatedAppVenueVenueIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
-  '/_signed-in': typeof SignedInRouteWithChildren
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sso-callback': typeof SsoCallbackRoute
-  '/_signed-in/app': typeof SignedInAppRouteRouteWithChildren
+  '/_authenticated/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
-  '/_signed-in/assessment': typeof SignedInAssessmentRoute
-  '/_signed-in/onboarding': typeof SignedInOnboardingRoute
-  '/_signed-in/setup': typeof SignedInSetupRoute
-  '/_signed-in/app/admin': typeof SignedInAppAdminRouteRouteWithChildren
+  '/_authenticated/assessment': typeof AuthenticatedAssessmentRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/setup': typeof AuthenticatedSetupRoute
+  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRouteRouteWithChildren
   '/_auth/admin/sign-in': typeof AuthAdminSignInRoute
-  '/_signed-in/app/book': typeof SignedInAppBookRoute
-  '/_signed-in/app/bookings': typeof SignedInAppBookingsRoute
-  '/_signed-in/app/chat': typeof SignedInAppChatRoute
-  '/_signed-in/app/play': typeof SignedInAppPlayRoute
-  '/_signed-in/app/': typeof SignedInAppIndexRoute
-  '/_signed-in/app/venue/$venueId': typeof SignedInAppVenueVenueIdRouteRouteWithChildren
-  '/_signed-in/app/admin/approvals': typeof SignedInAppAdminApprovalsRoute
-  '/_signed-in/app/admin/bookings': typeof SignedInAppAdminBookingsRoute
-  '/_signed-in/app/admin/complaints': typeof SignedInAppAdminComplaintsRoute
-  '/_signed-in/app/admin/discounts': typeof SignedInAppAdminDiscountsRoute
-  '/_signed-in/app/admin/refunds': typeof SignedInAppAdminRefundsRoute
-  '/_signed-in/app/admin/reviews': typeof SignedInAppAdminReviewsRoute
-  '/_signed-in/app/admin/venues': typeof SignedInAppAdminVenuesRoute
-  '/_signed-in/app/payment/$bookingId': typeof SignedInAppPaymentBookingIdRoute
-  '/_signed-in/app/admin/': typeof SignedInAppAdminIndexRoute
-  '/_signed-in/app/venue/': typeof SignedInAppVenueIndexRoute
-  '/_signed-in/app/venue/$venueId/analytics': typeof SignedInAppVenueVenueIdAnalyticsRoute
-  '/_signed-in/app/venue/$venueId/courts': typeof SignedInAppVenueVenueIdCourtsRoute
-  '/_signed-in/app/venue/$venueId/customers': typeof SignedInAppVenueVenueIdCustomersRoute
-  '/_signed-in/app/venue/$venueId/manage': typeof SignedInAppVenueVenueIdManageRoute
-  '/_signed-in/app/venue/$venueId/messages': typeof SignedInAppVenueVenueIdMessagesRoute
-  '/_signed-in/app/venue/$venueId/schedule': typeof SignedInAppVenueVenueIdScheduleRoute
-  '/_signed-in/app/venue/$venueId/': typeof SignedInAppVenueVenueIdIndexRoute
+  '/_authenticated/app/book': typeof AuthenticatedAppBookRoute
+  '/_authenticated/app/bookings': typeof AuthenticatedAppBookingsRoute
+  '/_authenticated/app/chat': typeof AuthenticatedAppChatRoute
+  '/_authenticated/app/play': typeof AuthenticatedAppPlayRoute
+  '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/venue/$venueId': typeof AuthenticatedAppVenueVenueIdRouteRouteWithChildren
+  '/_authenticated/app/admin/approvals': typeof AuthenticatedAppAdminApprovalsRoute
+  '/_authenticated/app/admin/bookings': typeof AuthenticatedAppAdminBookingsRoute
+  '/_authenticated/app/admin/complaints': typeof AuthenticatedAppAdminComplaintsRoute
+  '/_authenticated/app/admin/discounts': typeof AuthenticatedAppAdminDiscountsRoute
+  '/_authenticated/app/admin/refunds': typeof AuthenticatedAppAdminRefundsRoute
+  '/_authenticated/app/admin/reviews': typeof AuthenticatedAppAdminReviewsRoute
+  '/_authenticated/app/admin/venues': typeof AuthenticatedAppAdminVenuesRoute
+  '/_authenticated/app/payment/$bookingId': typeof AuthenticatedAppPaymentBookingIdRoute
+  '/_authenticated/app/admin/': typeof AuthenticatedAppAdminIndexRoute
+  '/_authenticated/app/venue/': typeof AuthenticatedAppVenueIndexRoute
+  '/_authenticated/app/venue/$venueId/analytics': typeof AuthenticatedAppVenueVenueIdAnalyticsRoute
+  '/_authenticated/app/venue/$venueId/courts': typeof AuthenticatedAppVenueVenueIdCourtsRoute
+  '/_authenticated/app/venue/$venueId/customers': typeof AuthenticatedAppVenueVenueIdCustomersRoute
+  '/_authenticated/app/venue/$venueId/manage': typeof AuthenticatedAppVenueVenueIdManageRoute
+  '/_authenticated/app/venue/$venueId/messages': typeof AuthenticatedAppVenueVenueIdMessagesRoute
+  '/_authenticated/app/venue/$venueId/schedule': typeof AuthenticatedAppVenueVenueIdScheduleRoute
+  '/_authenticated/app/venue/$venueId/': typeof AuthenticatedAppVenueVenueIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -431,47 +438,47 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_auth'
-    | '/_signed-in'
+    | '/_authenticated'
     | '/reset-password'
     | '/sso-callback'
-    | '/_signed-in/app'
+    | '/_authenticated/app'
     | '/_auth/forgot-password'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
-    | '/_signed-in/assessment'
-    | '/_signed-in/onboarding'
-    | '/_signed-in/setup'
-    | '/_signed-in/app/admin'
+    | '/_authenticated/assessment'
+    | '/_authenticated/onboarding'
+    | '/_authenticated/setup'
+    | '/_authenticated/app/admin'
     | '/_auth/admin/sign-in'
-    | '/_signed-in/app/book'
-    | '/_signed-in/app/bookings'
-    | '/_signed-in/app/chat'
-    | '/_signed-in/app/play'
-    | '/_signed-in/app/'
-    | '/_signed-in/app/venue/$venueId'
-    | '/_signed-in/app/admin/approvals'
-    | '/_signed-in/app/admin/bookings'
-    | '/_signed-in/app/admin/complaints'
-    | '/_signed-in/app/admin/discounts'
-    | '/_signed-in/app/admin/refunds'
-    | '/_signed-in/app/admin/reviews'
-    | '/_signed-in/app/admin/venues'
-    | '/_signed-in/app/payment/$bookingId'
-    | '/_signed-in/app/admin/'
-    | '/_signed-in/app/venue/'
-    | '/_signed-in/app/venue/$venueId/analytics'
-    | '/_signed-in/app/venue/$venueId/courts'
-    | '/_signed-in/app/venue/$venueId/customers'
-    | '/_signed-in/app/venue/$venueId/manage'
-    | '/_signed-in/app/venue/$venueId/messages'
-    | '/_signed-in/app/venue/$venueId/schedule'
-    | '/_signed-in/app/venue/$venueId/'
+    | '/_authenticated/app/book'
+    | '/_authenticated/app/bookings'
+    | '/_authenticated/app/chat'
+    | '/_authenticated/app/play'
+    | '/_authenticated/app/'
+    | '/_authenticated/app/venue/$venueId'
+    | '/_authenticated/app/admin/approvals'
+    | '/_authenticated/app/admin/bookings'
+    | '/_authenticated/app/admin/complaints'
+    | '/_authenticated/app/admin/discounts'
+    | '/_authenticated/app/admin/refunds'
+    | '/_authenticated/app/admin/reviews'
+    | '/_authenticated/app/admin/venues'
+    | '/_authenticated/app/payment/$bookingId'
+    | '/_authenticated/app/admin/'
+    | '/_authenticated/app/venue/'
+    | '/_authenticated/app/venue/$venueId/analytics'
+    | '/_authenticated/app/venue/$venueId/courts'
+    | '/_authenticated/app/venue/$venueId/customers'
+    | '/_authenticated/app/venue/$venueId/manage'
+    | '/_authenticated/app/venue/$venueId/messages'
+    | '/_authenticated/app/venue/$venueId/schedule'
+    | '/_authenticated/app/venue/$venueId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
-  SignedInRoute: typeof SignedInRouteWithChildren
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   SsoCallbackRoute: typeof SsoCallbackRoute
 }
@@ -492,11 +499,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_signed-in': {
-      id: '/_signed-in'
+    '/_authenticated': {
+      id: '/_authenticated'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof SignedInRouteImport
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -534,33 +541,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignUpRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/_signed-in/app': {
-      id: '/_signed-in/app'
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
       path: '/app'
       fullPath: '/app'
-      preLoaderRoute: typeof SignedInAppRouteRouteImport
-      parentRoute: typeof SignedInRoute
+      preLoaderRoute: typeof AuthenticatedAppRouteRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_signed-in/assessment': {
-      id: '/_signed-in/assessment'
+    '/_authenticated/assessment': {
+      id: '/_authenticated/assessment'
       path: '/assessment'
       fullPath: '/assessment'
-      preLoaderRoute: typeof SignedInAssessmentRouteImport
-      parentRoute: typeof SignedInRoute
+      preLoaderRoute: typeof AuthenticatedAssessmentRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_signed-in/onboarding': {
-      id: '/_signed-in/onboarding'
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
       path: '/onboarding'
       fullPath: '/onboarding'
-      preLoaderRoute: typeof SignedInOnboardingRouteImport
-      parentRoute: typeof SignedInRoute
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_signed-in/setup': {
-      id: '/_signed-in/setup'
+    '/_authenticated/setup': {
+      id: '/_authenticated/setup'
       path: '/setup'
       fullPath: '/setup'
-      preLoaderRoute: typeof SignedInSetupRouteImport
-      parentRoute: typeof SignedInRoute
+      preLoaderRoute: typeof AuthenticatedSetupRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_auth/admin/sign-in': {
       id: '/_auth/admin/sign-in'
@@ -569,173 +576,173 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAdminSignInRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/_signed-in/app/': {
-      id: '/_signed-in/app/'
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
       path: '/'
       fullPath: '/app/'
-      preLoaderRoute: typeof SignedInAppIndexRouteImport
-      parentRoute: typeof SignedInAppRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/_signed-in/app/admin': {
-      id: '/_signed-in/app/admin'
+    '/_authenticated/app/admin': {
+      id: '/_authenticated/app/admin'
       path: '/admin'
       fullPath: '/app/admin'
-      preLoaderRoute: typeof SignedInAppAdminRouteRouteImport
-      parentRoute: typeof SignedInAppRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/_signed-in/app/book': {
-      id: '/_signed-in/app/book'
+    '/_authenticated/app/book': {
+      id: '/_authenticated/app/book'
       path: '/book'
       fullPath: '/app/book'
-      preLoaderRoute: typeof SignedInAppBookRouteImport
-      parentRoute: typeof SignedInAppRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppBookRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/_signed-in/app/bookings': {
-      id: '/_signed-in/app/bookings'
+    '/_authenticated/app/bookings': {
+      id: '/_authenticated/app/bookings'
       path: '/bookings'
       fullPath: '/app/bookings'
-      preLoaderRoute: typeof SignedInAppBookingsRouteImport
-      parentRoute: typeof SignedInAppRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppBookingsRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/_signed-in/app/chat': {
-      id: '/_signed-in/app/chat'
+    '/_authenticated/app/chat': {
+      id: '/_authenticated/app/chat'
       path: '/chat'
       fullPath: '/app/chat'
-      preLoaderRoute: typeof SignedInAppChatRouteImport
-      parentRoute: typeof SignedInAppRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppChatRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/_signed-in/app/play': {
-      id: '/_signed-in/app/play'
+    '/_authenticated/app/play': {
+      id: '/_authenticated/app/play'
       path: '/play'
       fullPath: '/app/play'
-      preLoaderRoute: typeof SignedInAppPlayRouteImport
-      parentRoute: typeof SignedInAppRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppPlayRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/_signed-in/app/admin/': {
-      id: '/_signed-in/app/admin/'
+    '/_authenticated/app/admin/': {
+      id: '/_authenticated/app/admin/'
       path: '/'
       fullPath: '/app/admin/'
-      preLoaderRoute: typeof SignedInAppAdminIndexRouteImport
-      parentRoute: typeof SignedInAppAdminRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRouteRoute
     }
-    '/_signed-in/app/admin/approvals': {
-      id: '/_signed-in/app/admin/approvals'
+    '/_authenticated/app/admin/approvals': {
+      id: '/_authenticated/app/admin/approvals'
       path: '/approvals'
       fullPath: '/app/admin/approvals'
-      preLoaderRoute: typeof SignedInAppAdminApprovalsRouteImport
-      parentRoute: typeof SignedInAppAdminRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppAdminApprovalsRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRouteRoute
     }
-    '/_signed-in/app/admin/bookings': {
-      id: '/_signed-in/app/admin/bookings'
+    '/_authenticated/app/admin/bookings': {
+      id: '/_authenticated/app/admin/bookings'
       path: '/bookings'
       fullPath: '/app/admin/bookings'
-      preLoaderRoute: typeof SignedInAppAdminBookingsRouteImport
-      parentRoute: typeof SignedInAppAdminRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppAdminBookingsRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRouteRoute
     }
-    '/_signed-in/app/admin/complaints': {
-      id: '/_signed-in/app/admin/complaints'
+    '/_authenticated/app/admin/complaints': {
+      id: '/_authenticated/app/admin/complaints'
       path: '/complaints'
       fullPath: '/app/admin/complaints'
-      preLoaderRoute: typeof SignedInAppAdminComplaintsRouteImport
-      parentRoute: typeof SignedInAppAdminRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppAdminComplaintsRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRouteRoute
     }
-    '/_signed-in/app/admin/discounts': {
-      id: '/_signed-in/app/admin/discounts'
+    '/_authenticated/app/admin/discounts': {
+      id: '/_authenticated/app/admin/discounts'
       path: '/discounts'
       fullPath: '/app/admin/discounts'
-      preLoaderRoute: typeof SignedInAppAdminDiscountsRouteImport
-      parentRoute: typeof SignedInAppAdminRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppAdminDiscountsRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRouteRoute
     }
-    '/_signed-in/app/admin/refunds': {
-      id: '/_signed-in/app/admin/refunds'
+    '/_authenticated/app/admin/refunds': {
+      id: '/_authenticated/app/admin/refunds'
       path: '/refunds'
       fullPath: '/app/admin/refunds'
-      preLoaderRoute: typeof SignedInAppAdminRefundsRouteImport
-      parentRoute: typeof SignedInAppAdminRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppAdminRefundsRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRouteRoute
     }
-    '/_signed-in/app/admin/reviews': {
-      id: '/_signed-in/app/admin/reviews'
+    '/_authenticated/app/admin/reviews': {
+      id: '/_authenticated/app/admin/reviews'
       path: '/reviews'
       fullPath: '/app/admin/reviews'
-      preLoaderRoute: typeof SignedInAppAdminReviewsRouteImport
-      parentRoute: typeof SignedInAppAdminRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppAdminReviewsRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRouteRoute
     }
-    '/_signed-in/app/admin/venues': {
-      id: '/_signed-in/app/admin/venues'
+    '/_authenticated/app/admin/venues': {
+      id: '/_authenticated/app/admin/venues'
       path: '/venues'
       fullPath: '/app/admin/venues'
-      preLoaderRoute: typeof SignedInAppAdminVenuesRouteImport
-      parentRoute: typeof SignedInAppAdminRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppAdminVenuesRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRouteRoute
     }
-    '/_signed-in/app/payment/$bookingId': {
-      id: '/_signed-in/app/payment/$bookingId'
+    '/_authenticated/app/payment/$bookingId': {
+      id: '/_authenticated/app/payment/$bookingId'
       path: '/payment/$bookingId'
       fullPath: '/app/payment/$bookingId'
-      preLoaderRoute: typeof SignedInAppPaymentBookingIdRouteImport
-      parentRoute: typeof SignedInAppRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppPaymentBookingIdRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/_signed-in/app/venue/': {
-      id: '/_signed-in/app/venue/'
+    '/_authenticated/app/venue/': {
+      id: '/_authenticated/app/venue/'
       path: '/venue'
       fullPath: '/app/venue/'
-      preLoaderRoute: typeof SignedInAppVenueIndexRouteImport
-      parentRoute: typeof SignedInAppRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppVenueIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/_signed-in/app/venue/$venueId': {
-      id: '/_signed-in/app/venue/$venueId'
+    '/_authenticated/app/venue/$venueId': {
+      id: '/_authenticated/app/venue/$venueId'
       path: '/venue/$venueId'
       fullPath: '/app/venue/$venueId'
-      preLoaderRoute: typeof SignedInAppVenueVenueIdRouteRouteImport
-      parentRoute: typeof SignedInAppRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppVenueVenueIdRouteRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
-    '/_signed-in/app/venue/$venueId/': {
-      id: '/_signed-in/app/venue/$venueId/'
+    '/_authenticated/app/venue/$venueId/': {
+      id: '/_authenticated/app/venue/$venueId/'
       path: '/'
       fullPath: '/app/venue/$venueId/'
-      preLoaderRoute: typeof SignedInAppVenueVenueIdIndexRouteImport
-      parentRoute: typeof SignedInAppVenueVenueIdRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppVenueVenueIdIndexRouteImport
+      parentRoute: typeof AuthenticatedAppVenueVenueIdRouteRoute
     }
-    '/_signed-in/app/venue/$venueId/analytics': {
-      id: '/_signed-in/app/venue/$venueId/analytics'
+    '/_authenticated/app/venue/$venueId/analytics': {
+      id: '/_authenticated/app/venue/$venueId/analytics'
       path: '/analytics'
       fullPath: '/app/venue/$venueId/analytics'
-      preLoaderRoute: typeof SignedInAppVenueVenueIdAnalyticsRouteImport
-      parentRoute: typeof SignedInAppVenueVenueIdRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppVenueVenueIdAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedAppVenueVenueIdRouteRoute
     }
-    '/_signed-in/app/venue/$venueId/courts': {
-      id: '/_signed-in/app/venue/$venueId/courts'
+    '/_authenticated/app/venue/$venueId/courts': {
+      id: '/_authenticated/app/venue/$venueId/courts'
       path: '/courts'
       fullPath: '/app/venue/$venueId/courts'
-      preLoaderRoute: typeof SignedInAppVenueVenueIdCourtsRouteImport
-      parentRoute: typeof SignedInAppVenueVenueIdRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppVenueVenueIdCourtsRouteImport
+      parentRoute: typeof AuthenticatedAppVenueVenueIdRouteRoute
     }
-    '/_signed-in/app/venue/$venueId/customers': {
-      id: '/_signed-in/app/venue/$venueId/customers'
+    '/_authenticated/app/venue/$venueId/customers': {
+      id: '/_authenticated/app/venue/$venueId/customers'
       path: '/customers'
       fullPath: '/app/venue/$venueId/customers'
-      preLoaderRoute: typeof SignedInAppVenueVenueIdCustomersRouteImport
-      parentRoute: typeof SignedInAppVenueVenueIdRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppVenueVenueIdCustomersRouteImport
+      parentRoute: typeof AuthenticatedAppVenueVenueIdRouteRoute
     }
-    '/_signed-in/app/venue/$venueId/manage': {
-      id: '/_signed-in/app/venue/$venueId/manage'
+    '/_authenticated/app/venue/$venueId/manage': {
+      id: '/_authenticated/app/venue/$venueId/manage'
       path: '/manage'
       fullPath: '/app/venue/$venueId/manage'
-      preLoaderRoute: typeof SignedInAppVenueVenueIdManageRouteImport
-      parentRoute: typeof SignedInAppVenueVenueIdRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppVenueVenueIdManageRouteImport
+      parentRoute: typeof AuthenticatedAppVenueVenueIdRouteRoute
     }
-    '/_signed-in/app/venue/$venueId/messages': {
-      id: '/_signed-in/app/venue/$venueId/messages'
+    '/_authenticated/app/venue/$venueId/messages': {
+      id: '/_authenticated/app/venue/$venueId/messages'
       path: '/messages'
       fullPath: '/app/venue/$venueId/messages'
-      preLoaderRoute: typeof SignedInAppVenueVenueIdMessagesRouteImport
-      parentRoute: typeof SignedInAppVenueVenueIdRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppVenueVenueIdMessagesRouteImport
+      parentRoute: typeof AuthenticatedAppVenueVenueIdRouteRoute
     }
-    '/_signed-in/app/venue/$venueId/schedule': {
-      id: '/_signed-in/app/venue/$venueId/schedule'
+    '/_authenticated/app/venue/$venueId/schedule': {
+      id: '/_authenticated/app/venue/$venueId/schedule'
       path: '/schedule'
       fullPath: '/app/venue/$venueId/schedule'
-      preLoaderRoute: typeof SignedInAppVenueVenueIdScheduleRouteImport
-      parentRoute: typeof SignedInAppVenueVenueIdRouteRoute
+      preLoaderRoute: typeof AuthenticatedAppVenueVenueIdScheduleRouteImport
+      parentRoute: typeof AuthenticatedAppVenueVenueIdRouteRoute
     }
   }
 }
@@ -756,124 +763,122 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
-interface SignedInAppAdminRouteRouteChildren {
-  SignedInAppAdminApprovalsRoute: typeof SignedInAppAdminApprovalsRoute
-  SignedInAppAdminBookingsRoute: typeof SignedInAppAdminBookingsRoute
-  SignedInAppAdminComplaintsRoute: typeof SignedInAppAdminComplaintsRoute
-  SignedInAppAdminDiscountsRoute: typeof SignedInAppAdminDiscountsRoute
-  SignedInAppAdminRefundsRoute: typeof SignedInAppAdminRefundsRoute
-  SignedInAppAdminReviewsRoute: typeof SignedInAppAdminReviewsRoute
-  SignedInAppAdminVenuesRoute: typeof SignedInAppAdminVenuesRoute
-  SignedInAppAdminIndexRoute: typeof SignedInAppAdminIndexRoute
+interface AuthenticatedAppAdminRouteRouteChildren {
+  AuthenticatedAppAdminApprovalsRoute: typeof AuthenticatedAppAdminApprovalsRoute
+  AuthenticatedAppAdminBookingsRoute: typeof AuthenticatedAppAdminBookingsRoute
+  AuthenticatedAppAdminComplaintsRoute: typeof AuthenticatedAppAdminComplaintsRoute
+  AuthenticatedAppAdminDiscountsRoute: typeof AuthenticatedAppAdminDiscountsRoute
+  AuthenticatedAppAdminRefundsRoute: typeof AuthenticatedAppAdminRefundsRoute
+  AuthenticatedAppAdminReviewsRoute: typeof AuthenticatedAppAdminReviewsRoute
+  AuthenticatedAppAdminVenuesRoute: typeof AuthenticatedAppAdminVenuesRoute
+  AuthenticatedAppAdminIndexRoute: typeof AuthenticatedAppAdminIndexRoute
 }
 
-const SignedInAppAdminRouteRouteChildren: SignedInAppAdminRouteRouteChildren = {
-  SignedInAppAdminApprovalsRoute: SignedInAppAdminApprovalsRoute,
-  SignedInAppAdminBookingsRoute: SignedInAppAdminBookingsRoute,
-  SignedInAppAdminComplaintsRoute: SignedInAppAdminComplaintsRoute,
-  SignedInAppAdminDiscountsRoute: SignedInAppAdminDiscountsRoute,
-  SignedInAppAdminRefundsRoute: SignedInAppAdminRefundsRoute,
-  SignedInAppAdminReviewsRoute: SignedInAppAdminReviewsRoute,
-  SignedInAppAdminVenuesRoute: SignedInAppAdminVenuesRoute,
-  SignedInAppAdminIndexRoute: SignedInAppAdminIndexRoute,
-}
-
-const SignedInAppAdminRouteRouteWithChildren =
-  SignedInAppAdminRouteRoute._addFileChildren(
-    SignedInAppAdminRouteRouteChildren,
-  )
-
-interface SignedInAppVenueVenueIdRouteRouteChildren {
-  SignedInAppVenueVenueIdAnalyticsRoute: typeof SignedInAppVenueVenueIdAnalyticsRoute
-  SignedInAppVenueVenueIdCourtsRoute: typeof SignedInAppVenueVenueIdCourtsRoute
-  SignedInAppVenueVenueIdCustomersRoute: typeof SignedInAppVenueVenueIdCustomersRoute
-  SignedInAppVenueVenueIdManageRoute: typeof SignedInAppVenueVenueIdManageRoute
-  SignedInAppVenueVenueIdMessagesRoute: typeof SignedInAppVenueVenueIdMessagesRoute
-  SignedInAppVenueVenueIdScheduleRoute: typeof SignedInAppVenueVenueIdScheduleRoute
-  SignedInAppVenueVenueIdIndexRoute: typeof SignedInAppVenueVenueIdIndexRoute
-}
-
-const SignedInAppVenueVenueIdRouteRouteChildren: SignedInAppVenueVenueIdRouteRouteChildren =
+const AuthenticatedAppAdminRouteRouteChildren: AuthenticatedAppAdminRouteRouteChildren =
   {
-    SignedInAppVenueVenueIdAnalyticsRoute:
-      SignedInAppVenueVenueIdAnalyticsRoute,
-    SignedInAppVenueVenueIdCourtsRoute: SignedInAppVenueVenueIdCourtsRoute,
-    SignedInAppVenueVenueIdCustomersRoute:
-      SignedInAppVenueVenueIdCustomersRoute,
-    SignedInAppVenueVenueIdManageRoute: SignedInAppVenueVenueIdManageRoute,
-    SignedInAppVenueVenueIdMessagesRoute: SignedInAppVenueVenueIdMessagesRoute,
-    SignedInAppVenueVenueIdScheduleRoute: SignedInAppVenueVenueIdScheduleRoute,
-    SignedInAppVenueVenueIdIndexRoute: SignedInAppVenueVenueIdIndexRoute,
+    AuthenticatedAppAdminApprovalsRoute: AuthenticatedAppAdminApprovalsRoute,
+    AuthenticatedAppAdminBookingsRoute: AuthenticatedAppAdminBookingsRoute,
+    AuthenticatedAppAdminComplaintsRoute: AuthenticatedAppAdminComplaintsRoute,
+    AuthenticatedAppAdminDiscountsRoute: AuthenticatedAppAdminDiscountsRoute,
+    AuthenticatedAppAdminRefundsRoute: AuthenticatedAppAdminRefundsRoute,
+    AuthenticatedAppAdminReviewsRoute: AuthenticatedAppAdminReviewsRoute,
+    AuthenticatedAppAdminVenuesRoute: AuthenticatedAppAdminVenuesRoute,
+    AuthenticatedAppAdminIndexRoute: AuthenticatedAppAdminIndexRoute,
   }
 
-const SignedInAppVenueVenueIdRouteRouteWithChildren =
-  SignedInAppVenueVenueIdRouteRoute._addFileChildren(
-    SignedInAppVenueVenueIdRouteRouteChildren,
+const AuthenticatedAppAdminRouteRouteWithChildren =
+  AuthenticatedAppAdminRouteRoute._addFileChildren(
+    AuthenticatedAppAdminRouteRouteChildren,
   )
 
-interface SignedInAppRouteRouteChildren {
-  SignedInAppAdminRouteRoute: typeof SignedInAppAdminRouteRouteWithChildren
-  SignedInAppBookRoute: typeof SignedInAppBookRoute
-  SignedInAppBookingsRoute: typeof SignedInAppBookingsRoute
-  SignedInAppChatRoute: typeof SignedInAppChatRoute
-  SignedInAppPlayRoute: typeof SignedInAppPlayRoute
-  SignedInAppIndexRoute: typeof SignedInAppIndexRoute
-  SignedInAppVenueVenueIdRouteRoute: typeof SignedInAppVenueVenueIdRouteRouteWithChildren
-  SignedInAppPaymentBookingIdRoute: typeof SignedInAppPaymentBookingIdRoute
-  SignedInAppVenueIndexRoute: typeof SignedInAppVenueIndexRoute
+interface AuthenticatedAppVenueVenueIdRouteRouteChildren {
+  AuthenticatedAppVenueVenueIdAnalyticsRoute: typeof AuthenticatedAppVenueVenueIdAnalyticsRoute
+  AuthenticatedAppVenueVenueIdCourtsRoute: typeof AuthenticatedAppVenueVenueIdCourtsRoute
+  AuthenticatedAppVenueVenueIdCustomersRoute: typeof AuthenticatedAppVenueVenueIdCustomersRoute
+  AuthenticatedAppVenueVenueIdManageRoute: typeof AuthenticatedAppVenueVenueIdManageRoute
+  AuthenticatedAppVenueVenueIdMessagesRoute: typeof AuthenticatedAppVenueVenueIdMessagesRoute
+  AuthenticatedAppVenueVenueIdScheduleRoute: typeof AuthenticatedAppVenueVenueIdScheduleRoute
+  AuthenticatedAppVenueVenueIdIndexRoute: typeof AuthenticatedAppVenueVenueIdIndexRoute
 }
 
-const SignedInAppRouteRouteChildren: SignedInAppRouteRouteChildren = {
-  SignedInAppAdminRouteRoute: SignedInAppAdminRouteRouteWithChildren,
-  SignedInAppBookRoute: SignedInAppBookRoute,
-  SignedInAppBookingsRoute: SignedInAppBookingsRoute,
-  SignedInAppChatRoute: SignedInAppChatRoute,
-  SignedInAppPlayRoute: SignedInAppPlayRoute,
-  SignedInAppIndexRoute: SignedInAppIndexRoute,
-  SignedInAppVenueVenueIdRouteRoute:
-    SignedInAppVenueVenueIdRouteRouteWithChildren,
-  SignedInAppPaymentBookingIdRoute: SignedInAppPaymentBookingIdRoute,
-  SignedInAppVenueIndexRoute: SignedInAppVenueIndexRoute,
+const AuthenticatedAppVenueVenueIdRouteRouteChildren: AuthenticatedAppVenueVenueIdRouteRouteChildren =
+  {
+    AuthenticatedAppVenueVenueIdAnalyticsRoute:
+      AuthenticatedAppVenueVenueIdAnalyticsRoute,
+    AuthenticatedAppVenueVenueIdCourtsRoute:
+      AuthenticatedAppVenueVenueIdCourtsRoute,
+    AuthenticatedAppVenueVenueIdCustomersRoute:
+      AuthenticatedAppVenueVenueIdCustomersRoute,
+    AuthenticatedAppVenueVenueIdManageRoute:
+      AuthenticatedAppVenueVenueIdManageRoute,
+    AuthenticatedAppVenueVenueIdMessagesRoute:
+      AuthenticatedAppVenueVenueIdMessagesRoute,
+    AuthenticatedAppVenueVenueIdScheduleRoute:
+      AuthenticatedAppVenueVenueIdScheduleRoute,
+    AuthenticatedAppVenueVenueIdIndexRoute:
+      AuthenticatedAppVenueVenueIdIndexRoute,
+  }
+
+const AuthenticatedAppVenueVenueIdRouteRouteWithChildren =
+  AuthenticatedAppVenueVenueIdRouteRoute._addFileChildren(
+    AuthenticatedAppVenueVenueIdRouteRouteChildren,
+  )
+
+interface AuthenticatedAppRouteRouteChildren {
+  AuthenticatedAppAdminRouteRoute: typeof AuthenticatedAppAdminRouteRouteWithChildren
+  AuthenticatedAppBookRoute: typeof AuthenticatedAppBookRoute
+  AuthenticatedAppBookingsRoute: typeof AuthenticatedAppBookingsRoute
+  AuthenticatedAppChatRoute: typeof AuthenticatedAppChatRoute
+  AuthenticatedAppPlayRoute: typeof AuthenticatedAppPlayRoute
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppVenueVenueIdRouteRoute: typeof AuthenticatedAppVenueVenueIdRouteRouteWithChildren
+  AuthenticatedAppPaymentBookingIdRoute: typeof AuthenticatedAppPaymentBookingIdRoute
+  AuthenticatedAppVenueIndexRoute: typeof AuthenticatedAppVenueIndexRoute
 }
 
-const SignedInAppRouteRouteWithChildren =
-  SignedInAppRouteRoute._addFileChildren(SignedInAppRouteRouteChildren)
-
-interface SignedInRouteChildren {
-  SignedInAppRouteRoute: typeof SignedInAppRouteRouteWithChildren
-  SignedInAssessmentRoute: typeof SignedInAssessmentRoute
-  SignedInOnboardingRoute: typeof SignedInOnboardingRoute
-  SignedInSetupRoute: typeof SignedInSetupRoute
+const AuthenticatedAppRouteRouteChildren: AuthenticatedAppRouteRouteChildren = {
+  AuthenticatedAppAdminRouteRoute: AuthenticatedAppAdminRouteRouteWithChildren,
+  AuthenticatedAppBookRoute: AuthenticatedAppBookRoute,
+  AuthenticatedAppBookingsRoute: AuthenticatedAppBookingsRoute,
+  AuthenticatedAppChatRoute: AuthenticatedAppChatRoute,
+  AuthenticatedAppPlayRoute: AuthenticatedAppPlayRoute,
+  AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppVenueVenueIdRouteRoute:
+    AuthenticatedAppVenueVenueIdRouteRouteWithChildren,
+  AuthenticatedAppPaymentBookingIdRoute: AuthenticatedAppPaymentBookingIdRoute,
+  AuthenticatedAppVenueIndexRoute: AuthenticatedAppVenueIndexRoute,
 }
 
-const SignedInRouteChildren: SignedInRouteChildren = {
-  SignedInAppRouteRoute: SignedInAppRouteRouteWithChildren,
-  SignedInAssessmentRoute: SignedInAssessmentRoute,
-  SignedInOnboardingRoute: SignedInOnboardingRoute,
-  SignedInSetupRoute: SignedInSetupRoute,
+const AuthenticatedAppRouteRouteWithChildren =
+  AuthenticatedAppRouteRoute._addFileChildren(
+    AuthenticatedAppRouteRouteChildren,
+  )
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAppRouteRoute: typeof AuthenticatedAppRouteRouteWithChildren
+  AuthenticatedAssessmentRoute: typeof AuthenticatedAssessmentRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
 }
 
-const SignedInRouteWithChildren = SignedInRoute._addFileChildren(
-  SignedInRouteChildren,
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAppRouteRoute: AuthenticatedAppRouteRouteWithChildren,
+  AuthenticatedAssessmentRoute: AuthenticatedAssessmentRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedSetupRoute: AuthenticatedSetupRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
-  SignedInRoute: SignedInRouteWithChildren,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   SsoCallbackRoute: SsoCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

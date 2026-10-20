@@ -25,6 +25,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { ChevronDownIcon, SearchIcon, CheckIcon } from "lucide-react"
+import { cva, type VariantProps } from "class-variance-authority"
 
 function Select<T extends object, M extends "single" | "multiple" = "single">({
   className,
@@ -74,20 +75,41 @@ function SelectValue<T extends object>({
   )
 }
 
+const selectTriggerSurfaceVariants = cva("", {
+  variants: {
+    surface: {
+      default: "",
+      field: "rounded-xl border-line-strong bg-white text-xs",
+    },
+    elevation: {
+      flat: "",
+      raised: "shadow-sm",
+    },
+  },
+  defaultVariants: {
+    surface: "default",
+    elevation: "flat",
+  },
+})
+
 function SelectTrigger({
   className,
   size = "default",
+  surface,
+  elevation,
   children,
   ...props
-}: Omit<React.ComponentProps<typeof ButtonPrimitive>, "children"> & {
-  children?: React.ReactNode
-  size?: "sm" | "default"
-}) {
+}: Omit<React.ComponentProps<typeof ButtonPrimitive>, "children"> &
+  VariantProps<typeof selectTriggerSurfaceVariants> & {
+    children?: React.ReactNode
+    size?: "sm" | "default"
+  }) {
   return (
     <ButtonPrimitive
       data-slot="select-trigger"
       data-size={size}
       className={cn(
+        selectTriggerSurfaceVariants({ surface, elevation }),
         "flex w-full items-center justify-between gap-1.5 rounded-3xl border border-transparent bg-input/50 px-3 py-2 text-sm whitespace-nowrap transition-[color,box-shadow,background-color] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}

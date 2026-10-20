@@ -1,6 +1,6 @@
 import { getToken } from "@clerk/react"
 
-import { API_URL } from "@/env"
+import { API_URL } from "@/lib/env"
 
 export { API_URL }
 

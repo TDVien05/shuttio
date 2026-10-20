@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 
-import { AdminSignInForm } from "@/features/auth/admin-sign-in-form"
+import { AdminSignInForm } from "@/features/auth/components/admin-sign-in-form"
 import { pageTitle } from "@/lib/head"
 import { m } from "@/paraglide/messages"
 

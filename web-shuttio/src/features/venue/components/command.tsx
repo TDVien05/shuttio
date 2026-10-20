@@ -1,0 +1,390 @@
+import { formatVndText } from "@/lib/money"
+import { getLocale } from "@/paraglide/runtime"
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  CalendarPlus,
+  CircleDollarSign,
+  Clock,
+  LayoutGrid,
+  UserCheck,
+  Users,
+  Wrench,
+} from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { LinkButton } from "@/components/ui/button"
+import { useVenueData } from "@/features/venue/components/venue-data-provider"
+import { SportTag } from "@/features/dashboard/components/shared"
+import { useVenue } from "@/features/venue/components/venue-provider"
+import { venueBase } from "@/features/venue/nav"
+import {
+  MicroLabel,
+  Ring,
+  Sparkline,
+  VenueEmpty,
+  VenuePanel,
+  VenueStat,
+} from "@/features/venue/components/shared"
+import { courtStateAccent, locStr } from "@/lib/shared"
+import type { CourtState, Reservation } from "@/lib/shared"
+import { m } from "@/paraglide/messages"
+
+export function VenueCommandView() {
+  const locale = getLocale()
+  const {
+    revenueSeries: REVENUE_SERIES,
+    reservations: RESERVATIONS,
+    venue: VENUE,
+    venueCourts: VENUE_COURTS,
+  } = useVenueData()
+  const { stats } = useVenue()
+
+  // Today's arrivals still to come through the door.
+  const arrivals = RESERVATIONS.filter(
+    (r) =>
+      r.day.en === "Today" &&
+      (r.status === "confirmed" || r.status === "checked-in")
+  )
+
+  const revenueValues = REVENUE_SERIES.map((d) => d.value)
+  const todayIdx = REVENUE_SERIES.length - 1
+  const todayRevenue = REVENUE_SERIES[todayIdx]?.value ?? 0
+
+  const courtStateLabel: Record<CourtState, string> = {
+    "in-play": m.venue_command_state_in_play(),
+    upcoming: m.venue_command_state_upcoming(),
+    available: m.venue_command_state_available(),
+    maintenance: m.venue_command_state_maintenance(),
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <div>
+        <h1 className="font-heading text-3xl font-bold tracking-tight">
+          {m.venue_command_greeting({ manager: VENUE.manager.name })}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {m.venue_command_subtitle({ venue: VENUE.name })}
+        </p>
+        <p className="mt-2 inline-flex items-center gap-1.5 font-mono text-mini tracking-wider text-muted-foreground uppercase">
+          <span className="relative flex size-2">
+            <span className="animate-pulse-ring absolute inline-flex size-full rounded-full bg-brand/60" />
+            <span className="relative inline-flex size-2 rounded-full bg-brand" />
+          </span>
+          {m.venue_command_as_of({ time: VENUE.now })}
+        </p>
+      </div>
+
+      {/* ── Archived banner ───────────────────────────────────────── */}
+      {VENUE.archived ? (
+        <div className="flex flex-col gap-3 rounded-3xl bg-amber-500/10 px-4 py-3 ring-1 ring-amber-500/30 sm:flex-row sm:items-center sm:justify-between">
+          <span className="inline-flex items-start gap-2 text-sm text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            {m.venue_manage_archived_banner_title()}
+          </span>
+          <LinkButton
+            shape="pill"
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            href={`${venueBase(VENUE.id)}/manage`}
+          >
+            {m.venue_manage_restore_venue_button()}
+          </LinkButton>
+        </div>
+      ) : null}
+
+      {/* ── Admin approval banner ─────────────────────────────────── */}
+      {VENUE.approval === "pending" || VENUE.approval === "rejected" ? (
+        <div className="flex flex-col gap-1 rounded-3xl bg-amber-500/10 px-4 py-3 ring-1 ring-amber-500/30">
+          <span className="inline-flex items-start gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            {VENUE.approval === "pending"
+              ? m.venue_command_approval_banner_pending_title()
+              : m.venue_command_approval_banner_rejected_title()}
+          </span>
+          <p className="pl-6 text-sm text-amber-700/90 dark:text-amber-400/90">
+            {VENUE.approval === "pending"
+              ? m.venue_command_approval_banner_pending_description()
+              : m.venue_command_approval_banner_rejected_description({
+                  reason: VENUE.approvalReason ?? "—",
+                })}
+          </p>
+        </div>
+      ) : null}
+
+      {/* ── KPI row ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <VenueStat
+          label={m.venue_command_kpi_occupancy()}
+          value={String(stats.occupancy)}
+          unit="%"
+          delta={stats.occupancyDelta}
+          deltaSuffix="%"
+          icon={LayoutGrid}
+        />
+        <VenueStat
+          label={m.venue_command_kpi_revenue_today()}
+          value={formatVndText(stats.revenueToday)}
+          delta={stats.revenueDelta}
+          deltaSuffix="%"
+          icon={CircleDollarSign}
+        />
+        <VenueStat
+          label={m.venue_command_kpi_bookings_today()}
+          value={String(stats.bookingsToday)}
+          delta={stats.bookingsDelta}
+          icon={CalendarPlus}
+        />
+        <VenueStat
+          label={m.venue_command_kpi_no_show_rate()}
+          value={String(stats.noShowRate)}
+          unit="%"
+          delta={stats.noShowDelta}
+          deltaSuffix="%"
+          invert
+          icon={UserCheck}
+        />
+      </div>
+
+      {/* ── Courts now (signature hero) ────────────────────────────── */}
+      <section className="relative overflow-hidden rounded-4xl bg-card shadow-md ring-1 ring-foreground/5 dark:ring-foreground/10">
+        <div
+          aria-hidden
+          className="bg-court-lines pointer-events-none absolute inset-0 mask-venue-fade opacity-70"
+        />
+        <div className="absolute -top-16 -right-16 size-48 rounded-full bg-brand/15 blur-3xl" />
+        <div className="relative flex flex-col gap-5 p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <h2 className="inline-flex items-center gap-2 font-heading text-base font-semibold">
+                <LayoutGrid className="size-4 text-muted-foreground" />
+                {m.venue_command_courts_now()}
+              </h2>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end">
+                <MicroLabel>{m.venue_command_live_occupancy()}</MicroLabel>
+                <span className="mt-1 text-xs text-muted-foreground tabular-nums">
+                  {m.venue_command_courts_live({
+                    live: VENUE_COURTS.filter((c) => c.state === "in-play")
+                      .length,
+                    total: VENUE_COURTS.length,
+                  })}
+                </span>
+              </div>
+              <Ring pct={stats.occupancy} size={84} thickness={9}>
+                <div className="text-center leading-none">
+                  <span className="font-heading text-xl font-bold tabular-nums">
+                    {stats.occupancy}
+                  </span>
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
+              </Ring>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {VENUE_COURTS.map((court) => {
+              const live = court.state === "in-play"
+              return (
+                <div
+                  key={court.id}
+                  className={cn(
+                    "flex flex-col gap-3 rounded-3xl bg-background/60 p-4 ring-1 backdrop-blur-sm transition-colors",
+                    live
+                      ? "ring-brand/25"
+                      : "ring-foreground/5 dark:ring-foreground/10"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-heading text-sm font-semibold">
+                      {court.name}
+                    </span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-mini font-medium",
+                        courtStateAccent[court.state]
+                      )}
+                    >
+                      {live ? (
+                        <span className="relative flex size-1.5">
+                          <span className="animate-pulse-ring absolute inline-flex size-full rounded-full bg-brand/60" />
+                          <span className="relative inline-flex size-1.5 rounded-full bg-brand" />
+                        </span>
+                      ) : court.state === "maintenance" ? (
+                        <Wrench className="size-3" />
+                      ) : null}
+                      {courtStateLabel[court.state]}
+                    </span>
+                  </div>
+                  <SportTag sport={court.sport} />
+                  <div className="mt-auto min-h-9 border-t border-border/60 pt-2">
+                    {court.state === "maintenance" ? (
+                      <p className="text-xs text-destructive">
+                        {m.venue_command_court_maintenance()}
+                      </p>
+                    ) : court.occupant ? (
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="truncate font-medium">
+                          {court.occupant}
+                        </span>
+                        <span className="inline-flex shrink-0 items-center gap-1 font-mono text-muted-foreground tabular-nums">
+                          <Clock className="size-3" />
+                          {court.state === "upcoming"
+                            ? m.venue_command_court_from({
+                                time: court.until ?? "",
+                              })
+                            : m.venue_command_court_until({
+                                time: court.until ?? "",
+                              })}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {m.venue_command_court_open()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Arrivals + revenue ─────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <VenuePanel
+          title={m.venue_command_upcoming_arrivals()}
+          icon={Users}
+          action={
+            <LinkButton
+              shape="pill"
+              variant="ghost"
+              size="sm"
+
+              href={`${venueBase(VENUE.id)}/schedule?tab=reservations`}
+            >
+              {m.venue_command_see_all()}
+            </LinkButton>
+          }
+        >
+          {arrivals.length ? (
+            <div className="flex flex-col gap-1">
+              {arrivals.map((rv) => (
+                <ArrivalRow key={rv.id} rv={rv} />
+              ))}
+            </div>
+          ) : (
+            <VenueEmpty text={m.venue_command_empty_arrivals()} />
+          )}
+        </VenuePanel>
+
+        <VenuePanel
+          title={m.venue_command_revenue_week()}
+          icon={CircleDollarSign}
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex items-end justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <MicroLabel>{m.venue_command_today()}</MicroLabel>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="font-heading text-4xl leading-none font-bold tracking-tight tabular-nums">
+                    {formatVndText(todayRevenue)}
+                  </span>
+                  <RevenueDelta delta={stats.revenueDelta} />
+                </div>
+              </div>
+              <Ring pct={stats.utilization} size={64} thickness={7}>
+                <span className="font-heading text-sm font-bold tabular-nums">
+                  {stats.utilization}%
+                </span>
+              </Ring>
+            </div>
+
+            <Sparkline values={revenueValues} className="h-10" />
+
+            <div className="flex items-center justify-between">
+              {REVENUE_SERIES.map((d, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "font-mono text-micro tabular-nums",
+                    i === todayIdx
+                      ? "font-bold text-brand"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {locStr(d.label, locale)}
+                </span>
+              ))}
+            </div>
+
+            <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
+              {m.venue_command_revenue_caption({ util: stats.utilization })}
+            </p>
+          </div>
+        </VenuePanel>
+      </div>
+    </div>
+  )
+}
+
+/** Signed week-over-week revenue delta chip. */
+function RevenueDelta({ delta }: { delta: number }) {
+  const up = delta >= 0
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 text-xs font-semibold tabular-nums",
+        up ? "text-brand" : "text-destructive"
+      )}
+    >
+      {up ? (
+        <ArrowUpRight className="size-3.5" />
+      ) : (
+        <ArrowDownRight className="size-3.5" />
+      )}
+      {up ? "+" : ""}
+      {delta}%
+    </span>
+  )
+}
+
+/** One upcoming-arrival line. Players pay up front, so there is nothing to check in. */
+function ArrivalRow({ rv }: { rv: Reservation }) {
+  return (
+    <div className="flex items-center gap-3 rounded-3xl p-2 transition-colors hover:bg-muted/60">
+      <Avatar>
+        <AvatarFallback tone="secondary" size="xs" weight="medium">
+          {rv.customer.initials}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-medium">{rv.customer.name}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 truncate text-xs text-muted-foreground">
+          <SportTag sport={rv.sport} />
+          <span aria-hidden>·</span>
+          <span>{rv.court}</span>
+          <span aria-hidden>·</span>
+          <span className="inline-flex items-center gap-0.5">
+            <Users className="size-3" />
+            {rv.party}
+          </span>
+        </div>
+      </div>
+      <div className="text-right">
+        <span className="font-mono text-xs text-muted-foreground tabular-nums">
+          {rv.time.split(" – ")[0]}
+        </span>
+      </div>
+    </div>
+  )
+}

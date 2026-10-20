@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 import {
   Cell as CellPrimitive,
@@ -70,38 +71,123 @@ function TableFooter<T>({ className, ...props }: TableFooterProps<T>) {
   )
 }
 
-function TableRow<T>({ className, ...props }: RowProps<T>) {
+const tableRowVariants = cva(
+  "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted data-selected:bg-muted",
+  {
+    variants: {
+      hover: {
+        default: "",
+        none: "hover:bg-transparent",
+        subtle: "hover:bg-muted/40",
+      },
+    },
+    defaultVariants: { hover: "default" },
+  }
+)
+
+function TableRow<T>({
+  className,
+  hover,
+  ...props
+}: RowProps<T> & VariantProps<typeof tableRowVariants>) {
   return (
     <RowPrimitive
       data-slot="table-row"
-      className={cn(
-        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted data-selected:bg-muted",
-        className
-      )}
+      className={cn(tableRowVariants({ hover }), className)}
       {...props}
     />
   )
 }
 
-function TableHead({ className, ...props }: ColumnProps) {
+const tableHeadVariants = cva(
+  "h-12 px-3 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([data-slot=checkbox])]:pr-0 [&:has([role=checkbox])]:pr-0",
+  {
+    variants: {
+      density: {
+        default: "",
+        compact: "h-10 px-4 py-2",
+      },
+      align: {
+        left: "",
+        right: "text-right",
+      },
+    },
+    defaultVariants: { density: "default", align: "left" },
+  }
+)
+
+function TableHead({
+  className,
+  density,
+  align,
+  ...props
+}: ColumnProps & VariantProps<typeof tableHeadVariants>) {
   return (
     <ColumnPrimitive
       data-slot="table-head"
-      className={cn(
-        "h-12 px-3 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([data-slot=checkbox])]:pr-0 [&:has([role=checkbox])]:pr-0",
-        className
-      )}
+      className={cn(tableHeadVariants({ density, align }), className)}
       {...props}
     />
   )
 }
 
-function TableCell({ className, ...props }: CellProps) {
+const tableCellVariants = cva(
+  "p-3 align-middle whitespace-nowrap [&:has([data-slot=checkbox])]:pr-0 [&:has([role=checkbox])]:pr-0",
+  {
+    variants: {
+      density: {
+        default: "",
+        roomy: "px-4 py-3",
+      },
+      align: {
+        left: "",
+        right: "text-right",
+      },
+      size: {
+        default: "",
+        sm: "text-sm",
+      },
+      numeric: {
+        no: "",
+        yes: "tabular-nums",
+      },
+      tone: {
+        default: "",
+        muted: "text-muted-foreground",
+        strong: "text-foreground",
+      },
+      weight: {
+        default: "",
+        medium: "font-medium",
+        semibold: "font-semibold",
+      },
+    },
+    defaultVariants: {
+      density: "default",
+      align: "left",
+      size: "default",
+      numeric: "no",
+      tone: "default",
+      weight: "default",
+    },
+  }
+)
+
+function TableCell({
+  className,
+  density,
+  align,
+  size,
+  numeric,
+  tone,
+  weight,
+  ...props
+}: CellProps & VariantProps<typeof tableCellVariants>) {
   return (
     <CellPrimitive
       data-slot="table-cell"
       className={cn(
-        "p-3 align-middle whitespace-nowrap [&:has([data-slot=checkbox])]:pr-0 [&:has([role=checkbox])]:pr-0",
+        tableCellVariants({ density, align, size, numeric, tone, weight }),
         className
       )}
       {...props}

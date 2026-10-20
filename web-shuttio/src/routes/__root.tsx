@@ -12,11 +12,11 @@ import { ClerkProvider } from "@clerk/react"
 import { viVN } from "@clerk/localizations"
 import { RouterProvider } from "react-aria-components"
 
-import TanStackQueryDevtools from "../integrations/tanstack-query/devtools"
+import TanStackQueryDevtools from "../components/devtools"
 import { ThemeProvider } from "@/components/theme-provider"
-import { CLERK_PUBLISHABLE_KEY } from "@/env"
+import { CLERK_PUBLISHABLE_KEY } from "@/lib/env"
 import { m } from "@/paraglide/messages"
-import appCss from "../styles.css?url"
+import appCss from "../styles/globals.css?url"
 
 interface RouterContext {
   queryClient: QueryClient

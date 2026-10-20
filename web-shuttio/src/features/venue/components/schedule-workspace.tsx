@@ -1,0 +1,76 @@
+import * as React from "react"
+import { CalendarRange, Users } from "lucide-react"
+
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useVenueData } from "@/features/venue/components/venue-data-provider"
+import { VenueScheduleView } from "@/features/venue/components/schedule"
+import { VenueReservationsView } from "@/features/venue/components/reservations"
+import { hasOpenCancelRequest } from "@/lib/shared"
+import { m } from "@/paraglide/messages"
+
+export type ScheduleTab = "calendar" | "reservations"
+
+/**
+ * The venue "Schedule" surface. The live courts×hours grid and the list of
+ * incoming requests / holds / walk-ins are two views of the same thing — the
+ * day's bookings — so they share one section behind a segmented toggle rather
+ * than two sidebar entries. The Reservations tab carries a pending-count badge
+ * so operators still see actionable requests at a glance.
+ */
+export function VenueScheduleWorkspace({
+  initialTab = "calendar",
+  initialDay,
+}: {
+  initialTab?: ScheduleTab
+  /** Land the calendar tab's day view on this ISO date (deep link from Insights). */
+  initialDay?: string
+}) {
+  const { reservations: RESERVATIONS } = useVenueData()
+  const [tab, setTab] = React.useState<ScheduleTab>(initialTab)
+
+  // Rows waiting on the operator: approvals plus players' cancellation requests.
+  const pendingCount = RESERVATIONS.filter(
+    (r) => r.status === "pending" || hasOpenCancelRequest(r)
+  ).length
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold tracking-tight">
+            {m.venue_schedule_title()}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {m.venue_schedule_workspace_subtitle()}
+          </p>
+        </div>
+        <Tabs
+          selectedKey={tab}
+          onSelectionChange={(v) => setTab(v as ScheduleTab)}
+        >
+          <TabsList>
+            <TabsTrigger id="calendar">
+              <CalendarRange />
+              {m.venue_schedule_tabs_calendar()}
+            </TabsTrigger>
+            <TabsTrigger id="reservations">
+              <Users />
+              {m.venue_schedule_tabs_reservations()}
+              {pendingCount ? (
+                <span className="ml-1 rounded-full bg-brand/15 px-1.5 font-mono text-mini font-semibold text-brand tabular-nums">
+                  {pendingCount}
+                </span>
+              ) : null}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {tab === "calendar" ? (
+        <VenueScheduleView embedded initialDay={initialDay} />
+      ) : (
+        <VenueReservationsView embedded />
+      )}
+    </div>
+  )
+}

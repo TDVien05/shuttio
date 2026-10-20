@@ -1,4 +1,5 @@
 import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 function Avatar({
@@ -43,14 +44,49 @@ function AvatarImage({ className, ...props }: React.ComponentProps<"img">) {
   )
 }
 
-function AvatarFallback({ className, ...props }: React.ComponentProps<"div">) {
+const avatarFallbackVariants = cva(
+  "flex size-full items-center justify-center rounded-full group-data-[size=sm]/avatar:text-xs peer-data-[state=error]:flex peer-[*]:hidden",
+  {
+    variants: {
+      tone: {
+        muted: "bg-muted text-muted-foreground",
+        secondary: "bg-secondary text-secondary-foreground",
+        brand: "bg-electric text-white",
+        soft: "bg-surface-cool text-electric-deep",
+        light: "bg-white text-electric",
+      },
+      size: {
+        default: "text-sm",
+        xs: "text-xs",
+        micro: "text-micro",
+        lg: "text-lg",
+      },
+      weight: {
+        inherit: "",
+        medium: "font-medium",
+        semibold: "font-semibold",
+        bold: "font-bold",
+      },
+    },
+    defaultVariants: {
+      tone: "muted",
+      size: "default",
+      weight: "inherit",
+    },
+  }
+)
+
+function AvatarFallback({
+  className,
+  tone,
+  size,
+  weight,
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof avatarFallbackVariants>) {
   return (
     <div
       data-slot="avatar-fallback"
-      className={cn(
-        "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs peer-data-[state=error]:flex peer-[*]:hidden",
-        className
-      )}
+      className={cn(avatarFallbackVariants({ tone, size, weight }), className)}
       {...props}
     />
   )
