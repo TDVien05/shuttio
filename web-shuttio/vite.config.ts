@@ -9,6 +9,10 @@ import { nitro } from "nitro/vite"
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
+  // The build prerenders `/` against a temporary `vite preview` server. Pin
+  // it to IPv4 loopback: `localhost` can bind `::1` inside a container while
+  // the prerender `fetch` dials 127.0.0.1 (ECONNREFUSED, 0 pages prerendered).
+  preview: { host: "127.0.0.1" },
   plugins: [
     devtools(),
     paraglideVitePlugin({
