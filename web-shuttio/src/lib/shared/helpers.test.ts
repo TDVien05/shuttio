@@ -10,12 +10,13 @@ import {
   rangesOverlap,
   courtNumberFor,
   venueCourtToCourt,
-  sessionToBooking,
-  type PlaySession,
-  type Court,
-  type Venue,
-  type VenueCourt,
+  sessionToBooking
+  
+  
+  
+  
 } from "@/lib/shared"
+import type {PlaySession, Court, Venue, VenueCourt} from "@/lib/shared";
 
 describe("booking court identity", () => {
   const courts = [

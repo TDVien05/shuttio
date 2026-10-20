@@ -7,11 +7,12 @@ import {
   DialogTrigger as DialogTriggerPrimitive,
   Heading,
   ModalOverlay as ModalOverlayPrimitive,
-  Modal as ModalPrimitive,
-  type DialogProps as DialogPrimitiveProps,
-  type DialogTriggerProps as DialogTriggerPrimitiveProps,
-  type ModalOverlayProps as ModalOverlayPrimitiveProps,
+  Modal as ModalPrimitive
+  
+  
+  
 } from "react-aria-components"
+import type {DialogProps as DialogPrimitiveProps, DialogTriggerProps as DialogTriggerPrimitiveProps, ModalOverlayProps as ModalOverlayPrimitiveProps} from "react-aria-components";
 
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"

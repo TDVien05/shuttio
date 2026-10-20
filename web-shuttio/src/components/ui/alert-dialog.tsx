@@ -5,10 +5,11 @@ import {
   DialogTrigger as AlertDialogTriggerPrimitive,
   Heading,
   ModalOverlay as ModalOverlayPrimitive,
-  Modal as ModalPrimitive,
-  type DialogTriggerProps as AlertDialogTriggerPrimitiveProps,
-  type ModalOverlayProps as ModalOverlayPrimitiveProps,
+  Modal as ModalPrimitive
+  
+  
 } from "react-aria-components"
+import type {DialogTriggerProps as AlertDialogTriggerPrimitiveProps, ModalOverlayProps as ModalOverlayPrimitiveProps} from "react-aria-components";
 
 import { Button } from "@/components/ui/button"
 

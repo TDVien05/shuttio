@@ -9,15 +9,16 @@ import {
   TableBody as TableBodyPrimitive,
   TableFooter as TableFooterPrimitive,
   TableHeader as TableHeaderPrimitive,
-  Table as TablePrimitive,
-  type CellProps,
-  type ColumnProps,
-  type RowProps,
-  type TableBodyProps,
-  type TableFooterProps,
-  type TableHeaderProps,
-  type TableProps,
+  Table as TablePrimitive
+  
+  
+  
+  
+  
+  
+  
 } from "react-aria-components"
+import type {CellProps, ColumnProps, RowProps, TableBodyProps, TableFooterProps, TableHeaderProps, TableProps} from "react-aria-components";
 
 function Table({ className, ...props }: TableProps) {
   return (

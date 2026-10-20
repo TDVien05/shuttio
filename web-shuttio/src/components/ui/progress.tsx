@@ -2,10 +2,11 @@ import * as React from "react"
 import { cn } from "cn"
 import {
   Label as LabelPrimitive,
-  ProgressBar as ProgressPrimitive,
-  type LabelProps,
-  type ProgressBarProps as ProgressPrimitiveProps,
+  ProgressBar as ProgressPrimitive
+  
+  
 } from "react-aria-components"
+import type {LabelProps, ProgressBarProps as ProgressPrimitiveProps} from "react-aria-components";
 
 type ProgressContextValue = {
   percentage?: number

@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { hasCoordinates, type Coordinates } from "@/lib/shared/location"
+import { hasCoordinates  } from "@/lib/shared/location"
+import type {Coordinates} from "@/lib/shared/location";
 
 export function useUserLocation() {
   const [userLoc, setUserLoc] = React.useState<Coordinates | null>(null)
@@ -16,7 +17,7 @@ export function useUserLocation() {
         setGeoStatus("off")
         resolve(null)
       }
-      if (!navigator.geolocation) return unavailable()
+      if (!("geolocation" in navigator)) return unavailable()
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const location = {

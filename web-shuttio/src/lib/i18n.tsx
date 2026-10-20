@@ -1,6 +1,8 @@
 import * as React from "react"
 
-type Renderers = Record<string, (chunks: React.ReactNode) => React.ReactNode>
+type Renderers = Partial<
+  Record<string, (chunks: React.ReactNode) => React.ReactNode>
+>
 
 /**
  * Render a Paraglide message containing inline markup tags, e.g.

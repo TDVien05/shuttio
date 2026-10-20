@@ -1,9 +1,10 @@
 import { cn } from "cn"
 import {
   LabelContext,
-  Label as LabelPrimitive,
-  type LabelProps,
+  Label as LabelPrimitive
+  
 } from "react-aria-components"
+import type {LabelProps} from "react-aria-components";
 
 function Label({ className, htmlFor, slot, ...props }: LabelProps) {
   const label = (

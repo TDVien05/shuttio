@@ -7,12 +7,13 @@ import {
   Heading as AccordionHeaderPrimitive,
   Disclosure as AccordionItemPrimitive,
   DisclosureGroup as AccordionPrimitive,
-  Button as AccordionTriggerPrimitive,
-  type ButtonProps,
-  type DisclosureGroupProps,
-  type DisclosurePanelProps,
-  type DisclosureProps,
+  Button as AccordionTriggerPrimitive
+  
+  
+  
+  
 } from "react-aria-components"
+import type {ButtonProps, DisclosureGroupProps, DisclosurePanelProps, DisclosureProps} from "react-aria-components";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 
 function Accordion({ className, ...props }: DisclosureGroupProps) {

@@ -69,7 +69,7 @@ export function initialsOf(name: string): string {
 
 // ── Sports ───────────────────────────────────────────────────────────────────
 
-const sportBy = (k: SportKey) => SPORTS.find((s) => s.key === k)
+const sportBy = (k: string) => SPORTS.find((s) => s.key === k)
 export const sportLabel = (k: SportKey) => sportBy(k)?.label ?? k
 export const sportShort = (k: SportKey) => sportBy(k)?.short ?? "??"
 export const sportAccent = (k: SportKey) => sportBy(k)?.accent ?? "bg-muted"
@@ -598,7 +598,7 @@ export function courtDayBusy(
   raw.sort((a, b) => a.start - b.start)
   const merged: { start: number; end: number }[] = []
   for (const r of raw) {
-    const last = merged[merged.length - 1]
+    const last = merged.at(-1)
     if (last && r.start <= last.end) last.end = Math.max(last.end, r.end)
     else merged.push({ ...r })
   }
