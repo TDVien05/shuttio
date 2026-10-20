@@ -23,6 +23,10 @@ interface RouterContext {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  // Server-render only the landing page. Children inherit this decision, so
+  // `/app`, auth and every other URL are served the client-only SPA shell.
+  // (SSR is inherited: a child cannot re-enable it under a client-only parent.)
+  ssr: ({ location }) => location.pathname === "/",
   head: () => ({
     meta: [
       { charSet: "utf-8" },
