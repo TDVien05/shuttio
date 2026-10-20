@@ -1,0 +1,239 @@
+import * as React from "react"
+import Map, { Marker, NavigationControl } from "react-map-gl/mapbox"
+import type { MapRef, MarkerEvent } from "react-map-gl/mapbox"
+import { useTheme } from "next-themes"
+import { MapPin } from "lucide-react"
+
+import "mapbox-gl/dist/mapbox-gl.css"
+
+import { cn } from "@/lib/utils"
+import { formatVnd } from "@/features/dashboard/data"
+import type { Court, VenuePin } from "@/features/dashboard/data"
+
+const TOKEN = process.env.NEXT_PUBLIC_BOXMAP_TOKEN
+
+export type LatLng = { lat: number; lng: number }
+
+// Ho Chi Minh City — the camera framing before any court is picked.
+const HCMC = { longitude: 106.7009, latitude: 10.7769, zoom: 11.2 }
+
+/**
+ * The map panel of Find Courts. Each court is a price-pill marker; the active
+ * one is highlighted and labelled, and selecting a court (here or in the list)
+ * glides the camera to it. When the player shares their location it shows as a
+ * pulsing dot and the camera fits both them and the courts in view.
+ */
+// Memoized: Mapbox re-positions every Marker on each render, so a parent that
+// re-renders often (session/matchmaking ticks) would otherwise keep the main
+// thread busy and make unrelated UI (e.g. topbar popups) feel laggy. `onSelect`
+// is excluded from the comparison — callers pass inline/unstable callbacks, and
+// the latest one is read through a ref.
+export const CourtMap = React.memo(
+  CourtMapImpl,
+  (prev, next) =>
+    prev.forceDark === next.forceDark &&
+    prev.blueMarkers === next.blueMarkers &&
+    prev.courts === next.courts &&
+    prev.venues === next.venues &&
+    prev.selectedId === next.selectedId &&
+    prev.userLoc === next.userLoc
+)
+
+function CourtMapImpl({
+  forceDark = false,
+  blueMarkers = false,
+  courts,
+  venues,
+  selectedId,
+  onSelect,
+  userLoc,
+}: {
+  forceDark?: boolean
+  blueMarkers?: boolean
+  courts: (Court & LatLng)[]
+  /** One pin per branch (venue coords) — shown alongside the court price-pills. */
+  venues: (VenuePin & LatLng)[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  userLoc: LatLng | null
+}) {
+  const mapRef = React.useRef<MapRef>(null)
+  const fittedRef = React.useRef(false)
+  const { resolvedTheme } = useTheme()
+  const [hoverVenueId, setHoverVenueId] = React.useState<string | null>(null)
+  const onSelectRef = React.useRef(onSelect)
+  React.useEffect(() => {
+    onSelectRef.current = onSelect
+  })
+
+  // Glide the camera to the active court whenever the selection changes.
+  React.useEffect(() => {
+    const court = courts.find((c) => c.id === selectedId)
+    if (!court) return
+    mapRef.current?.flyTo({
+      center: [court.lng, court.lat],
+      zoom: 14,
+      duration: 1200,
+      essential: true,
+    })
+  }, [selectedId, courts])
+
+  // The first time we get a location fix, frame the player and every court +
+  // branch pin.
+  React.useEffect(() => {
+    if (!userLoc || fittedRef.current || (!courts.length && !venues.length))
+      return
+    fittedRef.current = true
+    const lngs = [
+      userLoc.lng,
+      ...courts.map((c) => c.lng),
+      ...venues.map((v) => v.lng),
+    ]
+    const lats = [
+      userLoc.lat,
+      ...courts.map((c) => c.lat),
+      ...venues.map((v) => v.lat),
+    ]
+    mapRef.current?.fitBounds(
+      [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ],
+      { padding: 72, maxZoom: 14, duration: 1000 }
+    )
+  }, [userLoc, courts, venues])
+
+  if (!TOKEN) {
+    return (
+      <div
+        className={cn(
+          "grid h-full place-items-center px-6 text-center text-sm",
+          forceDark
+            ? "bg-[#101a33] text-[#9fb0dd]"
+            : "bg-card text-muted-foreground"
+        )}
+      >
+        Set <code className="mx-1 font-mono">NEXT_PUBLIC_BOXMAP_TOKEN</code> to
+        enable the map.
+      </div>
+    )
+  }
+
+  const dark = forceDark || resolvedTheme === "dark"
+
+  return (
+    <Map
+      ref={mapRef}
+      reuseMaps
+      mapboxAccessToken={TOKEN}
+      initialViewState={HCMC}
+      mapStyle={
+        dark
+          ? "mapbox://styles/mapbox/dark-v11"
+          : "mapbox://styles/mapbox/light-v11"
+      }
+      style={{ width: "100%", height: "100%" }}
+    >
+      <NavigationControl position="top-right" showCompass={false} />
+
+      {userLoc ? (
+        <Marker longitude={userLoc.lng} latitude={userLoc.lat} anchor="center">
+          <span className="relative flex size-3.5">
+            <span className="animate-pulse-ring absolute inline-flex size-full rounded-full bg-brand/60" />
+            <span className="relative inline-flex size-3.5 rounded-full bg-brand ring-2 ring-card" />
+          </span>
+        </Marker>
+      ) : null}
+
+      {/* One pin per branch at its exact coordinates. Rendered before the court
+          price-pills so a court marker wins the z-order where they overlap. */}
+      {venues.map((v) => {
+        const hovered = v.id === hoverVenueId
+        return (
+          <Marker
+            key={`venue-${v.id}`}
+            longitude={v.lng}
+            latitude={v.lat}
+            anchor="bottom"
+            style={{ zIndex: hovered ? 2 : 1 }}
+            onClick={(e: MarkerEvent<MouseEvent>) => {
+              e.originalEvent.stopPropagation()
+              mapRef.current?.flyTo({
+                center: [v.lng, v.lat],
+                zoom: 14,
+                duration: 1000,
+                essential: true,
+              })
+            }}
+          >
+            <button
+              type="button"
+              aria-label={v.name}
+              onMouseEnter={() => setHoverVenueId(v.id)}
+              onMouseLeave={() => setHoverVenueId(null)}
+              className="flex cursor-pointer flex-col items-center"
+            >
+              {hovered ? (
+                <span className="mb-1 max-w-[11rem] truncate rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-brand-foreground shadow-md">
+                  {v.name}
+                </span>
+              ) : null}
+              <span className="grid size-6 place-items-center rounded-full bg-brand text-brand-foreground shadow-md ring-2 ring-card transition-transform hover:scale-110">
+                <MapPin className="size-3.5" />
+              </span>
+              <span className="-mt-0.5 size-2 rotate-45 bg-brand shadow-md" />
+            </button>
+          </Marker>
+        )
+      })}
+
+      {courts.map((c) => {
+        const active = c.id === selectedId
+        return (
+          <Marker
+            key={c.id}
+            longitude={c.lng}
+            latitude={c.lat}
+            anchor="bottom"
+            style={{ zIndex: active ? 3 : 1 }}
+            onClick={(e: MarkerEvent<MouseEvent>) => {
+              e.originalEvent.stopPropagation()
+              onSelectRef.current(c.id)
+            }}
+          >
+            <button
+              type="button"
+              aria-label={c.name}
+              className="flex cursor-pointer flex-col items-center"
+            >
+              {active ? (
+                <span className="mb-1 max-w-[11rem] truncate rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-brand-foreground shadow-md">
+                  {c.name}
+                </span>
+              ) : null}
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums shadow-md ring-2 transition-transform",
+                  active
+                    ? "scale-110 bg-brand text-brand-foreground ring-brand-foreground/40"
+                    : blueMarkers
+                      ? "bg-brand text-brand-foreground ring-white/90"
+                      : "bg-foreground text-background ring-background/70"
+                )}
+              >
+                {blueMarkers ? <MapPin className="size-3.5" /> : null}
+                {formatVnd(c.pricePerHour)}
+              </span>
+              <span
+                className={cn(
+                  "-mt-0.5 size-2 rotate-45 shadow-md",
+                  active || blueMarkers ? "bg-brand" : "bg-foreground"
+                )}
+              />
+            </button>
+          </Marker>
+        )
+      })}
+    </Map>
+  )
+}

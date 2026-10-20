@@ -1,0 +1,29 @@
+import type { PlaySession } from "@/lib/shared"
+
+import { api } from "@/lib/api"
+
+// Calls that mirror a player's PlaySession changes to the Hono API so
+// they persist to MongoDB (per Clerk user). The client SessionProvider owns the
+// interactive `sessions` array and calls these on the terminal writes (confirm
+// a booking, open a room, cancel) — fire-and-forget, so the UI stays snappy and
+// optimistic. We deliberately do NOT invalidate queries here: the client
+// already holds the new state, and a refetch mid-interaction would fight it.
+// The persisted copy is what a *cold* load (refresh/restart) reads back via the
+// seed merge.
+
+/** Persist (insert or replace) one of the signed-in user's sessions. */
+export async function saveSession(session: PlaySession): Promise<void> {
+  await api(`/api/sessions/${encodeURIComponent(session.id)}`, {
+    method: "PUT",
+    body: session,
+  })
+}
+
+/**
+ * Fetch the signed-in player's current sessions from the server — each
+ * session's booking-derived fields (`bookingStatus`, `hold`, etc.) reflect
+ * the latest venue decision. Used by `SessionProvider` for live polling.
+ */
+export async function listPlayerSessions(): Promise<PlaySession[]> {
+  return api<PlaySession[]>("/api/sessions")
+}
