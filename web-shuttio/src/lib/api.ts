@@ -1,26 +1,10 @@
-import { getToken } from "@clerk/react"
-
+import { ApiError } from "@/lib/api-error"
 import { API_URL } from "@/lib/env"
 
-export { API_URL }
+export { API_URL, ApiError }
 
 /** Fail fast instead of hanging a screen on an unreachable api. */
 export const API_TIMEOUT_MS = 15_000
-
-/**
- * A non-2xx api response. The api's `AllExceptionsFilter` renders every
- * failure as `{ error: message }`, so `message` is that string and `status`
- * the HTTP status — callers branch on `status` (e.g. a 409 slot conflict).
- */
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string
-  ) {
-    super(message)
-    this.name = "ApiError"
-  }
-}
 
 export interface ApiInit {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
@@ -43,8 +27,13 @@ export function apiUrl(path: string, query?: ApiInit["query"]) {
   return url.toString()
 }
 
-/** `Authorization` header carrying the signed-in user's Clerk session token. */
+/**
+ * `Authorization` header carrying the signed-in user's Clerk session token.
+ * Clerk is imported on demand: the landing page only makes `anonymous` calls,
+ * so it never downloads the SDK.
+ */
 export async function authHeaders(): Promise<Record<string, string>> {
+  const { getToken } = await import("@clerk/react")
   const token = await getToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }

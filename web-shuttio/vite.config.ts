@@ -18,7 +18,15 @@ export default defineConfig({
       // (and router rewrite hooks) once a second locale ships.
       strategy: ["baseLocale"],
     }),
-    nitro(),
+    nitro({
+      // The node server doesn't compress on the fly — ship .br/.gz siblings
+      // of every public file and let Nitro pick one per `Accept-Encoding`.
+      compressPublicAssets: { gzip: true, brotli: true },
+      // HTML must revalidate so a deploy never serves a page pointing at
+      // chunks that no longer exist. Hashed `/assets/**` keep Nitro's
+      // default `immutable` year-long cache (the more specific rule wins).
+      routeRules: { "/**": { headers: { "cache-control": "no-cache" } } },
+    }),
     tailwindcss(),
     tanstackStart({
       // Only the landing page is static. `/app` is the SPA fallback route:

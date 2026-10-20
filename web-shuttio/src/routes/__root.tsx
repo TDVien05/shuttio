@@ -1,20 +1,20 @@
+import { Suspense, lazy } from "react"
 import type { QueryClient } from "@tanstack/react-query"
 import {
   HeadContent,
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  useLocation,
   useRouter,
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
-import { ClerkProvider } from "@clerk/react"
-import { viVN } from "@clerk/localizations"
 import { RouterProvider } from "react-aria-components"
 
 import TanStackQueryDevtools from "../components/devtools"
 import { ThemeProvider } from "@/components/theme-provider"
-import { CLERK_PUBLISHABLE_KEY } from "@/lib/env"
+import { RouteLoading } from "@/components/layouts/route-loading"
 import { m } from "@/paraglide/messages"
 import appCss from "../styles/globals.css?url"
 
@@ -51,29 +51,28 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
 })
 
+const ClerkProvider = lazy(() => import("@/components/clerk-provider"))
+
 function RootComponent() {
   const router = useRouter()
+  const isLanding = useLocation({ select: (l) => l.pathname === "/" })
 
   return (
-    <ClerkProvider
-      publishableKey={CLERK_PUBLISHABLE_KEY}
-      localization={viVN}
-      routerPush={(to) => router.navigate({ href: to })}
-      routerReplace={(to) => router.navigate({ href: to, replace: true })}
-      signInUrl="/sign-in"
-      signUpUrl="/sign-up"
-      signInFallbackRedirectUrl="/app"
-      signUpFallbackRedirectUrl="/app"
-      afterSignOutUrl="/"
+    // React Aria links (LinkButton, menu items, …) navigate client-side.
+    <RouterProvider
+      navigate={(href, options) => router.navigate({ ...options, href })}
+      useHref={(href) => href}
     >
-      {/* React Aria links (LinkButton, menu items, …) navigate client-side. */}
-      <RouterProvider
-        navigate={(href, options) => router.navigate({ ...options, href })}
-        useHref={(href) => href}
-      >
+      {isLanding ? (
         <Outlet />
-      </RouterProvider>
-    </ClerkProvider>
+      ) : (
+        <Suspense fallback={<RouteLoading />}>
+          <ClerkProvider>
+            <Outlet />
+          </ClerkProvider>
+        </Suspense>
+      )}
+    </RouterProvider>
   )
 }
 
