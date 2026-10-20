@@ -1,123 +1,73 @@
+# Local development: `docker compose up --build --watch`.
+# Compose Watch syncs edits into the containers (a bind mount doesn't deliver
+# file events on Docker Desktop for Windows); a package.json or lockfile
+# change rebuilds the image. Production images are each Dockerfile's final
+# stage — see the deploy notes in web-shuttio/README.md.
+
+# Every service sets CI=true: with no TTY, pnpm's pre-run deps check must
+# reinstall without prompting.
+
 services:
   api:
-    build: ./api
-    env_file:
-      - ./api/.env
+    build: { context: ./api, target: dev }
+    env_file: ./api/.env
     environment:
-      # Non-interactive container: let pnpm's pre-run deps check reinstall
-      # without prompting to purge node_modules (no TTY → it would abort).
       CI: "true"
-      # Comma-separated CORS allow-list so the Next.js app (:3000) and the
-      # TanStack Start app (:3001) can run side by side during the migration.
+      # CORS allow-list: the Next.js app and the TanStack app side by side.
       WEB_URL: http://localhost:3000,http://localhost:3001
-    ports:
-      - "6969:6969"
+    ports: ["6969:6969"]
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:6969/health/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:6969/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 5s
       timeout: 3s
       retries: 12
       start_period: 10s
-    # Hot reload via Compose Watch (`docker compose up --watch`): edits are
-    # copied into the container, so the watcher inside sees real file events.
-    # A plain bind mount doesn't work on Docker Desktop for Windows — inotify
-    # events from the host never reach the Linux container, so `nest --watch`
-    # never noticed a save. node_modules and dist stay the container's own.
     develop:
       watch:
-        - action: sync
-          path: ./api
-          target: /app
-          ignore:
-            - node_modules/
-            - dist/
-        # New/changed dependencies need a fresh `pnpm install` in the image.
-        - action: rebuild
-          path: ./api/package.json
-        - action: rebuild
-          path: ./api/pnpm-lock.yaml
+        - { action: sync, path: ./api, target: /app, ignore: [node_modules/, dist/] }
+        - { action: rebuild, path: ./api/package.json }
+        - { action: rebuild, path: ./api/pnpm-lock.yaml }
 
-  web:
-    build: ./web
-    # `depends_on` does not wait when both services are manually restarted.
-    # Hold Next.js until the API has completed its watch-mode compilation and
-    # is serving readiness, otherwise the dashboard layout sees ECONNREFUSED.
-    command: >-
-      sh -c "find .next -mindepth 1 -maxdepth 1 -exec rm -rf {} +; until node -e \"fetch('http://api:6969/health/ready').then(r =>
-      process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"; do sleep 1; done;
-      pnpm dev"
-    env_file:
-      # The checked-in example uses `.env.local`; this workspace keeps the real
-      # values in `.local.env`. Both are optional so either layout works.
-      - path: ./web/.env.local
-        required: false
-      - path: ./web/.local.env
-        required: false
-    environment:
-      # Non-interactive container: let pnpm's pre-run deps check reinstall
-      # without prompting to purge node_modules (no TTY → it would abort).
-      CI: "true"
-      # Server-side calls stay inside the compose network; the browser still
-      # hits the API through the published port on localhost.
-      API_URL: http://api:6969
-      # Inlined into the client bundle at dev/build time: the browser reaches
-      # the api via the host-published port, not the compose-network name.
-      NEXT_PUBLIC_API_URL: http://localhost:6969
-    ports:
-      - "3000:3000"
-    depends_on:
-      api:
-        condition: service_healthy
-    # Same Compose Watch setup as `api` — Turbopack has no polling mode, so
-    # syncing files in is what makes Next.js pick up host edits on Windows.
-    develop:
-      watch:
-        - action: sync
-          path: ./web
-          target: /app
-          ignore:
-            - node_modules/
-            - .next/
-        - action: rebuild
-          path: ./web/package.json
-        - action: rebuild
-          path: ./web/pnpm-lock.yaml
+  # Legacy Next.js app — kept until the TanStack migration replaces it.
+  # web:
+  #   build: ./web
+  #   # Wait for the api's readiness probe: the dashboard layout fetches it on
+  #   # the server and would hit ECONNREFUSED during api watch compilation.
+  #   command: >-
+  #     sh -c "find .next -mindepth 1 -maxdepth 1 -exec rm -rf {} +;
+  #     until node -e \"fetch('http://api:6969/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))\"; do sleep 1; done;
+  #     pnpm dev"
+  #   env_file:
+  #     - { path: ./web/.env.local, required: false }
+  #     - { path: ./web/.local.env, required: false }
+  #   environment:
+  #     CI: "true"
+  #     API_URL: http://api:6969
+  #     NEXT_PUBLIC_API_URL: http://localhost:6969
+  #   ports: ["3000:3000"]
+  #   depends_on:
+  #     api: { condition: service_healthy }
+  #   develop:
+  #     watch:
+  #       - { action: sync, path: ./web, target: /app, ignore: [node_modules/, .next/] }
+  #       - { action: rebuild, path: ./web/package.json }
+  #       - { action: rebuild, path: ./web/pnpm-lock.yaml }
 
   web-shuttio:
-    build:
-      context: ./web-shuttio
-      target: dev
-    env_file:
-      - ./web-shuttio/.env.local
+    build: { context: ./web-shuttio, target: dev }
+    env_file: ./web-shuttio/.env.local
     environment:
-      # Non-interactive container: let pnpm's pre-run deps check reinstall
-      # without prompting to purge node_modules (no TTY → it would abort).
       CI: "true"
-      # Inlined into the client bundle by Vite: the browser calls the api via
-      # the host-published port, not the compose-network name.
+      # The browser calls the api through the host port, not the network name.
       VITE_API_URL: http://localhost:6969
-    ports:
-      # :3001 keeps the port free for the Next.js app above while both are
-      # being compared during the migration.
-      - "3001:3000"
+    ports: ["3000:3000"]
     depends_on:
-      api:
-        condition: service_healthy
-    # Same Compose Watch setup as the other two services: sync source into the
-    # image so Vite's watcher (and HMR) sees host edits.
+      api: { condition: service_healthy }
     develop:
       watch:
         - action: sync
           path: ./web-shuttio
           target: /app
-          ignore:
-            - node_modules/
-            - .output/
-            - .tanstack/
-            - src/paraglide/
-            - project.inlang/cache/
-            - .env.local
-        - action: rebuild
-          path: ./web-shuttio/package.json
-        - action: rebuild
-          path: ./web-shuttio/pnpm-lock.yaml
+          ignore: [node_modules/, .output/, .tanstack/, src/paraglide/, project.inlang/cache/, .env.local]
+        - { action: rebuild, path: ./web-shuttio/package.json }
+        - { action: rebuild, path: ./web-shuttio/pnpm-lock.yaml }

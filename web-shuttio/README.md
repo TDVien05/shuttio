@@ -60,27 +60,43 @@ pnpm typecheck && pnpm lint
 
 ## Docker
 
-From the repo root, with the NestJS api:
+From the repo root, with the NestJS api (`dev` stage, Vite dev server):
 
 ```bash
-docker compose up --build api web-shuttio   # http://localhost:3001
-docker compose up --watch api web-shuttio   # same, with Compose Watch sync
+docker compose up --build --watch api web-shuttio   # http://localhost:3001
 ```
 
-`docker compose up --build` (all services) also starts the Next.js reference on
-:3000. The dev image receives `VITE_*` from `.env.local` via Compose
-`env_file`; the api allows both :3000 and :3001 through its comma-separated
-`WEB_URL` CORS list.
+The dev image reads `VITE_*` from `.env.local`; the api's comma-separated
+`WEB_URL` CORS list allows :3000 and :3001.
 
-For the production Nitro image, `VITE_*` values are inlined at build time, so
-pass them as build args (run from this directory):
+The Dockerfile's final stage is production: the Nitro node server on :3000,
+pre-compressed assets, non-root, with a `HEALTHCHECK`. `VITE_*` values are
+inlined into the bundle at build time, so pass them as build args:
 
 ```bash
 set -a; . ./.env.local; set +a
-docker build --target production \
+docker build -t web-shuttio \
   --build-arg VITE_API_URL="$VITE_API_URL" \
   --build-arg VITE_CLERK_PUBLISHABLE_KEY="$VITE_CLERK_PUBLISHABLE_KEY" \
   --build-arg VITE_MAPBOX_TOKEN="$VITE_MAPBOX_TOKEN" \
-  -t web-shuttio:prod .
-docker run --rm -p 3001:3000 web-shuttio:prod
+  --build-arg VITE_CLOUDINARY_CLOUD_NAME="$VITE_CLOUDINARY_CLOUD_NAME" .
+docker run --rm -p 3001:3000 web-shuttio
 ```
+
+## Deploy (Dokploy)
+
+Create an **Application** with build type **Dockerfile**:
+
+| Setting | Value |
+| --- | --- |
+| Provider → Build Path | `/web-shuttio` |
+| Provider → Watch Paths | `web-shuttio/**` (auto-deploy only on frontend changes) |
+| Build Type → Dockerfile Path | `Dockerfile` |
+| Build Type → Docker Context Path | `.` |
+| Build Type → Docker Build Stage | empty (the final, production stage) |
+| Environment → Build Time Arguments | the four `VITE_*` above, production values |
+| Domains | your host, container port **3000**, HTTPS (Let's Encrypt) |
+
+`VITE_*` are public values, but they only take effect at build time: change
+one and redeploy (a rebuild), not just restart. Also add the frontend domain
+to the api's `WEB_URL` and to Clerk's allowed origins.
