@@ -32,6 +32,12 @@ done and deletion is approved.
    cross-cutting infra in `src/lib`, and global CSS in `src/styles`. The
    `_signed-in` pathless layout is now `_authenticated` (URLs unchanged). See
    `README.md` for the full tree.
+8. **Docker**: `web-shuttio` Compose service plus a multi-stage Dockerfile — a
+   `dev` target for Compose Watch and a `production` target running the Nitro
+   node server (`node .output/server/index.mjs`). The service publishes :3001
+   (Next.js keeps :3000), and the api's `WEB_URL` is a comma-separated CORS
+   allow-list so both frontends run side by side. Production builds take the
+   `VITE_*` values as build args.
 
 Checks at each commit: `pnpm typecheck`, `pnpm lint` (0 errors), `pnpm test`,
 `pnpm build`.
@@ -55,11 +61,6 @@ limited to:
 
 ## Remaining
 
-- [ ] **Docker Compose**: add a `web-shuttio` service plus Dockerfile building the
-      Nitro node server (`pnpm build` → `node .output/server/index.mjs`), with dev
-      via Compose Watch like the existing `web` service. `VITE_*` vars are
-      build-time, so pass them as build args. Point the api's `WEB_URL` at the new
-      origin for CORS.
 - [ ] **Runtime smoke test**: run the api plus `pnpm dev`, sign in, and click
       through the player, venue and admin flows. Only static checks have run so far.
       Watch for React Aria behaviour differences (Select/ComboBox keys,

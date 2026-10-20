@@ -48,10 +48,17 @@ async function bootstrap() {
     ],
   })
 
-  // The web app lives on a different origin (port), so CORS reflects the exact
-  // web origin and allows credentials (a wildcard is incompatible with those).
+  // The web apps live on different origins (ports), so CORS reflects each
+  // origin from a comma-separated WEB_URL allow-list and allows credentials
+  // (a wildcard is incompatible with those). During the migration the Next.js
+  // app runs on :3000 and the TanStack Start app on :3001 side by side.
+  const webOrigins = (config.get<string>("WEB_URL") ?? "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
   app.enableCors({
-    origin: config.get<string>("WEB_URL") ?? "http://localhost:3000",
+    origin: webOrigins,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,

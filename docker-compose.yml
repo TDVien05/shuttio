@@ -7,6 +7,9 @@ services:
       # Non-interactive container: let pnpm's pre-run deps check reinstall
       # without prompting to purge node_modules (no TTY → it would abort).
       CI: "true"
+      # Comma-separated CORS allow-list so the Next.js app (:3000) and the
+      # TanStack Start app (:3001) can run side by side during the migration.
+      WEB_URL: http://localhost:3000,http://localhost:3001
     ports:
       - "6969:6969"
     healthcheck:
@@ -44,7 +47,12 @@ services:
       process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"; do sleep 1; done;
       pnpm dev"
     env_file:
-      - ./web/.env.local
+      # The checked-in example uses `.env.local`; this workspace keeps the real
+      # values in `.local.env`. Both are optional so either layout works.
+      - path: ./web/.env.local
+        required: false
+      - path: ./web/.local.env
+        required: false
     environment:
       # Non-interactive container: let pnpm's pre-run deps check reinstall
       # without prompting to purge node_modules (no TTY → it would abort).
@@ -74,3 +82,42 @@ services:
           path: ./web/package.json
         - action: rebuild
           path: ./web/pnpm-lock.yaml
+
+  web-shuttio:
+    build:
+      context: ./web-shuttio
+      target: dev
+    env_file:
+      - ./web-shuttio/.env.local
+    environment:
+      # Non-interactive container: let pnpm's pre-run deps check reinstall
+      # without prompting to purge node_modules (no TTY → it would abort).
+      CI: "true"
+      # Inlined into the client bundle by Vite: the browser calls the api via
+      # the host-published port, not the compose-network name.
+      VITE_API_URL: http://localhost:6969
+    ports:
+      # :3001 keeps the port free for the Next.js app above while both are
+      # being compared during the migration.
+      - "3001:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    # Same Compose Watch setup as the other two services: sync source into the
+    # image so Vite's watcher (and HMR) sees host edits.
+    develop:
+      watch:
+        - action: sync
+          path: ./web-shuttio
+          target: /app
+          ignore:
+            - node_modules/
+            - .output/
+            - .tanstack/
+            - src/paraglide/
+            - project.inlang/cache/
+            - .env.local
+        - action: rebuild
+          path: ./web-shuttio/package.json
+        - action: rebuild
+          path: ./web-shuttio/pnpm-lock.yaml
