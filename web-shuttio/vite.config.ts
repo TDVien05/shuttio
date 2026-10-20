@@ -32,8 +32,9 @@ export default defineConfig({
       // Only the landing page is static. `/app` is the SPA fallback route:
       // TanStack writes its masked shell to `_shell.html` (a loading state,
       // not rendered page content) and Nitro serves that file for every
-      // client-side route. `defaultSsr: false` in `src/start.ts` keeps all
-      // other pages client-only; only `/` opts into SSR.
+      // client-side route. The root route's `ssr` gate (`__root.tsx`) renders
+      // only `/`; children inherit that decision, so no other page can opt
+      // into SSR.
       spa: {
         enabled: true,
         maskPath: "/app",
