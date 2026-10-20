@@ -19,20 +19,19 @@ import {
   Separator as SeparatorPrimitive,
   TagGroup as TagGroupPrimitive,
   TagList as TagListPrimitive,
-  Tag as TagPrimitive
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+  Tag as TagPrimitive,
+  type ButtonProps,
+  type ComboBoxValueProps,
+  type GroupProps,
+  type HeaderProps,
+  type InputProps,
+  type ListBoxItemProps,
+  type ListBoxProps,
+  type ListBoxSectionProps,
+  type SeparatorProps,
+  type TagListProps,
+  type TagProps,
 } from "react-aria-components"
-import type {ButtonProps, ComboBoxValueProps, GroupProps, HeaderProps, InputProps, ListBoxItemProps, ListBoxProps, ListBoxSectionProps, SeparatorProps, TagListProps, TagProps} from "react-aria-components";
 
 import { Button } from "@/components/ui/button"
 import {

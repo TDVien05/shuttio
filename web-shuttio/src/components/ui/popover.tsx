@@ -5,11 +5,10 @@ import { cn } from "cn"
 import {
   DialogTrigger,
   Heading,
-  Popover as PopoverPrimitive
-  
-  
+  Popover as PopoverPrimitive,
+  type DialogTriggerProps,
+  type PopoverProps as PopoverPrimitiveProps,
 } from "react-aria-components"
-import type {DialogTriggerProps, PopoverProps as PopoverPrimitiveProps} from "react-aria-components";
 
 function PopoverTrigger({ children, ...props }: DialogTriggerProps) {
   return (

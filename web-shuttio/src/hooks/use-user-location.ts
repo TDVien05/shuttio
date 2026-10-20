@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { hasCoordinates  } from "@/lib/shared/location"
-import type {Coordinates} from "@/lib/shared/location";
+import { hasCoordinates } from "@/lib/shared/location"
+import type { Coordinates } from "@/lib/shared/location"
 
 export function useUserLocation() {
   const [userLoc, setUserLoc] = React.useState<Coordinates | null>(null)

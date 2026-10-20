@@ -1,16 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { cva  } from "class-variance-authority"
-import type {VariantProps} from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 import {
   Button as ButtonPrimitive,
-  Link as LinkPrimitive
-  
-  
+  Link as LinkPrimitive,
+  type ButtonProps,
+  type LinkProps,
 } from "react-aria-components"
-import type {ButtonProps, LinkProps} from "react-aria-components";
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"

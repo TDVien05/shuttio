@@ -1,0 +1,937 @@
+.landing {
+  background: #030503;
+  color: #f6f7f4;
+  overflow: clip;
+}
+
+.main,
+.footer {
+  width: 100%;
+  max-width: none;
+  margin-inline: auto;
+}
+.main section {
+  scroll-margin-top: 90px;
+}
+.landing h1,
+.landing h2,
+.landing h3 {
+  font-family: var(--font-sans);
+}
+.landing h2 {
+  font-size: clamp(1.9rem, 3.5vw, 3.25rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+/* Same blue bar as the /app player header (features/dashboard/topbar.tsx), in
+   both themes. */
+.header {
+  background: #2046ed;
+  border-color: #ffffff1f;
+  color: #ffffff;
+}
+.header nav > a {
+  color: #ffffff;
+}
+.header nav > a:hover {
+  color: #a5ff12;
+  background: #ffffff14;
+}
+.header :global(#mobile-menu) {
+  background: #2046ed;
+  border-color: #ffffff26;
+}
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  padding: 58px 56px 54px;
+  background: #000000;
+}
+.hero::before,
+.testimonials::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(#ffffff08 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff08 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(#000, transparent 80%);
+}
+.heroCopy {
+  max-width: 880px;
+  margin: 0 auto 34px;
+  text-align: center;
+}
+.eyebrow {
+  margin-bottom: 18px;
+  color: #78db65;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.hero h1 {
+  color: #ffffff;
+  font-size: clamp(2.75rem, 5.6vw, 5rem);
+  line-height: 1.02;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.subtitle {
+  max-width: 570px;
+  margin: 23px auto 0;
+  color: #aab3a9;
+  font-size: 1rem;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+.heroImage {
+  position: relative;
+  max-width: 1000px;
+  margin: auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px #00250070;
+}
+.heroImage img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 56.25%;
+  height: 177.778%;
+  max-width: none;
+  object-fit: cover;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+.imageCaption {
+  position: absolute;
+  bottom: 22px;
+  left: 26px;
+  color: white;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.trust {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+  align-items: center;
+  gap: 48px;
+  padding: 90px 100px;
+}
+.trust::before,
+.trust::after {
+  content: "";
+  position: absolute;
+  top: 15%;
+  width: 140px;
+  height: 75%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    #2dff00aa,
+    #12b80040 35%,
+    transparent 68%
+  );
+  pointer-events: none;
+}
+.trust::before {
+  left: -85px;
+}
+.trust::after {
+  right: -85px;
+}
+.trust h2 {
+  max-width: 330px;
+  font-size: 1.65rem;
+  text-transform: uppercase;
+}
+.trustIntro > p {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #98a496;
+  font-size: 0.85rem;
+  margin-top: 18px;
+}
+.trustIntro > p svg {
+  width: 19px;
+  color: #7ff264;
+}
+.clubMarquee {
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
+}
+.clubTrack {
+  display: flex;
+  width: max-content;
+  animation: club-marquee 28s linear infinite;
+}
+.clubMarquee:hover .clubTrack {
+  animation-play-state: paused;
+}
+.clubList {
+  display: flex;
+  flex-shrink: 0;
+  gap: 24px;
+  align-items: center;
+  padding-right: 24px;
+}
+.club {
+  display: inline-flex;
+  align-items: center;
+  gap: 24px;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+.club::after {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #78ef5c;
+  content: "";
+}
+@keyframes club-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.lightPanel {
+  width: 100vw;
+  margin-left: calc((100% - 100vw) / 2);
+  background: #fff;
+  color: #171c17;
+}
+.lightPanel .eyebrow {
+  color: #258b36;
+}
+.about {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 670px;
+  padding: 100px 25%;
+  overflow: hidden;
+}
+.aboutCopy {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+.aboutCopy h2 {
+  font-size: clamp(2rem, 3vw, 2.8rem);
+}
+/* Same blue as the /app player topbar. */
+.aboutCopy h2 span {
+  color: #2046ed;
+}
+.aboutCopy > p:not(.eyebrow) {
+  color: #626b61;
+  font-size: 0.95rem;
+  line-height: 1.75;
+  margin: 25px auto 30px;
+}
+.aboutPhotoLeft,
+.aboutPhotoRight {
+  position: absolute;
+  width: 24%;
+  height: 380px;
+  overflow: hidden;
+  border-radius: 24px;
+}
+.aboutPhotoLeft {
+  left: -5%;
+  top: 90px;
+  transform: rotate(-7deg);
+}
+.aboutPhotoRight {
+  right: -5%;
+  top: 170px;
+  transform: rotate(7deg);
+}
+.aboutPhotoLeft img {
+  object-position: 67% center;
+}
+.sectionHeading {
+  max-width: 720px;
+  margin: 0 auto 52px;
+  text-align: center;
+}
+.sectionHeading > p:not(.eyebrow) {
+  color: #98a496;
+  line-height: 1.7;
+  margin: 20px auto 0;
+  max-width: 580px;
+}
+.lightPanel .sectionHeading > p:not(.eyebrow) {
+  color: #626b61;
+}
+.features {
+  padding: 30px 72px 80px;
+}
+/* "Tính năng nổi trội" — a black card on the white panel. */
+.featuresCard {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding: 56px 48px 64px;
+  border-radius: 24px;
+  background: #0b0b0f;
+  color: #ffffff;
+}
+.featuresCard .sectionHeading h2 {
+  color: #a5ff12;
+}
+.lightPanel .featuresCard .sectionHeading > p {
+  color: #e4e4e7;
+}
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 44px 32px;
+}
+.feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.feature > svg {
+  width: 32px;
+  height: 32px;
+  color: #ffffff;
+  stroke-width: 1.4;
+}
+.feature h3 {
+  margin: 14px 0 10px;
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+  transition: color 200ms ease;
+}
+.feature:hover h3 {
+  color: #a5ff12;
+}
+.feature > p {
+  max-width: 300px;
+  color: #9a9aa3;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+.steps {
+  padding: 65px 72px 100px;
+  text-align: center;
+}
+.steps .sectionHeading h2 {
+  color: #000000;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+}
+.stepGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 44px;
+  margin: 0 0 48px;
+  list-style: none;
+}
+/* Blue pill in the /app topbar color. */
+.stepNumber {
+  display: block;
+  max-width: 180px;
+  margin-inline: auto;
+  padding: 10px;
+  border-radius: 999px;
+  background: #2046ed;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+}
+.stepGrid h3 {
+  margin: 28px 0 12px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.stepGrid p {
+  max-width: 300px;
+  margin-inline: auto;
+  color: #626b61;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.stepsCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 22px;
+  border: 1px solid #d4d4d8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    border-color 200ms ease,
+    color 200ms ease;
+}
+.stepsCta:hover {
+  border-color: #2046ed;
+  color: #2046ed;
+}
+.stepsCta:focus-visible {
+  outline: 3px solid #2046ed66;
+  outline-offset: 2px;
+}
+/* Stats band → footer: black in both themes (paired with the `dark` class). */
+.darkZone {
+  background: #000000;
+  color: #f6f7f4;
+}
+.stats {
+  padding: 90px 85px;
+}
+.statsTitle {
+  color: #fff;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  text-transform: none;
+}
+.stats dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 35px;
+  margin-top: 40px;
+}
+.stats dl > div {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: end;
+  position: relative;
+  isolation: isolate;
+}
+.stats dl > div::before {
+  content: "";
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  left: -28px;
+  bottom: -28px;
+  background: radial-gradient(circle, #22d50070, transparent 65%);
+  z-index: -1;
+}
+.stats dd {
+  color: #7be45d;
+  font-size: clamp(2rem, 3.2vw, 3rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+.stats dt {
+  color: #aab5a7;
+  font-size: 0.8rem;
+  margin-top: 6px;
+}
+.testimonials {
+  position: relative;
+  isolation: isolate;
+  padding: 130px 72px 210px;
+  background: linear-gradient(
+    180deg,
+    #000000 0%,
+    #063817 16%,
+    #0a7025 34%,
+    #13ad2b 52%,
+    #108f27 70%,
+    #06451a 86%,
+    #000000 100%
+  );
+}
+.testimonials::before {
+  background-size: 28px 28px;
+  mask-image: linear-gradient(#000 0%, #000 32%, transparent 80%);
+}
+.testimonials .sectionHeading {
+  margin-left: 0;
+  text-align: left;
+}
+.testimonials h2 {
+  font-size: clamp(2rem, 2.5vw, 2.25rem);
+}
+.testimonials .eyebrow {
+  color: #bdedaf;
+}
+/* No real reviews yet: a soft invitation in place of the quote grid. */
+.testimonialsEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  max-width: 560px;
+}
+.testimonialsEmpty p {
+  color: #d1ffbd;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.quoteGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.quoteGrid figure {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 24px 32px 0;
+  border-top: 1px solid #d1ffbd99;
+  border-right: 1px solid #d1ffbd99;
+  border-radius: 0 30px 0 0;
+}
+.stars {
+  display: flex;
+  gap: 3px;
+  color: #c3ff97;
+}
+.stars svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.5;
+}
+/* Unearned stars of a sub-5★ review: outline only, dimmed. */
+.stars .starOff {
+  fill: none;
+  opacity: 0.35;
+}
+/* "4.8/5 · 23 đánh giá" under the testimonials heading (real reviews only). */
+.testimonials .sectionHeading > p.ratingSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  color: #d1ffbd;
+  font-weight: 500;
+}
+.quoteGrid blockquote {
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  margin: 12px 0 28px;
+}
+.quoteGrid figcaption {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.8rem;
+}
+.quoteGrid figcaption p {
+  color: #b3d9ad;
+  font-size: 0.75rem;
+  margin-top: 3px;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #183d20;
+  color: #c9f4b8;
+  font-size: 0.7rem;
+}
+.venues {
+  padding: 70px 85px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 70px;
+}
+.venues h2 span {
+  color: #7be45d;
+}
+.venues > div > p:not(.eyebrow) {
+  color: #98a496;
+  margin-top: 24px;
+  line-height: 1.7;
+}
+.venueBenefits {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+.venueBenefits svg {
+  color: #7be45d;
+  width: 22px;
+}
+.venueBenefits h3 {
+  margin: 12px 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.venueBenefits p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #98a496;
+}
+.pricing {
+  padding: 70px 72px 100px;
+}
+.pricing .sectionHeading h2 {
+  font-size: clamp(1.9rem, 3vw, 2.7rem);
+}
+.plan {
+  background: #050805;
+  border-color: #a9c29880;
+  color: #f3f7ef;
+}
+.planFeatured {
+  background: linear-gradient(155deg, #138a2e, #b0fa7b);
+  border-color: #caffaa80;
+  color: #102d13;
+}
+.plan h3,
+.planFeatured h3 {
+  color: inherit;
+}
+.plan p,
+.plan [data-plan-period] {
+  color: #a3b09e;
+}
+.planFeatured p,
+.planFeatured [data-plan-period] {
+  color: #173e1d;
+}
+.plan [data-plan-price],
+.plan li > span:last-child {
+  color: #f3f7ef;
+}
+.planFeatured [data-plan-price],
+.planFeatured li > span:last-child {
+  color: #102d13;
+}
+.faq {
+  padding: 70px 24px;
+  max-width: 810px;
+  margin: auto;
+}
+.finalCta {
+  padding: 85px 24px 100px;
+  text-align: center;
+  background: #000000;
+}
+.finalCta h2 {
+  max-width: 750px;
+  margin: auto;
+  text-transform: uppercase;
+}
+.finalCta > p:not(.eyebrow) {
+  margin: 22px auto 30px;
+  color: #98a496;
+}
+.footer {
+  padding: 65px 72px 28px;
+  border-top: 1px solid #ffffff25;
+}
+.footerGrid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  gap: 45px;
+}
+.footerGrid > div > p {
+  max-width: 270px;
+  color: #899486;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  margin-top: 20px;
+}
+.footer h3 {
+  color: #899486;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+.footer li {
+  margin-top: 12px;
+  font-size: 0.8rem;
+}
+.footer a:hover {
+  color: #7be45d;
+}
+.footerBottom {
+  margin-top: 70px;
+  padding-top: 25px;
+  border-top: 1px solid #ffffff25;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  color: #899486;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 1100px) {
+  .header nav {
+    gap: 0;
+  }
+  .header nav > a {
+    padding-inline: 7px;
+    font-size: 0.75rem;
+  }
+  .trust {
+    padding-inline: 55px;
+  }
+  .features,
+  .steps,
+  .testimonials,
+  .pricing,
+  .footer {
+    padding-inline: 40px;
+  }
+  .stats,
+  .venues {
+    padding-inline: 45px;
+  }
+  .venues {
+    gap: 35px;
+  }
+}
+@media (max-width: 767px) {
+  .hero {
+    padding: 45px 20px 28px;
+  }
+  .heroCopy {
+    margin-bottom: 35px;
+  }
+  .hero h1 {
+    font-size: clamp(2.5rem, 8vw, 3.8rem);
+  }
+  .hero .eyebrow {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+  }
+  .heroImage {
+    border-radius: 10px;
+  }
+  .imageCaption {
+    bottom: 16px;
+    left: 16px;
+    font-size: 0.5rem;
+  }
+  .trust {
+    padding: 65px 28px;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 30px;
+  }
+  .trust h2 {
+    max-width: 360px;
+    font-size: 1.5rem;
+  }
+  .about {
+    min-height: auto;
+    padding: 65px 28px 250px;
+  }
+  .aboutCopy {
+    max-width: 540px;
+  }
+  .aboutPhotoLeft,
+  .aboutPhotoRight {
+    top: auto;
+    bottom: 30px;
+    width: 39%;
+    height: 180px;
+    border-radius: 14px;
+  }
+  .aboutPhotoLeft {
+    left: 8%;
+  }
+  .aboutPhotoRight {
+    right: 8%;
+  }
+  .features,
+  .steps {
+    padding: 55px 28px;
+  }
+  .featuresCard {
+    padding: 44px 24px 48px;
+  }
+  .featureGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 36px 20px;
+  }
+  .sectionHeading {
+    margin-bottom: 35px;
+  }
+  .stepGrid {
+    gap: 25px;
+  }
+  .stepGrid h3 {
+    font-size: 1rem;
+  }
+  .stats {
+    padding: 65px 28px;
+  }
+  .stats dl {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 42px 25px;
+  }
+  .testimonials {
+    padding: 90px 28px 140px;
+  }
+  .quoteGrid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .quoteGrid figure {
+    padding: 24px;
+  }
+  .venues {
+    padding: 55px 28px;
+    grid-template-columns: 1fr;
+  }
+  .pricing {
+    padding: 55px 24px;
+  }
+  .footer {
+    padding: 50px 28px 25px;
+  }
+  .footerGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 35px;
+  }
+  .footerBottom {
+    margin-top: 45px;
+  }
+}
+@media (max-width: 480px) {
+  .stats dl {
+    grid-template-columns: 1fr;
+  }
+  .stepGrid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .stepGrid p {
+    max-width: 320px;
+  }
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+  .footerGrid {
+    gap: 35px 20px;
+  }
+}
+
+/* Landing theme palettes. The theme provider toggles `.dark` on <html>. */
+:global(html:not(.dark)) .landing {
+  background: #f4f8f2;
+  color: #152018;
+}
+:global(html:not(.dark)) .subtitle,
+:global(html:not(.dark)) .trustIntro > p {
+  color: #5f6d61;
+}
+:global(html:not(.dark)) .heroImage {
+  box-shadow: 0 22px 56px #28592924;
+}
+/* The hero stays black in both themes, so keep its subtitle light. */
+.landing .hero .subtitle {
+  color: #aab3a9;
+}
+:global(html:not(.dark)) .trust {
+  background: #071007;
+  color: #f6f7f4;
+}
+:global(html:not(.dark)) .trust::before,
+:global(html:not(.dark)) .trust::after {
+  background: radial-gradient(
+    ellipse,
+    #4ee83166,
+    #81e76a24 38%,
+    transparent 70%
+  );
+}
+:global(html:not(.dark)) .eyebrow:not(.darkZone *),
+:global(html:not(.dark)) .trustIntro > p svg {
+  color: #218a35;
+}
+:global(html:not(.dark)) .trustIntro > p {
+  color: #98a496;
+}
+:global(html:not(.dark)) .club {
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clubTrack {
+    width: 100%;
+    animation: none;
+  }
+  .clubList:first-child {
+    flex-wrap: wrap;
+  }
+  .clubList[aria-hidden="true"] {
+    display: none;
+  }
+}
+:global(html:not(.dark)) .lightPanel {
+  background: #ffffff;
+  color: #171c17;
+}
+
+:global(.dark) .lightPanel {
+  background: #0b100b;
+  color: #f3f6f1;
+}
+:global(.dark) .lightPanel .eyebrow {
+  color: #7be45d;
+}
+:global(.dark) .aboutCopy > p:not(.eyebrow),
+:global(.dark) .lightPanel .sectionHeading > p:not(.eyebrow) {
+  color: #a5afa3;
+}
+/* The topbar blue is too dark to read on the dark panel — lighten it. */
+:global(.dark) .aboutCopy h2 span {
+  color: #6f8cff;
+}
+:global(.dark) .featuresCard {
+  border: 1px solid #ffffff1a;
+}
+:global(.dark) .lightPanel .featuresCard .sectionHeading > p {
+  color: #e4e4e7;
+}
+:global(.dark) .steps .sectionHeading h2 {
+  color: #ffffff;
+}
+:global(.dark) .stepGrid p {
+  color: #a5afa3;
+}
+:global(.dark) .stepsCta {
+  border-color: #ffffff33;
+  background: transparent;
+  color: #f3f6f1;
+}
+:global(.dark) .stepsCta:hover {
+  border-color: #6f8cff;
+  color: #6f8cff;
+}

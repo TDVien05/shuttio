@@ -1,10 +1,9 @@
 import * as React from "react"
 import { cn } from "cn"
 import {
-  Button as ButtonPrimitive
-  
+  Button as ButtonPrimitive,
+  type ButtonProps,
 } from "react-aria-components"
-import type {ButtonProps} from "react-aria-components";
 
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible"
 import { ChevronRightIcon } from "lucide-react"

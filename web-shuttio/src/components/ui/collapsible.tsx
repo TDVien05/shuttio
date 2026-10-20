@@ -1,12 +1,11 @@
 import {
   DisclosurePanel as CollapsibleContentPrimitive,
   Disclosure as CollapsiblePrimitive,
-  Button as CollapsibleTriggerPrimitive
-  
-  
-  
+  Button as CollapsibleTriggerPrimitive,
+  type ButtonProps,
+  type DisclosurePanelProps,
+  type DisclosureProps,
 } from "react-aria-components"
-import type {ButtonProps, DisclosurePanelProps, DisclosureProps} from "react-aria-components";
 
 function Collapsible({ ...props }: DisclosureProps) {
   return <CollapsiblePrimitive data-slot="collapsible" {...props} />
