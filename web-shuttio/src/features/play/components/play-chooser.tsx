@@ -7,11 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useBooking } from "@/features/booking/components/booking"
+import { useBookingWizard } from "@/features/booking/hooks/use-booking-wizard"
+import { useSessionUi } from "@/features/play/state/session-ui"
 import { m } from "@/paraglide/messages"
 
 export function PlayChooser() {
-  const { playOpen, closePlay, openBooking } = useBooking()
+  const { playOpen, closePlay } = useSessionUi()
+  const { openBooking } = useBookingWizard()
   const router = useRouter()
 
   const options = [

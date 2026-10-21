@@ -162,26 +162,14 @@ function matchesFilter(r: Reservation, filter: FilterKey): boolean {
   }
 }
 
-/** Effective status reflects an operator decision on a pending row. */
-function effectiveStatus(
-  r: Reservation,
-  decision?: Decision
-): ReservationStatus {
-  if (decision === "approved") return "confirmed"
-  if (decision === "declined") return "cancelled"
-  return r.status
-}
-
 const columnHelper = createColumnHelper<SortableTable, Reservation>()
 
 /**
- * Bookings table columns. Cells close over the operator's in-flight decisions
- * and callbacks; columns rebuild on change, which is free here since the table
- * is small and React Compiler already opts this component out of memoization.
+ * Bookings table columns. Status comes straight from the query data; an
+ * approve/decline mutation writes its optimistic result into that cache.
  */
 function useReservationColumns(
   locale: string,
-  decisions: Partial<Record<string, Decision>>,
   onDecide: (r: Reservation, d: Decision) => void,
   onReview: (r: Reservation) => void
 ) {
@@ -194,7 +182,7 @@ function useReservationColumns(
           enableSorting: false,
           cell: ({ row }) => {
             const r = row.original
-            const declined = decisions[r.id] === "declined"
+            const declined = r.status === "cancelled"
             return (
               <div className="flex items-center gap-3">
                 <Avatar>
@@ -284,7 +272,7 @@ function useReservationColumns(
           enableSorting: false,
           cell: ({ row }) => {
             const r = row.original
-            const status = effectiveStatus(r, decisions[r.id])
+            const status = r.status
             return (
               <div className="flex flex-col items-start gap-1">
                 <Badge
@@ -327,14 +315,13 @@ function useReservationColumns(
           cell: ({ row }) => (
             <ReservationActions
               reservation={row.original}
-              decision={decisions[row.original.id]}
               onDecide={onDecide}
               onReview={onReview}
             />
           ),
         }),
       ]),
-    [locale, decisions, onDecide, onReview]
+    [locale, onDecide, onReview]
   )
 }
 
@@ -352,13 +339,6 @@ export function VenueReservationsView({
   const decideMutation = useDecideReservation(venueId)
 
   const [filter, setFilter] = React.useState<FilterKey>("all")
-  // Optimistic overlay of just-decided rows — shows the "decided" affordance and
-  // status the instant the operator acts; the server action (below) persists the
-  // real status and `updateReservation` folds it into the shared data.
-  const [decisions, setDecisions] = React.useState<
-    Partial<Record<string, Decision>>
-  >({})
-  const [, startTransition] = React.useTransition()
   const [sorting, setSorting] = React.useState<SortingState>([])
   // A decline requires a reason (it flows back to the player's cancelled
   // booking), captured in this dialog before the action fires.
@@ -371,9 +351,7 @@ export function VenueReservationsView({
   )
 
   // ── Summary counts (against the source data, not the filtered slice) ──
-  const pendingCount = RESERVATIONS.filter(
-    (r) => effectiveStatus(r, decisions[r.id]) === "pending"
-  ).length
+  const pendingCount = RESERVATIONS.filter((r) => r.status === "pending").length
   const todayConfirmed = RESERVATIONS.filter(
     (r) =>
       r.day.en === "Today" &&
@@ -381,46 +359,30 @@ export function VenueReservationsView({
   ).length
 
   const data = React.useMemo(
-    () =>
-      RESERVATIONS.filter((r) =>
-        matchesFilter(
-          { ...r, status: effectiveStatus(r, decisions[r.id]) },
-          filter
-        )
-      ),
-    [filter, RESERVATIONS, decisions]
+    () => RESERVATIONS.filter((r) => matchesFilter(r, filter)),
+    [filter, RESERVATIONS]
   )
   const pagination = useReservationPagination(data.length)
 
   const decide = React.useCallback(
     (r: Reservation, decision: Decision, reason?: string) => {
       const name = r.customer.name
-      // Optimistically mark the row, then persist. Roll the overlay back if the
-      // server rejects it.
-      setDecisions((prev) => ({ ...prev, [r.id]: decision }))
-      startTransition(async () => {
-        try {
-          await decideMutation.mutateAsync({
-            id: r.id,
-            decision,
-            reason,
-          })
+      // The mutation writes its optimistic row into the venue-bundle cache and
+      // rolls that cache back on failure; there is no separate overlay to keep.
+      void decideMutation
+        .mutateAsync({ id: r.id, decision, reason })
+        .then(() => {
           if (decision === "approved") {
             toast.success(m.venue_reservations_toast_approved({ name }))
           } else {
             toast(m.venue_reservations_toast_declined({ name }))
           }
-        } catch (error) {
-          setDecisions((prev) => {
-            const next = { ...prev }
-            delete next[r.id]
-            return next
-          })
+        })
+        .catch((error) => {
           toast.error(
             error instanceof Error ? error.message : "Failed to update booking"
           )
-        }
-      })
+        })
     },
     [decideMutation]
   )
@@ -444,12 +406,7 @@ export function VenueReservationsView({
     decide(target, "declined", reason)
   }
 
-  const columns = useReservationColumns(
-    locale,
-    decisions,
-    handleDecide,
-    setReviewTarget
-  )
+  const columns = useReservationColumns(locale, handleDecide, setReviewTarget)
 
   const table = useTable({
     features: sortableTable,
@@ -467,7 +424,7 @@ export function VenueReservationsView({
   // Column sorting still applies within each status group.
   const sortedRows = table.getSortedRowModel().rows
   const needsApproval = (row: (typeof sortedRows)[number]) =>
-    effectiveStatus(row.original, decisions[row.original.id]) === "pending"
+    row.original.status === "pending"
   const orderedRows = [
     ...sortedRows.filter(needsApproval),
     ...sortedRows.filter((row) => !needsApproval(row)),
@@ -577,14 +534,18 @@ export function VenueReservationsView({
           <TableBody>
             {pageRows.length ? (
               pageRows.map((row) => {
-                const decision = decisions[row.original.id]
+                const pendingDecision =
+                  decideMutation.isPending &&
+                  decideMutation.variables.id === row.original.id
+                    ? decideMutation.variables.decision
+                    : undefined
                 return (
                   <TableRow
                     key={row.id}
                     className={cn(
-                      decision === "declined"
+                      pendingDecision === "declined"
                         ? "opacity-55 hover:bg-transparent"
-                        : decision === "approved"
+                        : pendingDecision === "approved"
                           ? "bg-brand/5 hover:bg-brand/10"
                           : undefined
                     )}
@@ -693,29 +654,13 @@ function SortableHeader<TValue>({
 
 function ReservationActions({
   reservation: r,
-  decision,
   onDecide,
   onReview,
 }: {
   reservation: Reservation
-  decision?: Decision
   onDecide: (r: Reservation, d: Decision) => void
   onReview: (r: Reservation) => void
 }) {
-  if (decision != null) {
-    return decision === "approved" ? (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand">
-        <Check className="size-3.5" />
-        {m.venue_reservations_decided_approved()}
-      </span>
-    ) : (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <X className="size-3.5" />
-        {m.venue_reservations_decided_declined()}
-      </span>
-    )
-  }
-
   // A "held" slot is payment-gated, not operator-actionable — it offers no
   // decision surface (and isn't a `BOOKING_TRANSITIONS` key). Guard before the
   // lookup so the six real operator statuses index cleanly below.

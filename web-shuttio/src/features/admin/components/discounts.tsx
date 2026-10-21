@@ -36,11 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { VenueEmpty } from "@/features/venue/components/shared"
-import {
-  createDiscount,
-  deleteDiscount,
-  updateDiscount,
-} from "@/features/admin/api/admin-api"
+import { useAdminActions } from "@/features/admin/api/admin-api"
 import type {
   AdminDiscountInput,
   AdminDiscountRow,
@@ -76,9 +72,9 @@ export function AdminDiscountsView({
 }: {
   discounts: AdminDiscountRow[]
 }) {
-  const [rows, setRows] = React.useState(discounts)
+  const admin = useAdminActions()
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const pagination = useAdminPagination(rows.length)
+  const pagination = useAdminPagination(discounts.length)
   const [dialogTarget, setDialogTarget] = React.useState<DialogTarget | null>(
     null
   )
@@ -87,21 +83,12 @@ export function AdminDiscountsView({
     React.useState<AdminDiscountRow | null>(null)
   const [deletePending, setDeletePending] = React.useState(false)
 
-  const handleSaved = (row: AdminDiscountRow, mode: "create" | "edit") => {
-    setRows((current) =>
-      mode === "create"
-        ? [...current, row]
-        : current.map((r) => (r.code === row.code ? row : r))
-    )
-  }
-
   const handleToggle = async (row: AdminDiscountRow) => {
     setTogglingCode(row.code)
     try {
-      const updated = await updateDiscount(row.code, { active: !row.active })
-      setRows((current) =>
-        current.map((r) => (r.code === updated.code ? updated : r))
-      )
+      // `useAdminActions` invalidates the admin queries; the route's
+      // `useSuspenseQuery` supplies the refreshed rows.
+      await admin.updateDiscount(row.code, { active: !row.active })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Request failed")
     } finally {
@@ -113,8 +100,7 @@ export function AdminDiscountsView({
     if (!deleteTarget) return
     setDeletePending(true)
     try {
-      await deleteDiscount(deleteTarget.code)
-      setRows((current) => current.filter((r) => r.code !== deleteTarget.code))
+      await admin.deleteDiscount(deleteTarget.code)
       setDeleteTarget(null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Request failed")
@@ -294,7 +280,7 @@ export function AdminDiscountsView({
 
   const table = useTable({
     features: sortableTable,
-    data: rows,
+    data: discounts,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -320,7 +306,7 @@ export function AdminDiscountsView({
         </Button>
       </div>
 
-      {rows.length === 0 ? (
+      {discounts.length === 0 ? (
         <VenueEmpty text={m.admin_discounts_empty()} />
       ) : (
         <div className="-mx-4 border-t sm:-mx-6">
@@ -364,7 +350,6 @@ export function AdminDiscountsView({
       <DiscountFormDialog
         target={dialogTarget}
         onClose={() => setDialogTarget(null)}
-        onSaved={handleSaved}
       />
 
       <Dialog
@@ -402,12 +387,11 @@ export function AdminDiscountsView({
 function DiscountFormDialog({
   target,
   onClose,
-  onSaved,
 }: {
   target: DialogTarget | null
   onClose: () => void
-  onSaved: (row: AdminDiscountRow, mode: "create" | "edit") => void
 }) {
+  const admin = useAdminActions()
   const [code, setCode] = React.useState("")
   const [type, setType] = React.useState<DiscountType>("percent")
   const [value, setValue] = React.useState("")
@@ -472,14 +456,12 @@ function DiscountFormDialog({
           description,
         }
         if (target.mode === "create") {
-          const created = await createDiscount({
+          await admin.createDiscount({
             ...patch,
             code,
           } as AdminDiscountInput)
-          onSaved(created, "create")
         } else {
-          const updated = await updateDiscount(target.row.code, patch)
-          onSaved(updated, "edit")
+          await admin.updateDiscount(target.row.code, patch)
         }
         onClose()
       } catch (err) {

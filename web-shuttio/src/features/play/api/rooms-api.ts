@@ -19,9 +19,10 @@ export type RoomActionResult<T> = ApiResult<T>
 
 /**
  * Every listed, non-demo, still-open room across every signed-in user —
- * `SessionProvider` polls this (mirroring `NotificationsProvider`'s poll) as
- * the source of truth for which rooms the caller has joined outside their own
- * session doc, and to browse rooms other players host.
+ * `sessionQueries.rooms()` owns the cache, with polling as the offline
+ * fallback behind `rooms:changes`. It is the source of truth for rooms the
+ * caller joined outside their own session doc, and for browsing rooms other
+ * players host.
  */
 export async function listRooms(signal?: AbortSignal): Promise<PlaySession[]> {
   return api<PlaySession[]>("/api/rooms", { signal })

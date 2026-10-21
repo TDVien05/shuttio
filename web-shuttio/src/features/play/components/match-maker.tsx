@@ -26,24 +26,18 @@ import {
 import { formatVnd } from "@/lib/shared"
 import type { MatchRoom } from "@/lib/shared"
 import { RoomPreviewSheet } from "@/features/play/components/active-room"
-import { useMatchmaking } from "@/features/play/components/matchmaking"
+import { useSessionData } from "@/features/play/hooks/use-session-data"
+import { useSessionActions } from "@/features/play/hooks/use-session-actions"
+import { useSessionUi } from "@/features/play/state/session-ui"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { useData } from "@/features/dashboard/components/data-provider"
 import { m } from "@/paraglide/messages"
 
 export function RoomsView() {
-  const {
-    rooms,
-    joinedIds,
-    requestedIds,
-    hostedIds,
-    hasTimeConflict,
-    joinRoom,
-    leaveRoom,
-    openManager,
-    openQuickJoin,
-    openCreateRoom,
-  } = useMatchmaking()
+  const { rooms, joinedIds, requestedIds, hostedIds, hasTimeConflict } =
+    useSessionData()
+  const { joinRoom, leaveRoom, openManager } = useSessionActions()
+  const { openQuickJoin, openCreateRoom } = useSessionUi()
   // Kept separately from `open` so the sheet still has its room while it
   // animates closed.
   const [preview, setPreview] = React.useState<{
@@ -140,7 +134,7 @@ function RoomCard({
   onOpen: () => void
 }) {
   const sUser = useAuthUser()
-  const { userName } = useMatchmaking()
+  const { userName } = useSessionData()
   const { courtByVenue } = useData()
   const court = courtByVenue(room.venue)
   const address = court

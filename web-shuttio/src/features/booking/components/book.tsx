@@ -55,7 +55,8 @@ import type { Court } from "@/lib/shared"
 import { addDays, mondayIndex } from "@/features/booking/lib/calendar"
 import { toMin } from "@/features/booking/components/calendar-ui"
 import { useData } from "@/features/dashboard/components/data-provider"
-import { useBooking } from "@/features/booking/components/booking"
+import { useUserLocationContext } from "@/features/dashboard/state/location"
+import { useBookingWizard } from "@/features/booking/hooks/use-booking-wizard"
 import { CourtImage } from "@/features/dashboard/components/shared"
 import { CourtPhotosButton } from "@/features/dashboard/components/court-photos"
 import { CourtMap } from "@/features/play/components/court-map"
@@ -205,7 +206,7 @@ export function BookView() {
     checkoutError,
     clearCheckoutError,
     pay,
-  } = useBooking()
+  } = useBookingWizard()
   const { courts: COURTS, dayLabelFor } = useData()
 
   // Cold load / direct navigation: nothing armed the wizard, so default to a
@@ -804,7 +805,7 @@ function CourtSlotGrid({
 }) {
   const { courtDayBusy, courtDayGaps, courtDayPending, todayIso, bookingDays } =
     useData()
-  const { sessions, roomId } = useBooking()
+  const { sessions, roomId } = useBookingWizard()
 
   const current = courts.find((c) => c.id === courtId)
   const group = React.useMemo(() => {
@@ -1230,16 +1231,9 @@ function CourtFinder({
   onChoose: (id: string, dayKey: string | null) => void
 }) {
   const locale = getLocale()
-  const {
-    venuePins,
-    userLoc,
-    geoStatus,
-    requestLocation,
-    bookingDays,
-    courtDayGaps,
-    dayLabelFor,
-  } = useData()
-  const { sessions, roomId } = useBooking()
+  const { venuePins, bookingDays, courtDayGaps, dayLabelFor } = useData()
+  const { userLoc, geoStatus, requestLocation } = useUserLocationContext()
+  const { sessions, roomId } = useBookingWizard()
 
   const priceBounds = React.useMemo((): readonly [number, number] => {
     if (!courts.length) return [0, 0]

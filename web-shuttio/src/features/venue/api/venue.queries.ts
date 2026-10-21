@@ -517,52 +517,72 @@ export function useAddWalkInReservation(venueId: string) {
 }
 
 /** Approve/decline is optimistic: the operator sees the row flip at once. */
+export interface ReservationDecisionInput {
+  id: string
+  decision: "approved" | "declined"
+  reason?: string
+}
+
+/** Apply one approval/decline to a reservation row. */
+function decideReservationRow(
+  reservation: Reservation,
+  input: ReservationDecisionInput
+): Reservation {
+  if (reservation.id !== input.id) return reservation
+  return {
+    ...reservation,
+    status: input.decision === "approved" ? "confirmed" : "cancelled",
+    ...(input.decision === "declined" && input.reason
+      ? { declineReason: input.reason }
+      : {}),
+  }
+}
+
+/**
+ * Apply an approval/decline to the cached venue bundle, leaving every other
+ * reservation untouched. Pure so the optimistic view can be unit-tested.
+ */
+export function applyReservationDecision(
+  seed: VenueSeed | undefined,
+  input: ReservationDecisionInput
+): VenueSeed | undefined {
+  if (!seed) return seed
+  return {
+    ...seed,
+    reservations: seed.reservations.map((reservation) =>
+      decideReservationRow(reservation, input)
+    ),
+  }
+}
+
 export function useDecideReservation(venueId: string) {
   const queryClient = useQueryClient()
   const invalidate = useInvalidateVenue(venueId)
 
   return useMutation({
-    mutationFn: ({
-      id,
-      decision,
-      reason,
-    }: {
-      id: string
-      decision: "approved" | "declined"
-      reason?: string
-    }) => decideReservation(venueId, id, decision, reason),
+    mutationFn: (input: ReservationDecisionInput) =>
+      decideReservation(venueId, input.id, input.decision, input.reason),
 
-    onMutate: async ({ id, decision, reason }) => {
+    onMutate: async (input) => {
+      // 1. Stop an in-flight bundle read from overwriting the optimistic view.
       await queryClient.cancelQueries({
         queryKey: queryKeys.venue.detail(venueId),
       })
+      // 2. Snapshot the cache so a rejected decision can restore it.
       const previous = queryClient.getQueryData<VenueSeed>(
         queryKeys.venue.detail(venueId)
       )
+      // 3. Write the optimistic status flip.
       queryClient.setQueryData<VenueSeed>(
         queryKeys.venue.detail(venueId),
-        (seed) =>
-          seed && {
-            ...seed,
-            reservations: seed.reservations.map((reservation) =>
-              reservation.id === id
-                ? {
-                    ...reservation,
-                    status:
-                      decision === "approved" ? "confirmed" : "cancelled",
-                    ...(decision === "declined" && reason
-                      ? { declineReason: reason }
-                      : {}),
-                  }
-                : reservation
-            ),
-          }
+        (seed) => applyReservationDecision(seed, input)
       )
+      // 4. Hand the snapshot to onError.
       return { previous }
     },
 
     onError: (_error, _vars, context) => {
-      if (context?.previous) {
+      if (context) {
         queryClient.setQueryData(
           queryKeys.venue.detail(venueId),
           context.previous
@@ -577,13 +597,8 @@ export function useDecideReservation(venueId: string) {
 export function useCancelReservation(venueId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({
-      id,
-      reason,
-    }: {
-      id: string
-      reason: string
-    }) => cancelReservation(venueId, id, reason),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      cancelReservation(venueId, id, reason),
     onSuccess: (updated) => {
       queryClient.setQueryData<VenueSeed>(
         queryKeys.venue.detail(venueId),

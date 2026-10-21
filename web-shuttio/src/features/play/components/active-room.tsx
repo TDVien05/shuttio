@@ -27,10 +27,8 @@ import {
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { roomChannelId } from "@/features/chat/lib/channel-ids"
-import {
-  markSharePaid,
-  remindSharePayment,
-} from "@/features/play/api/rooms-api"
+import { remindSharePayment } from "@/features/play/api/rooms-api"
+import { useMarkSharePaid } from "@/features/play/api/session.queries"
 import {
   AlertDialogAction,
   AlertDialogCancel,
@@ -66,8 +64,10 @@ import {
 } from "@/lib/shared"
 import type { MatchRoom, RoomMember } from "@/lib/shared"
 import { useData } from "@/features/dashboard/components/data-provider"
-import { useMatchmaking } from "@/features/play/components/matchmaking"
-import { useSession } from "@/features/play/components/session"
+import { useBookingWizard } from "@/features/booking/hooks/use-booking-wizard"
+import { useSessionData } from "@/features/play/hooks/use-session-data"
+import { useSessionActions } from "@/features/play/hooks/use-session-actions"
+import { useSessionUi } from "@/features/play/state/session-ui"
 import { PlayerProfileDialog } from "@/features/dashboard/components/profile-dialog"
 import { RoomSharePanel } from "@/features/play/components/room-share"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
@@ -90,9 +90,8 @@ const sportsMessages = {
  * other rooms the user has joined.
  */
 export function ActiveRoomPill() {
-  const { joinedRooms, activeRoom, managerOpen, setManagerOpen } =
-    useMatchmaking()
-  const { sessions } = useSession()
+  const { joinedRooms, activeRoom, sessions } = useSessionData()
+  const { managerOpen, setManagerOpen } = useSessionUi()
   const { user: USER } = useData()
   const pathname = useLocation({ select: (l) => l.pathname })
   const playScope = pathname === "/app/play"
@@ -183,7 +182,7 @@ export function RoomPreviewSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const { rooms } = useMatchmaking()
+  const { rooms } = useSessionData()
   const pathname = useLocation({ select: (l) => l.pathname })
   const playScope = pathname === "/app/play"
   const room = rooms.find((r) => r.id === roomId)
@@ -214,24 +213,25 @@ function RoomDetail({
   const {
     joinedRooms,
     joinedIds,
-    setActiveRoomId,
-    joinRoom,
-    leaveRoom,
     hasTimeConflict,
-    setRoomCapacity,
     userName,
-  } = useMatchmaking()
-  const sUser = useAuthUser()
-  const {
     sessions,
     requestedIds,
+  } = useSessionData()
+  const { setActiveRoomId } = useSessionUi()
+  const {
+    joinRoom,
+    leaveRoom,
+    setRoomCapacity,
     invitePlayer,
     kickPlayer,
-    bookCourtForSession,
     approveRequest,
     declineRequest,
-  } = useSession()
+  } = useSessionActions()
+  const sUser = useAuthUser()
+  const { bookCourtForSession } = useBookingWizard()
   const { players: MATCH_SUGGESTIONS, user: USER, courtByVenue } = useData()
+  const markPaid = useMarkSharePaid()
   const router = useRouter()
   const pathname = useLocation({ select: (l) => l.pathname })
   const playScope = pathname === "/app/play"
@@ -275,11 +275,6 @@ function RoomDetail({
     null
   )
   const [profileOpen, setProfileOpen] = React.useState(false)
-  // Optimistic paid-status overrides keyed by userId — persisted until the
-  // room list refreshes from the server on the next poll.
-  const [paidOverrides, setPaidOverrides] = React.useState<
-    Partial<Record<string, boolean>>
-  >({})
 
   const openProfile = (initials: string) => {
     setProfileInitials(initials)
@@ -456,18 +451,21 @@ function RoomDetail({
             {room.players.map((initials, i) => {
               const member = room.members?.at(i)
               const memberId = member?.userId
-              const isPaid =
-                paidOverrides[memberId ?? ""] ?? member?.paid ?? false
+              const isPaid = member?.paid ?? false
+              const paidPending =
+                markPaid.isPending &&
+                markPaid.variables.memberUserId === memberId
               return (
                 <ParticipantRow
                   key={`${initials}-${i}`}
                   sport={room.sport}
                   initials={initials}
-                  member={member ? { ...member, paid: isPaid } : undefined}
+                  member={member}
                   canKick={isHost && initials !== USER.initials}
                   onKick={() => kickPlayer(room.id, initials)}
                   onViewProfile={openProfile}
                   sharePrice={booked ? room.sharePrice : undefined}
+                  paidPending={paidPending}
                   onRemind={
                     isHost && memberId && !isPaid
                       ? () => {
@@ -486,19 +484,12 @@ function RoomDetail({
                   onMarkPaid={
                     isHost && memberId && !isPaid
                       ? () => {
-                          setPaidOverrides((prev) => ({
-                            ...prev,
-                            [memberId]: true,
-                          }))
-                          void markSharePaid(room.id, memberId).then((res) => {
-                            if (!res.ok) {
-                              setPaidOverrides((prev) => ({
-                                ...prev,
-                                [memberId]: false,
-                              }))
-                              toast.error(res.message)
+                          markPaid.mutate(
+                            { roomId: room.id, memberUserId: memberId },
+                            {
+                              onError: (error) => toast.error(error.message),
                             }
-                          })
+                          )
                         }
                       : undefined
                   }
@@ -590,7 +581,7 @@ function RoomDetail({
                   <button
                     key={r.id}
                     type="button"
-                    onClick={() => setActiveRoomId(r.id)}
+                    onClick={() => setActiveRoomId(r.id, r.title)}
                     className="flex w-full items-center gap-2.5 rounded-2xl p-2 text-left transition-colors hover:bg-muted/60"
                   >
                     <SportDot sport={r.sport} />
@@ -704,6 +695,7 @@ function ParticipantRow({
   onKick,
   onViewProfile,
   sharePrice,
+  paidPending,
   onRemind,
   onMarkPaid,
 }: {
@@ -715,12 +707,14 @@ function ParticipantRow({
   onViewProfile?: (initials: string) => void
   /** Non-zero when the room is booked and cost-sharing is enabled. */
   sharePrice?: number
+  /** Host-only: this member's paid write is in flight. */
+  paidPending?: boolean
   /** Host-only: send a payment reminder to this member. */
   onRemind?: () => void
   /** Host-only: mark this member as having paid. */
   onMarkPaid?: () => void
 }) {
-  const { userLevelForSport, userName } = useMatchmaking()
+  const { userLevelForSport, userName } = useSessionData()
   const sUser = useAuthUser()
   const { user: USER, players, playerByInitials } = useData()
   const { name, level, trust } = playerByInitials(initials)
@@ -843,6 +837,7 @@ function ParticipantRow({
                   variant="ghost"
                   size="xs"
                   className="h-5 px-2 text-mini"
+                  isDisabled={paidPending}
                   onPress={onMarkPaid}
                 >
                   <Check className="size-3" />

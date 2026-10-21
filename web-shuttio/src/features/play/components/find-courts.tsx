@@ -21,7 +21,8 @@ import {
 import { formatVnd } from "@/lib/shared"
 import type { Court } from "@/lib/shared"
 import { useData } from "@/features/dashboard/components/data-provider"
-import { useBooking } from "@/features/booking/components/booking"
+import { useUserLocationContext } from "@/features/dashboard/state/location"
+import { useBookingWizard } from "@/features/booking/hooks/use-booking-wizard"
 import { CourtImage, SportTag } from "@/features/dashboard/components/shared"
 import { CourtPhotosButton } from "@/features/dashboard/components/court-photos"
 import { CourtMap } from "@/features/play/components/court-map"
@@ -153,13 +154,8 @@ export function FindCourtsView({
   query: string
   filters: CourtFilterState
 }) {
-  const {
-    courts: COURTS,
-    venuePins,
-    userLoc,
-    geoStatus,
-    requestLocation,
-  } = useData()
+  const { courts: COURTS, venuePins } = useData()
+  const { userLoc, geoStatus, requestLocation } = useUserLocationContext()
   const [sort, setSort] = React.useState<SortKey>("distance")
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const locate = () => void requestLocation()
@@ -289,7 +285,7 @@ function CourtCard({
   active: boolean
   onSelect: () => void
 }) {
-  const { openBooking } = useBooking()
+  const { openBooking } = useBookingWizard()
   const ref = React.useRef<HTMLDivElement>(null)
 
   // Reveal the card when it becomes the selection (e.g. via a map marker).

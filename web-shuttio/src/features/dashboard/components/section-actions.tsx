@@ -3,7 +3,7 @@ import type { ComponentType } from "react"
 import { CalendarPlus, Play, Plus, RotateCcw } from "lucide-react"
 
 import { Button, LinkButton } from "@/components/ui/button"
-import { useBooking } from "@/features/booking/components/booking"
+import { useSessionUi } from "@/features/play/state/session-ui"
 import type { SectionKey } from "@/features/dashboard/nav"
 import { venueBase } from "@/features/venue/nav"
 import type { VenueSectionKey } from "@/features/venue/nav"
@@ -25,7 +25,7 @@ import { m } from "@/paraglide/messages"
 
 /** Player default — open the Play chooser. */
 function PlayAction() {
-  const { openPlay } = useBooking()
+  const { openPlay } = useSessionUi()
   return (
     <Button shape="pill" size="sm" onPress={openPlay}>
       <Play />
@@ -60,7 +60,7 @@ function ClearChatAction() {
  * this is exported for that view.
  */
 export function NewBookingAction() {
-  const { openPlay } = useBooking()
+  const { openPlay } = useSessionUi()
   return (
     <Button
       variant="lime"

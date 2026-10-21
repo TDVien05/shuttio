@@ -1,5 +1,8 @@
 import * as React from "react"
-import { useUserLocation } from "@/hooks/use-user-location"
+import { useSuspenseQuery } from "@tanstack/react-query"
+
+import { dashboardQueries } from "@/features/dashboard/api/dashboard.queries"
+import { useUserLocationContext } from "@/features/dashboard/state/location"
 import { distanceKmBetween } from "@/lib/shared/location"
 
 import {
@@ -10,31 +13,22 @@ import {
   courtDayBusy as courtDayBusyFn,
   courtDayPending as courtDayPendingFn,
   courtDayGaps as courtDayGapsFn,
-  courtNumberFor as courtNumberForFn,
-  courtSlots as courtSlotsFn,
   dayLabelFor as dayLabelForFn,
   isoDateOf,
   playerByInitials as playerByInitialsFn,
-  sessionToBooking as sessionToBookingFn,
 } from "@/lib/shared"
 import type {
   AccountType,
-  ActivityItem,
-  Booking,
+  Brand,
   Conflict,
   ConflictQuery,
   Court,
   CourtBand,
   Localized,
-  MatchRoom,
-  NotificationItem,
   Player,
   PlaySession,
+  PlayerAssessment,
   RosterEntry,
-  Seed,
-  Stats,
-  Brand,
-  Streak,
   User,
   Venue,
   VenuePin,
@@ -43,18 +37,15 @@ import type {
 /**
  * The player-scoped records (fetched from the API) plus helpers pre-bound to
  * them — so call sites keep the original `playerByInitials(initials)` /
- * `courtSlots(courtId, day)` signatures even though the records now live in the
- * API rather than a web module.
+ * `courtDayGaps(courtId, day)` signatures even though the records now live in
+ * the API rather than a web module.
  *
  * Venue-operator records are **not** here — they are per-venue and provided by
- * {@link VenueDataProvider} under each `/app/venue/[venueId]` subtree. The
- * one exception is {@link DataContextValue.venues}, the operator's *list* of
- * venue profiles (account-level, used by the sidebar switcher/manager).
+ * the venue bundle queries under each `/app/venue/[venueId]` subtree. The one
+ * exception is {@link DataContextValue.venues}, the operator's *list* of venue
+ * profiles (account-level, used by the sidebar switcher/manager).
  */
 interface DataContextValue {
-  userLoc: ReturnType<typeof useUserLocation>["userLoc"]
-  geoStatus: ReturnType<typeof useUserLocation>["geoStatus"]
-  requestLocation: ReturnType<typeof useUserLocation>["requestLocation"]
   // ── Real-time anchor ──
   /** Server "now" as an ISO datetime (+07:00) — the render anchor (never Date.now()). */
   serverNow: string
@@ -70,14 +61,8 @@ interface DataContextValue {
   courts: Court[]
   /** Every discoverable branch as one map pin (venue coords) for the Find Courts map. */
   venuePins: VenuePin[]
-  rooms: MatchRoom[]
-  bookings: Booking[]
-  /** Seed sessions (built from rooms + bookings) the SessionProvider hydrates. */
-  sessions: PlaySession[]
-  streak: Streak
-  stats: Stats
-  activity: ActivityItem[]
-  notifications: NotificationItem[]
+  /** The player's persisted skills assessment (null until taken). */
+  assessment: PlayerAssessment | null
   /** The operator's brand (thương hiệu), or null when unprovisioned / player-only. */
   brand: Brand | null
   /** Every branch (chi nhánh) the operator manages (profiles), for the switcher/manager. */
@@ -89,11 +74,6 @@ interface DataContextValue {
   // ── Record-bound helpers ──
   playerByInitials: (initials: string) => RosterEntry
   courtByVenue: (name: string) => Court | undefined
-  courtNumberFor: (courtId: string) => string
-  courtSlots: (
-    courtId: string,
-    dayKey: string
-  ) => { time: string; taken: boolean }[]
   conflictFor: (sessions: PlaySession[], q: ConflictQuery) => Conflict
   courtDayBusy: (
     sessions: PlaySession[],
@@ -113,7 +93,6 @@ interface DataContextValue {
     dayKey: string,
     ignoreId?: string
   ) => CourtBand[]
-  sessionToBooking: (s: PlaySession) => Booking
 }
 
 const DataContext = React.createContext<DataContextValue | null>(null)
@@ -126,19 +105,16 @@ export function useData() {
 }
 
 /**
- * Holds the player dataset fetched from the API (the `/app` layout's seed
- * query) and exposes it — plus helpers bound to it — through `useData`. The
- * layout only renders once the seed has loaded, so there is no loading state
- * here; a seed refetch (after a write) flows straight through.
+ * Derives the player dataset from the seed query and exposes it — plus helpers
+ * bound to it — through `useData`. It owns no mutable copy: a seed refetch
+ * (after a write) flows straight through. Geolocation lives in
+ * `LocationProvider`; this provider only reads the resulting coordinates to
+ * decorate courts with distances.
  */
-export function DataProvider({
-  seed,
-  children,
-}: {
-  seed: Seed
-  children: React.ReactNode
-}) {
-  const { userLoc, geoStatus, requestLocation } = useUserLocation()
+export function DataProvider({ children }: { children: React.ReactNode }) {
+  const { data: seed } = useSuspenseQuery(dashboardQueries.seed())
+  const { userLoc } = useUserLocationContext()
+
   const value = React.useMemo<DataContextValue>(() => {
     const courts = seed.courts.map((court) => ({
       ...court,
@@ -147,9 +123,6 @@ export function DataProvider({
     const roster = buildRoster(seed.user, seed.players)
     const todayIso = isoDateOf(seed.serverNow)
     return {
-      userLoc,
-      geoStatus,
-      requestLocation,
       // Real-time anchor
       serverNow: seed.serverNow,
       todayIso,
@@ -160,13 +133,7 @@ export function DataProvider({
       players: seed.players,
       courts,
       venuePins: seed.venuePins,
-      rooms: seed.rooms,
-      bookings: seed.bookings,
-      sessions: seed.sessions,
-      streak: seed.streak,
-      stats: seed.stats,
-      activity: seed.activity,
-      notifications: seed.notifications,
+      assessment: seed.assessment,
       // Operator's brand + branch profiles (account-level)
       brand: seed.brand,
       venues: seed.venues,
@@ -175,8 +142,6 @@ export function DataProvider({
       // Bound helpers (original signatures preserved)
       playerByInitials: (initials) => playerByInitialsFn(roster, initials),
       courtByVenue: (name) => courtByVenueFn(courts, name),
-      courtNumberFor: (courtId) => courtNumberForFn(courts, courtId),
-      courtSlots: (courtId, dayKey) => courtSlotsFn(courts, courtId, dayKey),
       conflictFor: (sessions, q) =>
         conflictForFn(courts, seed.user, sessions, q),
       courtDayBusy: (sessions, courtId, dayKey, ignoreId) =>
@@ -185,9 +150,8 @@ export function DataProvider({
         courtDayPendingFn(sessions, courtId, dayKey, ignoreId),
       courtDayGaps: (sessions, courtId, dayKey, ignoreId) =>
         courtDayGapsFn(courts, sessions, courtId, dayKey, ignoreId),
-      sessionToBooking: (s) => sessionToBookingFn(courts, s),
     }
-  }, [seed, userLoc, geoStatus, requestLocation])
+  }, [seed, userLoc])
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>
 }

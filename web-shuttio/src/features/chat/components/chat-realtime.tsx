@@ -1,14 +1,10 @@
-import * as React from "react"
 import { useQueryClient } from "@tanstack/react-query"
 
 import type { ChatEvent } from "@/lib/shared"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
-import {
-  appendMessage,
-  chatQueries,
-} from "@/features/chat/lib/chat-queries"
+import { appendMessage, chatQueries } from "@/features/chat/lib/chat-queries"
 import type { MessagePages } from "@/features/chat/lib/chat-queries"
-import { subscribeToChannel, userChatChannel } from "@/lib/realtime"
+import { useChannelInvalidation, userChatChannel } from "@/lib/realtime"
 import { queryKeys } from "@/lib/query-keys"
 
 /**
@@ -21,14 +17,11 @@ export function ChatRealtime() {
   const queryClient = useQueryClient()
   const { id: userId } = useAuthUser()
 
-  React.useEffect(() => {
-    const refetchChannels = () =>
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.chat.channelsAll(),
-      })
-    return subscribeToChannel(
-      userChatChannel(userId),
-      (data) => {
+  useChannelInvalidation(
+    userChatChannel(userId),
+    [queryKeys.chat.channelsAll()],
+    {
+      onPublication: (data) => {
         const event = data as ChatEvent
         if (event.type === "message") {
           queryClient.setQueryData<MessagePages>(
@@ -36,17 +29,16 @@ export function ChatRealtime() {
             (prev) => appendMessage(prev, event.message)
           )
         }
-        refetchChannels()
       },
-      // (Re)connected: cover anything published while offline.
-      () => {
-        refetchChannels()
+      // (Re)connected: a message query could have missed a publication, so
+      // refetch the open conversation as well as the list (handled above).
+      onSubscribed: () => {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.chat.messagesAll(),
         })
-      }
-    )
-  }, [queryClient, userId])
+      },
+    }
+  )
 
   return null
 }

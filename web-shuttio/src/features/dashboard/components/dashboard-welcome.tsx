@@ -14,9 +14,10 @@ import { AdvancedImage } from "@cloudinary/react"
 import { Link } from "@tanstack/react-router"
 
 import { useData } from "@/features/dashboard/components/data-provider"
+import { useUserLocationContext } from "@/features/dashboard/state/location"
 import { CLOUDINARY_IMAGES, cloudinaryImage } from "@/lib/cloudinary"
 import { CourtMap } from "@/features/play/components/court-map"
-import { useSession } from "@/features/play/components/session"
+import { useSessionData } from "@/features/play/hooks/use-session-data"
 import { formatVnd } from "@/lib/shared"
 import { hasCoordinates } from "@/lib/shared/location"
 import { m } from "@/paraglide/messages"
@@ -50,8 +51,9 @@ export function DashboardWelcome({
   /** Set when an AI conversation is in progress — shows "Continue chatting". */
   onResume?: () => void
 }) {
-  const { courts, venuePins, userLoc } = useData()
-  const { bookings } = useSession()
+  const { courts, venuePins } = useData()
+  const { userLoc } = useUserLocationContext()
+  const { bookings } = useSessionData()
   const [mapSelectedId, setMapSelectedId] = useState<string | null>(null)
 
   // Stable references so the memoized CourtMap skips re-renders.

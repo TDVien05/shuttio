@@ -39,6 +39,27 @@ export const notificationQueries = {
 }
 
 /**
+ * Flip one notification's read flag while leaving the rest of the list (and
+ * every other record's identity) untouched. Pure so the optimistic view can be
+ * unit-tested.
+ */
+export function applyNotificationRead(
+  records: NotificationRecord[] | undefined,
+  id: string
+): NotificationRecord[] | undefined {
+  return records?.map((record) =>
+    record.id === id ? { ...record, read: true } : record
+  )
+}
+
+/** Mark every notification read. Pure so the optimistic view can be tested. */
+export function applyAllNotificationsRead(
+  records: NotificationRecord[] | undefined
+): NotificationRecord[] | undefined {
+  return records?.map((record) => ({ ...record, read: true }))
+}
+
+/**
  * Flip one notification's read flag immediately and mirror it to the server.
  * A failed write restores the previous list, so the bell never claims a
  * notification was read when the API rejected it.
@@ -50,22 +71,23 @@ export function useMarkNotificationRead() {
     mutationFn: (id: string) => markNotificationRead(id),
 
     onMutate: async (id) => {
+      // 1. Stop an in-flight list read from overwriting the optimistic view.
       await queryClient.cancelQueries({ queryKey: queryKeys.notifications() })
+      // 2. Snapshot the cache so a rejected write can restore it.
       const previous = queryClient.getQueryData<NotificationRecord[]>(
         queryKeys.notifications()
       )
+      // 3. Write the optimistic read flag.
       queryClient.setQueryData<NotificationRecord[]>(
         queryKeys.notifications(),
-        (records) =>
-          records?.map((record) =>
-            record.id === id ? { ...record, read: true } : record
-          )
+        (records) => applyNotificationRead(records, id)
       )
+      // 4. Hand the snapshot to onError.
       return { previous }
     },
 
     onError: (_error, _id, context) => {
-      if (context?.previous) {
+      if (context) {
         queryClient.setQueryData(queryKeys.notifications(), context.previous)
       }
     },
@@ -86,19 +108,23 @@ export function useMarkAllNotificationsRead() {
     mutationFn: () => markAllNotificationsRead(),
 
     onMutate: async () => {
+      // 1. Stop an in-flight list read from overwriting the optimistic view.
       await queryClient.cancelQueries({ queryKey: queryKeys.notifications() })
+      // 2. Snapshot the cache so a rejected write can restore it.
       const previous = queryClient.getQueryData<NotificationRecord[]>(
         queryKeys.notifications()
       )
+      // 3. Write the optimistic all-read view.
       queryClient.setQueryData<NotificationRecord[]>(
         queryKeys.notifications(),
-        (records) => records?.map((record) => ({ ...record, read: true }))
+        (records) => applyAllNotificationsRead(records)
       )
+      // 4. Hand the snapshot to onError.
       return { previous }
     },
 
     onError: (_error, _vars, context) => {
-      if (context?.previous) {
+      if (context) {
         queryClient.setQueryData(queryKeys.notifications(), context.previous)
       }
     },

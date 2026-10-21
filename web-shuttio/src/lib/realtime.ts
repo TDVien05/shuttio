@@ -1,5 +1,8 @@
+import * as React from "react"
 import { Centrifuge, UnauthorizedError } from "centrifuge"
 import type { Subscription } from "centrifuge"
+import { useQueryClient } from "@tanstack/react-query"
+import type { QueryKey } from "@tanstack/react-query"
 
 import { api } from "@/lib/api"
 import { ApiError } from "@/lib/api-error"
@@ -85,4 +88,61 @@ export function subscribeToChannel(
       client = null
     }
   }
+}
+
+interface ChannelInvalidationOptions {
+  /** Apply a publication to the cache before the follow-up refetch. */
+  onPublication?: (data: unknown) => void
+  /** Extra catch-up work after a reconnect (query-key invalidation is below). */
+  onSubscribed?: () => void
+}
+
+/**
+ * Invalidate query caches whenever `channel` publishes, and once more each
+ * time the subscription reconnects (cover anything missed while offline).
+ * Bursts are collapsed into one refetch. Every Centrifugo subscription in the
+ * app goes through this hook; callers pass fresh key arrays each render, so
+ * the effect keys on a serialized stable hash instead.
+ */
+export function useChannelInvalidation(
+  channel: string | null,
+  queryKeys: readonly QueryKey[],
+  options: ChannelInvalidationOptions = {}
+): void {
+  const queryClient = useQueryClient()
+  const keysHash = JSON.stringify(queryKeys)
+  const onPublicationRef = React.useRef(options.onPublication)
+  const onSubscribedRef = React.useRef(options.onSubscribed)
+
+  React.useEffect(() => {
+    onPublicationRef.current = options.onPublication
+    onSubscribedRef.current = options.onSubscribed
+  }, [options.onPublication, options.onSubscribed])
+
+  React.useEffect(() => {
+    if (!channel) return
+    const keys = JSON.parse(keysHash) as QueryKey[]
+    let debounce: ReturnType<typeof setTimeout> | undefined
+
+    const invalidate = () => {
+      for (const queryKey of keys) {
+        void queryClient.invalidateQueries({ queryKey })
+      }
+    }
+    const onPublication = (data: unknown) => {
+      onPublicationRef.current?.(data)
+      clearTimeout(debounce)
+      debounce = setTimeout(invalidate, 250)
+    }
+    const onSubscribed = () => {
+      onSubscribedRef.current?.()
+      invalidate()
+    }
+
+    const unsubscribe = subscribeToChannel(channel, onPublication, onSubscribed)
+    return () => {
+      clearTimeout(debounce)
+      unsubscribe()
+    }
+  }, [channel, keysHash, queryClient])
 }

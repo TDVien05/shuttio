@@ -142,13 +142,11 @@ export function RefundQueuePanel({ items }: { items: RefundQueueItem[] }) {
   const queryClient = useQueryClient()
   const { venueId }: { venueId?: string } = useParams({ strict: false })
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const targetRef = React.useRef<RefundQueueItem | null>(null)
-  const [done, setDone] = React.useState<ReadonlySet<string>>(new Set())
+  const targetIdRef = React.useRef<string | null>(null)
   const [busyId, setBusyId] = React.useState<string | null>(null)
   const [amounts, setAmounts] = React.useState<Record<string, string>>({})
 
-  const open = items.filter((i) => !done.has(i.bookingId))
-  if (open.length === 0) return null
+  if (items.length === 0) return null
 
   const copy = (text: string) => {
     void navigator.clipboard.writeText(text).then(() => {
@@ -178,9 +176,8 @@ export function RefundQueuePanel({ items }: { items: RefundQueueItem[] }) {
         toast.error(result.message)
         return
       }
-      setDone((prev) => new Set(prev).add(item.bookingId))
       toast.success(m.venue_payment_review_refund_done())
-      void queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: venueId
           ? queryKeys.venue.detail(venueId)
           : queryKeys.venue.all(),
@@ -205,7 +202,9 @@ export function RefundQueuePanel({ items }: { items: RefundQueueItem[] }) {
         hidden
         onChange={(e) => {
           const file = e.target.files?.[0]
-          const item = targetRef.current
+          const item = items.find(
+            (entry) => entry.bookingId === targetIdRef.current
+          )
           e.target.value = ""
           if (file && item) void submit(item, file)
         }}
@@ -214,7 +213,7 @@ export function RefundQueuePanel({ items }: { items: RefundQueueItem[] }) {
         {m.venue_payment_review_refund_hint()}
       </p>
       <ul className="flex flex-col divide-y divide-border">
-        {open.map((item) => (
+        {items.map((item) => (
           <li
             key={item.bookingId}
             className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row"
@@ -280,7 +279,7 @@ export function RefundQueuePanel({ items }: { items: RefundQueueItem[] }) {
 
                   isDisabled={busyId === item.bookingId}
                   onPress={() => {
-                    targetRef.current = item
+                    targetIdRef.current = item.bookingId
                     inputRef.current?.click()
                   }}
                 >

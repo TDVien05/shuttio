@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table"
 import { VenueEmpty, ReasonDialog } from "@/features/venue/components/shared"
 import { useReasonConfirm } from "@/features/admin/hooks/use-reason-confirm"
-import { forceCancelBooking } from "@/features/admin/api/admin-api"
+import { useAdminActions } from "@/features/admin/api/admin-api"
 import type { AdminBookingRow } from "@/features/admin/types/admin-types"
 import { sortableTable } from "@/lib/table"
 import type { SortableTable } from "@/lib/table"
@@ -85,10 +85,11 @@ export function AdminBookingsView({
 }: {
   bookings: AdminBookingRow[]
 }) {
+  const admin = useAdminActions()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const pagination = useAdminPagination(bookings.length)
   const { setTarget, dialogProps } = useReasonConfirm<AdminBookingRow>(
-    (booking, reason) => forceCancelBooking(booking.bookingId, reason)
+    (booking, reason) => admin.forceCancelBooking(booking.bookingId, reason)
   )
 
   const headerCell = React.useCallback(

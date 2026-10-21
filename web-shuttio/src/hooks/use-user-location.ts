@@ -4,11 +4,13 @@ import * as React from "react"
 import { hasCoordinates } from "@/lib/shared/location"
 import type { Coordinates } from "@/lib/shared/location"
 
+export type GeoStatus = "locating" | "on" | "off"
+
 export function useUserLocation() {
   const [userLoc, setUserLoc] = React.useState<Coordinates | null>(null)
-  const [geoStatus, setGeoStatus] = React.useState<"locating" | "on" | "off">(
-    "locating"
-  )
+  // Never prompt on mount: only an explicit "near me" action requests the
+  // browser permission.
+  const [geoStatus, setGeoStatus] = React.useState<GeoStatus>("off")
   const requestLocation = React.useCallback(() => {
     setGeoStatus("locating")
     return new Promise<Coordinates | null>((resolve) => {
@@ -34,11 +36,6 @@ export function useUserLocation() {
       )
     })
   }, [])
-
-  React.useEffect(() => {
-    const id = setTimeout(() => void requestLocation(), 0)
-    return () => clearTimeout(id)
-  }, [requestLocation])
 
   return { userLoc, geoStatus, requestLocation }
 }

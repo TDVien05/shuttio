@@ -1,10 +1,12 @@
 import {
+  conflictFor,
   courtDayBusy,
   courtDayGaps,
   isRsvpExpired,
   rangesOverlap,
   sessionToBooking,
   sessionToRoom,
+  withoutExpiredRsvps,
 } from "@/lib/shared"
 import type {
   Booking,
@@ -15,6 +17,7 @@ import type {
   PlaySession,
   User,
 } from "@/lib/shared"
+import type { ExpiredEvent } from "@/features/play/lib/session-types"
 
 /** `GET /api/rooms` is stored unvalidated; drop docs a dashboard can't read. */
 export function wellFormedRooms(remote: unknown): PlaySession[] {
@@ -120,9 +123,7 @@ export function deriveCommittedSessions(
         s.status !== "cancelled" &&
         s.status !== "completed" &&
         s.slot != null &&
-        s.roster.some(
-          (p) => p.userId === userId && p.rsvp !== "declined"
-        )
+        s.roster.some((p) => p.userId === userId && p.rsvp !== "declined")
     ),
   ]
 }
@@ -143,12 +144,7 @@ export function overlappingCommitment(
       (s) =>
         s.id !== target.id &&
         s.dayKey === target.dayKey &&
-        rangesOverlap(
-          target.slot!,
-          target.durationMin,
-          s.slot!,
-          s.durationMin
-        )
+        rangesOverlap(target.slot!, target.durationMin, s.slot!, s.durationMin)
     ) ?? null
   )
 }
@@ -287,6 +283,54 @@ export function deriveExpiries(
   return { heldExpired, rsvpExpired }
 }
 
+/**
+ * The expiry rules as a read view: an expired forming hold stops reserving the
+ * court, and an unanswered request/invite disappears from the roster. The
+ * stored server record is left alone — `GET /api/sessions` owns the same rules
+ * and the venue may still answer a request made before the TTL.
+ */
+export function applyExpiryView(
+  sessions: PlaySession[],
+  now: number
+): PlaySession[] {
+  return sessions.map((session) => {
+    const released =
+      session.status === "forming" &&
+      session.holdExpiresAt != null &&
+      session.holdExpiresAt <= now
+        ? {
+            ...session,
+            courtId: null,
+            courtLabel: null,
+            slot: null,
+            holdExpiresAt: undefined,
+          }
+        : session
+    return withoutExpiredRsvps(released, now)
+  })
+}
+
+/** Notifications for everything that has expired, with stable dedupe ids. */
+export function deriveExpiredEvents(
+  sessions: PlaySession[],
+  now: number
+): ExpiredEvent[] {
+  const { heldExpired, rsvpExpired } = deriveExpiries(sessions, now)
+  return [
+    ...heldExpired.map((session): ExpiredEvent => ({
+      id: `hx-${session.id}`,
+      kind: "hold",
+      title: session.title,
+      description: session.venue,
+    })),
+    ...rsvpExpired.map(({ session, player }): ExpiredEvent => ({
+      id: `rx-${session.id}-${player.userId ?? player.initials}`,
+      kind: player.rsvp === "requested" ? "request" : "invite",
+      title: player.name || player.initials,
+    })),
+  ]
+}
+
 /** The court the wizard is booking, or null for a courtless (find-players) draft. */
 export function draftCourt(
   courts: Court[],
@@ -364,4 +408,3 @@ export function courtGaps(
   const court = draftCourt(courts, courtId)
   return court ? courtDayGaps(courts, sessions, court.id, dayKey, ignoreId) : []
 }
-

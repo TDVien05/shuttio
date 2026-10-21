@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  applyExpiryView,
   deriveActiveSession,
   deriveBookings,
+  deriveExpiredEvents,
   deriveExpiries,
   deriveHostedIds,
   deriveJoinedIds,
@@ -99,10 +101,7 @@ describe("room derivations", () => {
 
     const hosted = deriveHostedIds([mine], "Q")
     const remote = deriveRemoteJoinedIds([remoteGoing, remoteRequested], "u1")
-    const requested = deriveRequestedIds(
-      [remoteGoing, remoteRequested],
-      "u1"
-    )
+    const requested = deriveRequestedIds([remoteGoing, remoteRequested], "u1")
     const joined = deriveJoinedIds(new Set(["local"]), hosted, remote)
 
     expect([...hosted]).toEqual(["hosted"])
@@ -144,12 +143,12 @@ describe("room derivations", () => {
   })
 
   it("only marks a joinable room suitable when it has space and isn't mine", () => {
-    const room = deriveRooms([session()], [], [court])[0]!
+    const room = deriveRooms([session()], [], [court])[0]
     expect(isRoomSuitable(room, new Set())).toBe(true)
     expect(isRoomSuitable(room, new Set(["s1"]))).toBe(false)
-    expect(
-      isRoomSuitable({ ...room, joined: room.capacity }, new Set())
-    ).toBe(false)
+    expect(isRoomSuitable({ ...room, joined: room.capacity }, new Set())).toBe(
+      false
+    )
     expect(isRoomSuitable({ ...room, demo: true }, new Set())).toBe(false)
   })
 })
@@ -199,7 +198,9 @@ describe("expiry derivations", () => {
 
     expect(result.heldExpired.map((s) => s.id)).toEqual(["s1"])
     expect(
-      result.rsvpExpired.map(({ session: s, player }) => `${s.id}:${player.initials}`)
+      result.rsvpExpired.map(
+        ({ session: s, player }) => `${s.id}:${player.initials}`
+      )
     ).toEqual(["requested:M", "invited:I"])
   })
 
@@ -211,5 +212,55 @@ describe("expiry derivations", () => {
       ],
     })
     expect(deriveExpiries([room], now).rsvpExpired).toEqual([])
+  })
+
+  it("hides an expired hold and RSVP without rewriting the stored record", () => {
+    const held = session({ holdExpiresAt: now, venue: "Ace Pavilion" })
+    const requested = session({
+      id: "requested",
+      roster: [
+        { name: "Host", initials: "H", rsvp: "host" },
+        {
+          name: "Mai",
+          initials: "M",
+          rsvp: "requested",
+          rsvpAt: now - REQUEST_EXPIRY_MS - 1,
+        },
+      ],
+    })
+
+    const view = applyExpiryView([held, requested], now)
+
+    expect(view[0]).toMatchObject({
+      courtId: null,
+      courtLabel: null,
+      slot: null,
+      holdExpiresAt: undefined,
+    })
+    expect(view[1]?.roster.map((p) => p.initials)).toEqual(["H"])
+    // The source records stay intact for the server's own rules.
+    expect(held.courtId).toBe("c1")
+    expect(requested.roster).toHaveLength(2)
+  })
+
+  it("builds stable notification ids for each expiry", () => {
+    const held = session({ holdExpiresAt: now })
+    const requested = session({
+      id: "requested",
+      roster: [
+        {
+          name: "Mai",
+          initials: "M",
+          rsvp: "requested",
+          rsvpAt: now - REQUEST_EXPIRY_MS - 1,
+        },
+      ],
+    })
+
+    const events = deriveExpiredEvents([held, requested], now)
+
+    expect(events.map((e) => e.id)).toEqual(["hx-s1", "rx-requested-M"])
+    expect(events.map((e) => e.kind)).toEqual(["hold", "request"])
+    expect(events[0]?.description).toBe("Ace Pavilion")
   })
 })

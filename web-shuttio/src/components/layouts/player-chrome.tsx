@@ -7,9 +7,9 @@ import { workspaceForPath } from "@/features/dashboard/lib/workspace"
  * Player-workspace-only floating chrome (the Play chooser, booking wizard and
  * Match Maker dialogs). Hidden on venue
  * routes so the operator surface gets its own chrome instead. Lives inside the
- * shared SessionProvider so every floater keeps its state across player-section
- * navigation — and so the topbar can open the Quick Join / Create Room dialogs
- * from anywhere.
+ * dashboard's UI providers so every floater keeps its state across
+ * player-section navigation — and so the topbar can open the Quick Join /
+ * Create Room dialogs from anywhere.
  */
 export function PlayerChrome() {
   const pathname = useLocation({ select: (l) => l.pathname })

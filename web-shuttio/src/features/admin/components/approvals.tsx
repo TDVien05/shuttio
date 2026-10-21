@@ -21,20 +21,21 @@ import {
 import { VenueEmpty, ReasonDialog } from "@/features/venue/components/shared"
 import { ContactPhone } from "@/features/admin/components/contact-phone"
 import { useReasonConfirm } from "@/features/admin/hooks/use-reason-confirm"
-import { approveBrand, rejectBrand } from "@/features/admin/api/admin-api"
+import { useAdminActions } from "@/features/admin/api/admin-api"
 import type { AdminApprovalRow } from "@/features/admin/types/admin-types"
 import { sortableTable } from "@/lib/table"
 import type { SortableTable } from "@/lib/table"
 import { m } from "@/paraglide/messages"
 
 export function AdminApprovalsView({ brands }: { brands: AdminApprovalRow[] }) {
+  const admin = useAdminActions()
   const [rows, setRows] = React.useState(brands)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const pagination = useAdminPagination(rows.length)
   const [pending, setPending] = React.useState<string | null>(null)
 
   const { setTarget, dialogProps } = useReasonConfirm<AdminApprovalRow>(
-    (row, reason) => rejectBrand(row.brand.id, reason),
+    (row, reason) => admin.rejectBrand(row.brand.id, reason),
     (row) =>
       setRows((current) => current.filter((r) => r.brand.id !== row.brand.id))
   )
@@ -42,7 +43,7 @@ export function AdminApprovalsView({ brands }: { brands: AdminApprovalRow[] }) {
   const handleApprove = async (row: AdminApprovalRow) => {
     setPending(row.brand.id)
     try {
-      await approveBrand(row.brand.id)
+      await admin.approveBrand(row.brand.id)
       setRows((current) => current.filter((r) => r.brand.id !== row.brand.id))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Request failed")

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 import {
@@ -12,102 +12,33 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { subscribeToChannel, userNotificationsChannel } from "@/lib/realtime"
-import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { relativeTime } from "@/lib/relative-time"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverTrigger } from "@/components/ui/popover"
-import type {
-  NotificationItem,
-  NotificationKind,
-} from "@/lib/shared"
+import type { NotificationItem, NotificationKind } from "@/lib/shared"
 import {
   notificationQueries,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
 } from "@/features/dashboard/api/dashboard.queries"
-import { useMatchmaking } from "@/features/play/components/matchmaking"
-import { ROOMS_CHANGED_EVENT } from "@/features/play/components/session"
-import { queryKeys } from "@/lib/query-keys"
+import { useSessionUi } from "@/features/play/state/session-ui"
 import { m } from "@/paraglide/messages"
 
 /** A notification this recent still toasts on the first load. */
 const FRESH_NOTIFICATION_MS = 60_000
 
-interface NotificationsContextValue {
-  items: NotificationItem[]
-  unreadCount: number
-  markRead: (id: string) => void
-  markAllRead: () => void
-}
-
-const NotificationsContext =
-  React.createContext<NotificationsContextValue | null>(null)
-
-export function useNotifications() {
-  const ctx = React.useContext(NotificationsContext)
-  if (!ctx) {
-    throw new Error(
-      "useNotifications must be used within a NotificationsProvider."
-    )
-  }
-  return ctx
-}
-
 /**
- * Notification centre, mounted in the dashboard layout. Server notifications
- * (an operator's approve/decline, an auto-confirm, a no-show mark, …) come
- * from polling `GET /api/notifications`; a live room change refetches right
- * away. Matchmaking expiry events add client-only items on top.
+ * The notification centre's derived view. Server rows come from React Query;
+ * client-only expiry items come from the shared session UI store.
  */
-export function NotificationsProvider({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const queryClient = useQueryClient()
-  const authUser = useAuthUser()
-  const { expiredEvents } = useMatchmaking()
+export function useNotifications() {
   const { data: records = [] } = useQuery(notificationQueries.list())
+  const { now, expiredEvents, readLocal, markLocalRead, markAllLocalRead } =
+    useSessionUi()
   const markReadMutation = useMarkNotificationRead()
   const markAllReadMutation = useMarkAllNotificationsRead()
-  // Client-only items (expiry events) have no server row to flip.
-  const [readLocal, setReadLocal] = React.useState<Set<string>>(new Set())
-
-  // A new notification row is announced on the user's own channel.
-  React.useEffect(
-    () =>
-      subscribeToChannel(userNotificationsChannel(authUser.id), () =>
-        queryClient.invalidateQueries({ queryKey: queryKeys.notifications() })
-      ),
-    [authUser.id, queryClient]
-  )
-
-  // A live room change usually comes with a notification for this user.
-  React.useEffect(() => {
-    const refetch = () =>
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.notifications(),
-      })
-    window.addEventListener(ROOMS_CHANGED_EVENT, refetch)
-    return () => window.removeEventListener(ROOMS_CHANGED_EVENT, refetch)
-  }, [queryClient])
-
-  // Toast genuinely new unread notifications. The first load only toasts very
-  // fresh ones — a mount shouldn't replay everything that arrived while away.
-  const seen = React.useRef<Set<string> | null>(null)
-  React.useEffect(() => {
-    const firstLoad = seen.current === null
-    for (const r of records) {
-      if (r.read || seen.current?.has(r.id)) continue
-      const age = Date.now() - Date.parse(r.createdAt)
-      if (!firstLoad || age <= FRESH_NOTIFICATION_MS) toast(r.text)
-    }
-    seen.current = new Set(records.map((r) => r.id))
-  }, [records])
 
   const items = React.useMemo<NotificationItem[]>(() => {
-    const now = new Date()
     const expired = expiredEvents.map((e): NotificationItem => ({
       id: e.id,
       kind: e.kind === "hold" ? "booking" : "match",
@@ -122,31 +53,54 @@ export function NotificationsProvider({
     }))
     const server = records.map((r): NotificationItem => ({
       ...r,
-      time: relativeTime(new Date(r.createdAt), now),
+      time: relativeTime(new Date(r.createdAt), new Date(now)),
     }))
     return [...expired.reverse(), ...server]
-  }, [expiredEvents, records, readLocal])
+  }, [expiredEvents, records, readLocal, now])
 
-  // Optimistic: flip local state immediately, mirror to the server in the
-  // background (a client-only id no-ops server-side harmlessly).
-  const markRead = (id: string) => {
-    setReadLocal((prev) => new Set(prev).add(id))
-    markReadMutation.mutate(id)
-  }
-  const markAllRead = () => {
-    setReadLocal(new Set(items.map((n) => n.id)))
+  // Server rows are optimistically flipped in the query cache (and restored on
+  // failure); only client-only expiry items need a local read flag.
+  const markRead = React.useCallback(
+    (id: string) => {
+      if (expiredEvents.some((event) => event.id === id)) {
+        markLocalRead(id)
+        return
+      }
+      markReadMutation.mutate(id)
+    },
+    [expiredEvents, markLocalRead, markReadMutation]
+  )
+
+  const markAllRead = React.useCallback(() => {
+    markAllLocalRead(expiredEvents.map((event) => event.id))
     markAllReadMutation.mutate()
-  }
+  }, [expiredEvents, markAllLocalRead, markAllReadMutation])
 
   const unreadCount = items.reduce((n, item) => n + (item.read ? 0 : 1), 0)
 
-  return (
-    <NotificationsContext.Provider
-      value={{ items, unreadCount, markRead, markAllRead }}
-    >
-      {children}
-    </NotificationsContext.Provider>
-  )
+  return { items, unreadCount, markRead, markAllRead }
+}
+
+/**
+ * Toast genuinely new unread server notifications. Mounted once in the
+ * dashboard layout; the first load only toasts very fresh rows so mounting
+ * doesn't replay everything that arrived while away.
+ */
+export function NotificationsToaster() {
+  const { data: records = [] } = useQuery(notificationQueries.list())
+  const seen = React.useRef<Set<string> | null>(null)
+
+  React.useEffect(() => {
+    const firstLoad = seen.current === null
+    for (const record of records) {
+      if (record.read || seen.current?.has(record.id)) continue
+      const age = Date.now() - Date.parse(record.createdAt)
+      if (!firstLoad || age <= FRESH_NOTIFICATION_MS) toast(record.text)
+    }
+    seen.current = new Set(records.map((record) => record.id))
+  }, [records])
+
+  return null
 }
 
 const kindIcon: Record<

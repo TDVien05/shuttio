@@ -70,7 +70,9 @@ import {
   useNow,
 } from "@/features/booking/components/calendar-ui"
 import type { TimelineColumn } from "@/features/booking/components/calendar-ui"
-import { useBooking } from "@/features/booking/components/booking"
+import { useBookingWizard } from "@/features/booking/hooks/use-booking-wizard"
+import { useSessionData } from "@/features/play/hooks/use-session-data"
+import { useSessionActions } from "@/features/play/hooks/use-session-actions"
 import { confirmRefundReceipt } from "@/features/booking/api/payment-api"
 import { SportTag, dayWordLabel } from "@/features/dashboard/components/shared"
 import { NewBookingAction } from "@/features/dashboard/components/section-actions"
@@ -384,7 +386,7 @@ interface Col {
 }
 
 export function BookingsView() {
-  const { bookings } = useBooking()
+  const { bookings } = useSessionData()
   const { todayIso } = useData()
   const now = useNow()
 
@@ -824,8 +826,8 @@ function CalendarEvent({
   dayLabel: string
   offsetMin: (hhmm: string) => number
 }) {
-  const { cancelBooking, rebookFrom, addTeamToSession, resumePayment } =
-    useBooking()
+  const { cancelBooking, addTeamToSession } = useSessionActions()
+  const { rebookFrom, resumePayment } = useBookingWizard()
   const router = useRouter()
   const queryClient = useQueryClient()
 
@@ -1232,7 +1234,7 @@ function FreeBand({
   durationMin: number
   offsetMin: (hhmm: string) => number
 }) {
-  const { openBooking, setDay, setSlot } = useBooking()
+  const { openBooking, setDay, setSlot } = useBookingWizard()
   const top = offsetMin(start) * PX_PER_MIN
   const height = durationMin * PX_PER_MIN
   if (height < 24) return null
@@ -1276,7 +1278,7 @@ function LegendDot({ status }: { status: BookingStatus }) {
  * time, the result/score (or final status), the players and a rebook action.
  */
 function PastRow({ booking }: { booking: Booking }) {
-  const { rebookFrom } = useBooking()
+  const { rebookFrom } = useBookingWizard()
   const { dayLabelFor } = useData()
   const locale = getLocale()
   const courtLabel = useCourtLabel()

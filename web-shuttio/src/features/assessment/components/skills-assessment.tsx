@@ -1,5 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query"
-import { queryKeys } from "@/lib/query-keys"
 import { useRouter } from "@tanstack/react-router"
 import * as React from "react"
 import { ArrowRight } from "lucide-react"
@@ -12,15 +10,13 @@ import {
   answerKeys,
   calculateAssessmentResult,
   rangeLabel,
-  readStoredAssessment,
-  writeStoredAssessment,
 } from "@/features/assessment/lib/player-assessment"
 import type {
   AssessmentDefinition,
   AssessmentSport,
   PlayerAssessment,
 } from "@/features/assessment/lib/player-assessment"
-import { saveAssessment } from "@/features/assessment/api/assessment-api"
+import { useSaveAssessment } from "@/features/assessment/api/assessment.queries"
 import { m } from "@/paraglide/messages"
 
 const descriptionMessages = {
@@ -52,7 +48,7 @@ export function SkillsAssessmentView({
   nextPath?: string
 } = {}) {
   const router = useRouter()
-  const queryClient = useQueryClient()
+  const saveAssessment = useSaveAssessment()
 
   const [answers, setAnswers] = React.useState<DraftAnswers>({})
   const [submitted, setSubmitted] = React.useState(false)
@@ -60,16 +56,12 @@ export function SkillsAssessmentView({
     null
   )
 
-  // Pre-populate from any saved assessment so a retake starts from the
-  // previous answers. The server-persisted value (Mongo, via the page) wins
-  // over the local cache and is mirrored into localStorage so the dashboard's
-  // synchronous readers agree.
+  // Pre-populate from the saved assessment so a retake starts from the previous
+  // answers. The server-persisted value (Mongo, via the page) is the only
+  // source of truth.
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      const existing = initial ?? readStoredAssessment()
-      if (!existing) return
-      if (initial) writeStoredAssessment(initial)
-      const saved = existing.results[SPORT]?.answers
+      const saved = initial?.results[SPORT]?.answers
       if (saved) setAnswers({ [SPORT]: saved })
     }, 0)
     return () => clearTimeout(timer)
@@ -119,7 +111,7 @@ export function SkillsAssessmentView({
   }
 
   const finish = () => {
-    if (!current) return
+    if (!current || saveAssessment.isPending) return
 
     const done =
       current.questions.filter((q) => currentAnswers[q.id]).length ===
@@ -129,9 +121,8 @@ export function SkillsAssessmentView({
       return
     }
 
-    const existing = readStoredAssessment()
     const mergedResults = {
-      ...(existing?.results ?? {}),
+      ...(initial?.results ?? {}),
       [SPORT]: calculateAssessmentResult(current, currentAnswers),
     } as PlayerAssessment["results"]
 
@@ -141,23 +132,15 @@ export function SkillsAssessmentView({
       selectedSports: [SPORT],
       results: mergedResults,
     }
-    writeStoredAssessment(nextAssessment)
     // Persist to Mongo (per Clerk user) so the assessment survives a
     // device/browser switch. Saving also makes a venue-only account a player,
-    // so wait for it and refresh the cached account/seed before showing the
-    // CTA — otherwise the dashboard still sees "venue" and bounces them back.
-    // A failed write just means a cold load falls back to the local cache.
-    void saveAssessment(nextAssessment)
+    // so wait for the mutation's account/seed refetch before showing the CTA —
+    // otherwise the dashboard still sees "venue" and bounces them back.
+    void saveAssessment
+      .mutateAsync(nextAssessment)
       .catch((error) => {
         console.error("Failed to persist assessment", error)
       })
-      .then(() =>
-        Promise.all([
-          queryClient.invalidateQueries({ queryKey: queryKeys.seed() }),
-          queryClient.invalidateQueries({ queryKey: queryKeys.account() }),
-          queryClient.invalidateQueries({ queryKey: queryKeys.assessment() }),
-        ])
-      )
       .then(() => setCompleted(nextAssessment))
   }
 

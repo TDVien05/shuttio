@@ -12,14 +12,15 @@ import {
   ReasonDialog,
 } from "@/features/venue/components/shared"
 import { useReasonConfirm } from "@/features/admin/hooks/use-reason-confirm"
-import { settleRefund } from "@/features/admin/api/admin-api"
+import { useAdminActions } from "@/features/admin/api/admin-api"
 import type { AdminRefundRow } from "@/features/admin/types/admin-types"
 import { m } from "@/paraglide/messages"
 
 export function AdminRefundsView({ refunds }: { refunds: AdminRefundRow[] }) {
+  const admin = useAdminActions()
   const pagination = useAdminPagination(refunds.length)
   const { setTarget, dialogProps } = useReasonConfirm<AdminRefundRow>(
-    (item, ref) => settleRefund(item.bookingId, ref)
+    (item, ref) => admin.settleRefund(item.bookingId, ref)
   )
 
   return (

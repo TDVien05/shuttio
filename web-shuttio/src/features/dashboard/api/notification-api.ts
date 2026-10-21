@@ -2,11 +2,9 @@ import type { NotificationRecord } from "@/lib/shared"
 
 import { api } from "@/lib/api"
 
-// Client calls for the Phase 7 transactional notification feed
-// (`api/src/features/notifications/`). `NotificationsProvider` calls these
-// directly from the client (no invalidation — it already holds the optimistic
-// state) to poll the signed-in user's notifications and mirror read/read-all
-// back to the server.
+// Client calls for the transactional notification feed
+// (`api/src/features/notifications/`). `notificationQueries` polls through
+// these and the read mutations mirror optimistic state back to the server.
 
 /**
  * The signed-in user's notifications, newest first. Every real record carries

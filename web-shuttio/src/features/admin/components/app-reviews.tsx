@@ -11,7 +11,7 @@ import {
   AdminPagination,
   useAdminPagination,
 } from "@/features/admin/components/pagination"
-import { setAppReviewHidden } from "@/features/admin/api/admin-api"
+import { useAdminActions } from "@/features/admin/api/admin-api"
 import { VenueEmpty, VenuePanel } from "@/features/venue/components/shared"
 import { m } from "@/paraglide/messages"
 
@@ -30,19 +30,14 @@ export function AdminAppReviewsView({
 }: {
   reviews: AdminAppReviewRow[]
 }) {
-  const [rows, setRows] = React.useState(reviews)
+  const admin = useAdminActions()
   const [pending, setPending] = React.useState<string | null>(null)
-  const pagination = useAdminPagination(rows.length)
+  const pagination = useAdminPagination(reviews.length)
 
   const toggle = async (row: AdminAppReviewRow) => {
     setPending(row.userId)
     try {
-      await setAppReviewHidden(row.userId, !row.hidden)
-      setRows((current) =>
-        current.map((r) =>
-          r.userId === row.userId ? { ...r, hidden: !row.hidden } : r
-        )
-      )
+      await admin.setAppReviewHidden(row.userId, !row.hidden)
       toast.success(
         row.hidden
           ? m.admin_app_reviews_shown()
@@ -64,14 +59,14 @@ export function AdminAppReviewsView({
 
   return (
     <div className="flex flex-col gap-5">
-      {rows.length === 0 ? (
+      {reviews.length === 0 ? (
         <VenueEmpty text={m.admin_app_reviews_empty()} />
       ) : (
         <VenuePanel
-          title={m.admin_app_reviews_list_title({ count: rows.length })}
+          title={m.admin_app_reviews_list_title({ count: reviews.length })}
         >
           <ul className="flex flex-col divide-y divide-border">
-            {rows
+            {reviews
               .slice(pagination.offset, pagination.offset + pagination.pageSize)
               .map((row) => (
                 <li

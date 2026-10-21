@@ -12,7 +12,7 @@ import {
   ReasonDialog,
 } from "@/features/venue/components/shared"
 import { useReasonConfirm } from "@/features/admin/hooks/use-reason-confirm"
-import { resolveComplaint } from "@/features/admin/api/admin-api"
+import { useAdminActions } from "@/features/admin/api/admin-api"
 import { m } from "@/paraglide/messages"
 
 const STATUS_VARIANT = {
@@ -41,12 +41,13 @@ export function AdminComplaintsView({
 }: {
   complaints: RoomComplaintRow[]
 }) {
+  const admin = useAdminActions()
   const pagination = useAdminPagination(complaints.length)
   const resolve = useReasonConfirm<RoomComplaintRow>((item, note) =>
-    resolveComplaint(item.id, "resolve", note)
+    admin.resolveComplaint(item.id, "resolve", note)
   )
   const dismiss = useReasonConfirm<RoomComplaintRow>((item, note) =>
-    resolveComplaint(item.id, "dismiss", note)
+    admin.resolveComplaint(item.id, "dismiss", note)
   )
 
   return (

@@ -1,5 +1,4 @@
 import { useLocation, useRouter } from "@tanstack/react-router"
-import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { RotateCcw, Star } from "lucide-react"
 import { initialsOf } from "@/lib/shared"
@@ -18,14 +17,12 @@ import {
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { useData } from "@/features/dashboard/components/data-provider"
 import { assessmentQueries } from "@/features/assessment/api/assessment.queries"
-import { useMatchmaking } from "@/features/play/components/matchmaking"
+import { usePlayerIdentity } from "@/features/play/hooks/use-player-identity"
 import { LevelChip, SportDot } from "@/features/dashboard/components/shared"
 import {
-  readStoredAssessment,
   rangeLabel,
   PLAYER_ASSESSMENT_PATH,
 } from "@/features/assessment/lib/player-assessment"
-import type { PlayerAssessment } from "@/features/assessment/lib/player-assessment"
 import { m } from "@/paraglide/messages"
 
 const sportsMessages = {
@@ -40,21 +37,13 @@ interface ProfileDialogProps {
 export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
   const sUser = useAuthUser()
   const router = useRouter()
-  const { userName } = useMatchmaking()
+  const { userName } = usePlayerIdentity()
   const { user: USER } = useData()
 
-  const [assessment, setAssessment] = React.useState<PlayerAssessment | null>(
-    null
-  )
-
-  React.useEffect(() => {
-    if (open) {
-      const handle = setTimeout(() => {
-        setAssessment(readStoredAssessment())
-      }, 0)
-      return () => clearTimeout(handle)
-    }
-  }, [open])
+  const { data: assessment = null } = useQuery({
+    ...assessmentQueries.assessment(),
+    enabled: open,
+  })
 
   const accountName = sUser.name || userName
   const accountSubtitle = sUser.email || USER.handle

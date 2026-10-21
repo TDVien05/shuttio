@@ -4,7 +4,7 @@ import { MapPin, Plus, Search, Users, X, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useMatchmaking } from "@/features/play/components/matchmaking"
+import { useSessionUi } from "@/features/play/state/session-ui"
 import { RoomsView } from "@/features/play/components/match-maker"
 import {
   CourtFilterPanel,
@@ -28,7 +28,7 @@ export function PlayView({ initialTab = "courts" }: { initialTab?: PlayTab }) {
   const [courtFilters, setCourtFilters] = React.useState<CourtFilterState>(
     DEFAULT_COURT_FILTERS
   )
-  const { openQuickJoin, openCreateRoom } = useMatchmaking()
+  const { openQuickJoin, openCreateRoom } = useSessionUi()
 
   return (
     <div className="player-play flex min-h-full flex-col bg-surface-cool-2 text-foreground lg:h-full lg:overflow-hidden">

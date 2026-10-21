@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { AccountType } from "@/lib/shared"
 
-import { chooseAccountType } from "@/features/onboarding/api/account-api"
+import { useChooseAccountType } from "@/features/onboarding/api/account-api"
 import { m } from "@/paraglide/messages"
 
 type Role = "player" | "venue"
@@ -20,6 +20,7 @@ type Role = "player" | "venue"
  */
 export function OnboardingView() {
   const router = useRouter()
+  const chooseAccountType = useChooseAccountType()
   const [selected, setSelected] = React.useState<Role[]>([])
   const [submitting, setSubmitting] = React.useState(false)
 
@@ -41,12 +42,15 @@ export function OnboardingView() {
   const handleContinue = () => {
     if (!accountType || submitting) return
     setSubmitting(true)
-    void chooseAccountType(accountType).then(() => {
-      void router.navigate({
-        href: accountType === "venue" ? "/setup" : "/assessment",
-        replace: true,
+    void chooseAccountType
+      .mutateAsync(accountType)
+      .then(() => {
+        void router.navigate({
+          href: accountType === "venue" ? "/setup" : "/assessment",
+          replace: true,
+        })
       })
-    })
+      .catch(() => setSubmitting(false))
   }
 
   return (

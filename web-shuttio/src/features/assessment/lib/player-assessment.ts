@@ -62,9 +62,6 @@ export interface AssessmentDefinition {
   ranges: AssessmentRange[]
 }
 
-export const PLAYER_ASSESSMENT_STORAGE_KEY = "sportmatch.playerAssessment.v1"
-export const PLAYER_ASSESSMENT_UPDATED_EVENT = "player-assessment-updated"
-
 // The dedicated route hosting the assessment wizard. The gate redirects
 // incomplete players here, and "redo" sends them back to it.
 export const PLAYER_ASSESSMENT_PATH = "/assessment"
@@ -186,7 +183,7 @@ export function isCompleteAssessment(
   value: unknown
 ): value is PlayerAssessment {
   if (!value || typeof value !== "object") return false
-  // Untrusted (localStorage) — validate against a loose shape.
+  // Untrusted (API) — validate against a loose shape.
   const assessment = value as {
     version?: unknown
     selectedSports?: unknown
@@ -231,20 +228,6 @@ export function isCompleteAssessment(
   })
 }
 
-export function readStoredAssessment(): PlayerAssessment | null {
-  try {
-    const raw = window.localStorage.getItem(PLAYER_ASSESSMENT_STORAGE_KEY)
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    if (!isCompleteAssessment(parsed)) return null
-    // Saves from before `selectedSports` existed only covered badminton.
-    const { selectedSports } = parsed as { selectedSports?: AssessmentSport[] }
-    return { ...parsed, selectedSports: selectedSports ?? ["badminton"] }
-  } catch {
-    return null
-  }
-}
-
 export function levelForSport(
   assessment: PlayerAssessment | null,
   sport: AssessmentSport,
@@ -262,20 +245,7 @@ export function levelsBySport(
   }
 }
 
-export function writeStoredAssessment(assessment: PlayerAssessment) {
-  window.localStorage.setItem(
-    PLAYER_ASSESSMENT_STORAGE_KEY,
-    JSON.stringify(assessment)
-  )
-  window.dispatchEvent(new Event(PLAYER_ASSESSMENT_UPDATED_EVENT))
-}
-
-export function clearStoredAssessment() {
-  window.localStorage.removeItem(PLAYER_ASSESSMENT_STORAGE_KEY)
-  window.dispatchEvent(new Event(PLAYER_ASSESSMENT_UPDATED_EVENT))
-}
-
-/** The assessment for a sport key (from typed code or untrusted storage). */
+/** The assessment for a sport key (from typed code or untrusted payload). */
 export function definitionFor(sport: string): AssessmentDefinition | undefined {
   return ASSESSMENTS.find((a) => a.sport === sport)
 }

@@ -40,8 +40,10 @@ import {
 import { LEVELS, diffMinutes, locStr } from "@/lib/shared"
 import type { RoomLevel } from "@/lib/shared"
 import { useData } from "@/features/dashboard/components/data-provider"
-import { useMatchmaking } from "@/features/play/components/matchmaking"
-import type { QuickJoinFilters } from "@/features/play/components/matchmaking"
+import { useSessionData } from "@/features/play/hooks/use-session-data"
+import { useSessionActions } from "@/features/play/hooks/use-session-actions"
+import { useSessionUi } from "@/features/play/state/session-ui"
+import type { QuickJoinFilters } from "@/features/play/lib/session-types"
 import { m } from "@/paraglide/messages"
 
 const levelsMessages = {
@@ -95,7 +97,8 @@ function QuickJoinDialog() {
   const { courts: COURTS } = useData()
   const pathname = useLocation({ select: (l) => l.pathname })
   const playScope = pathname === "/app/play"
-  const { quickJoinOpen, setQuickJoinOpen, quickJoin } = useMatchmaking()
+  const { quickJoinOpen, setQuickJoinOpen } = useSessionUi()
+  const { quickJoin } = useSessionActions()
   const [maxDistance, setMaxDistance] = React.useState("any") // "2" | "5" | "any"
   const [day, setDay] =
     React.useState<QuickJoinFilters["day"]>("today-tomorrow")
@@ -279,16 +282,15 @@ function CreateRoomDialog() {
     dayLabelFor,
   } = useData()
   const {
-    userLevelForSport,
-    addRoom,
-    createRoomOpen,
-    setCreateRoomOpen,
     sessions,
     hostedRoomCount,
     maxHostedRooms,
     canHostMore,
+    userLevelForSport,
     userName,
-  } = useMatchmaking()
+  } = useSessionData()
+  const { addRoom } = useSessionActions()
+  const { createRoomOpen, setCreateRoomOpen } = useSessionUi()
   const idRef = React.useRef(0)
 
   /** Opening window of a court ("HH:MM"); the global window backs courts with none. */

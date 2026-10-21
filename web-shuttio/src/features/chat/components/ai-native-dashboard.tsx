@@ -31,7 +31,7 @@ import {
 import { toast } from "sonner"
 
 import { CourtDistance } from "@/features/dashboard/components/court-distance"
-import { useBooking } from "@/features/booking/components/booking"
+import { useBookingWizard } from "@/features/booking/hooks/use-booking-wizard"
 import { activeRoster, formatVnd } from "@/lib/shared"
 import type {
   Court,
@@ -41,7 +41,9 @@ import type {
   SportKey,
 } from "@/lib/shared"
 import { useData } from "@/features/dashboard/components/data-provider"
-import { useSession } from "@/features/play/components/session"
+import { useUserLocationContext } from "@/features/dashboard/state/location"
+import { useSessionData } from "@/features/play/hooks/use-session-data"
+import { useSessionActions } from "@/features/play/hooks/use-session-actions"
 import {
   CourtImage,
   LevelChip,
@@ -73,10 +75,7 @@ import type {
   PlayerMatchIntent,
   PlayerMatchResult,
 } from "@/features/play/lib/player-matching"
-import {
-  readStoredAssessment,
-  PLAYER_ASSESSMENT_PATH,
-} from "@/features/assessment/lib/player-assessment"
+import { PLAYER_ASSESSMENT_PATH } from "@/features/assessment/lib/player-assessment"
 import {
   Trace,
   TraceLine,
@@ -189,23 +188,12 @@ const useIsomorphicLayoutEffect =
 // ─── Main view ───────────────────────────────────────────────────────────────
 
 export function AiNativeDashboardView() {
-  const {
-    courts,
-    user: USER,
-    requestLocation,
-    players: seedPlayers,
-  } = useData()
-  const { openBooking } = useBooking()
-  const {
-    createInviteRoom,
-    addPlayersToSession,
-    sessions,
-    rooms,
-    joinedIds,
-    joinRoom,
-    userLevelForSport,
-    userLevels,
-  } = useSession()
+  const { courts, user: USER, players: seedPlayers } = useData()
+  const { requestLocation } = useUserLocationContext()
+  const { openBooking } = useBookingWizard()
+  const { sessions, rooms, joinedIds, userLevelForSport } = useSessionData()
+  const { createInviteRoom, addPlayersToSession, joinRoom } =
+    useSessionActions()
   const navigate = useNavigate()
 
   const [input, setInput] = React.useState("")
@@ -655,11 +643,6 @@ export function AiNativeDashboardView() {
     setInput("")
 
     await resolveLocation()
-    const assessment = readStoredAssessment()
-    const activeUserLevels: Record<string, string> = {}
-    if (assessment?.results.badminton) {
-      activeUserLevels.badminton = userLevels.badminton
-    }
     void sendMessage({ text: trimmed })
   }
 
@@ -1800,7 +1783,7 @@ function RoomCard({
   room: MatchRoom
   onJoin: (room: MatchRoom) => void
 }) {
-  const { joinedIds, requestedIds } = useSession()
+  const { joinedIds, requestedIds } = useSessionData()
   const open = room.capacity - room.joined
   const isJoined = joinedIds.has(room.id)
   const isRequested = requestedIds.has(room.id)

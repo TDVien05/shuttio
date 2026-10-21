@@ -1,9 +1,16 @@
-import { queryOptions } from "@tanstack/react-query"
+import {
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query-keys"
 import type { PlayerAssessment } from "@/lib/shared"
-import { playerSkillLevels } from "@/features/assessment/api/assessment-api"
+import {
+  playerSkillLevels,
+  saveAssessment,
+} from "@/features/assessment/api/assessment-api"
 import { playerRatingSummary } from "@/features/chat/api/group-api"
 
 /** Reads owned by the player skills assessment. */
@@ -29,4 +36,25 @@ export const assessmentQueries = {
       queryKey: queryKeys.ratings(userId),
       queryFn: () => playerRatingSummary(userId),
     }),
+}
+
+/**
+ * Save the signed-in player's assessment. The API returns the stored record, so
+ * write that single cache entry and refresh the resources whose derived views
+ * include it (the dashboard seed and the account type).
+ */
+export function useSaveAssessment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (assessment: PlayerAssessment) => saveAssessment(assessment),
+
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(queryKeys.assessment(), saved)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.seed() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.account() }),
+      ])
+    },
+  })
 }

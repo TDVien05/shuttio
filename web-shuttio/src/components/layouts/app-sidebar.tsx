@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { useData } from "@/features/dashboard/components/data-provider"
-import { useMatchmaking } from "@/features/play/components/matchmaking"
+import { usePlayerIdentity } from "@/features/play/hooks/use-player-identity"
 import { ProfileDialog } from "@/features/dashboard/components/profile-dialog"
 import { AppReviewDialog } from "@/features/app-review/components/app-review-dialog"
 import { venueBase } from "@/features/venue/nav"
@@ -51,7 +51,7 @@ export function AppSidebar() {
   const pathname = useLocation({ select: (l) => l.pathname })
   const { signOut, openUserProfile } = useClerk()
   const { isMobile, setOpenMobile } = useSidebar()
-  const { userName } = useMatchmaking()
+  const { userName } = usePlayerIdentity()
   const { user: USER, brand: BRAND, venues: VENUES, accountType } = useData()
   const venueOnly = accountType === "venue"
 

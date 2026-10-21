@@ -29,12 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  deleteVenue,
-  removeVenueOwner,
-  restoreVenue,
-  suspendVenue,
-} from "@/features/admin/api/admin-api"
+import { useAdminActions } from "@/features/admin/api/admin-api"
 import type { AdminActionResult } from "@/features/admin/api/admin-api"
 import { ContactPhone } from "@/features/admin/components/contact-phone"
 import type {
@@ -56,6 +51,7 @@ const approvalMessages = {
 } as const
 
 export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
+  const admin = useAdminActions()
   const [pending, setPending] = React.useState<string | null>(null)
 
   const [removing, setRemoving] = React.useState<{
@@ -94,16 +90,16 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
   }
 
   const handleSuspend = (venue: AdminVenueRow) =>
-    void run(venue.id, () => suspendVenue(venue.id))
+    void run(venue.id, () => admin.suspendVenue(venue.id))
 
   const handleRestore = (venue: AdminVenueRow) =>
-    void run(venue.id, () => restoreVenue(venue.id))
+    void run(venue.id, () => admin.restoreVenue(venue.id))
 
   const confirmDeleteVenue = async () => {
     if (!deletingVenue) return
     const ok = await run(
       `delete-${deletingVenue.id}`,
-      () => deleteVenue(deletingVenue.id),
+      () => admin.deleteVenue(deletingVenue.id),
       m.admin_venues_delete_venue_done()
     )
     if (ok) setDeletingVenue(null)
@@ -113,7 +109,7 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
     if (!removing) return
     const ok = await run(
       removing.ownerId,
-      () => removeVenueOwner(removing.ownerId),
+      () => admin.removeVenueOwner(removing.ownerId),
       m.admin_venues_remove_owner_done()
     )
     if (ok) setRemoving(null)
