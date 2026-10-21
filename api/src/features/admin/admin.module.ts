@@ -6,7 +6,8 @@ import { DiscountsModule } from "../discounts/discounts.module.js"
 import { PlayersModule } from "../players/players.module.js"
 import { RoomsModule } from "../rooms/rooms.module.js"
 import { SessionsModule } from "../sessions/sessions.module.js"
-import { StreamModule } from "../stream/stream.module.js"
+import { ChatModule } from "../chat/chat.module.js"
+import { DirectoryModule } from "../directory/directory.module.js"
 import { VenuesModule } from "../venues/venues.module.js"
 import { AdminController } from "./admin.controller.js"
 import { AdminService } from "./admin.service.js"
@@ -23,7 +24,8 @@ import { OwnerRemovalService } from "./owner-removal.service.js"
     SessionsModule,
     DiscountsModule,
     RoomsModule,
-    StreamModule,
+    DirectoryModule,
+    ChatModule,
   ],
   controllers: [AdminController],
   providers: [AdminService, OwnerRemovalService],

@@ -3,11 +3,7 @@ import { test } from "node:test"
 
 import "reflect-metadata"
 
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from "@nestjs/common"
+import { ForbiddenException } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 
 import { RoomEventsService } from "../src/features/rooms/room-events.service.js"
@@ -26,26 +22,17 @@ import { BookingsService } from "../src/features/bookings/bookings.service.js"
 import { PlaySession } from "../src/features/sessions/session.schema.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
 import { ProfileService } from "../src/features/players/profile.service.js"
-import {
-  ClerkDirectoryService,
-  type DirectoryUser,
-} from "../src/features/stream/clerk-directory.service.js"
-import {
-  MAX_GROUP_MEMBERS,
-  STREAM_CLIENT,
-  StreamService,
-  isGroupChannel,
-} from "../src/features/stream/stream.service.js"
-import { Venue } from "../src/features/venues/venue.schema.js"
+import { ClerkDirectoryService } from "../src/features/directory/clerk-directory.service.js"
+import { isGroupChannel } from "../src/features/chat/chat.ids.js"
+import { ChatService } from "../src/features/chat/chat.service.js"
 import { Booking } from "../src/features/bookings/booking.schema.js"
-import { Brand } from "../src/features/brands/brand.schema.js"
 import type { PlaySession as PlaySessionData } from "../src/shared/index.js"
 
 /**
  * Group-chat management: the pure "match a group coordinates" projections
  * (group-match.ts), `RoomsService#groupMatch` (what any member sees), and
- * `StreamService`'s rename/add-members. Fakes follow rooms-service.test.ts
- * and stream-community.test.ts — no real Stream app, Mongo or Clerk.
+ * Fakes follow rooms-service.test.ts — no real Mongo or Clerk. Rename/add-member
+ * rules are covered in chat-service.test.ts.
  */
 
 function makeSession(
@@ -176,18 +163,20 @@ async function makeRooms(
       { provide: getModelToken(PlaySession.name), useValue: { findOne } },
       { provide: NotificationsService, useValue: {} },
       { provide: ProfileService, useValue: {} },
-      { provide: StreamService, useValue: { assertMember } },
+      { provide: ChatService, useValue: { assertMember } },
       { provide: ClerkDirectoryService, useValue: {} },
       // Court-share collaborators — groupMatch never touches them.
       { provide: getModelToken(Booking.name), useValue: {} },
       {
         provide: BookingsService,
-        useValue: {
-        },
+        useValue: {},
       },
       { provide: getModelToken(RoomComplaint.name), useValue: {} },
-      { provide: BookingChatService, useValue: { post: () => Promise.resolve() } },
-      RoomEventsService,
+      {
+        provide: BookingChatService,
+        useValue: { post: () => Promise.resolve() },
+      },
+      { provide: RoomEventsService, useValue: { emit: () => {} } },
     ],
   }).compile()
   return moduleRef.get(RoomsService)
@@ -261,161 +250,5 @@ void test("groupMatch rejects non-members", async () => {
   await assert.rejects(
     service.groupMatch("stranger", "group-g"),
     ForbiddenException
-  )
-})
-
-// ── StreamService rename / add members ──────────────────────────────────────
-
-function makeStreamClient(channel: {
-  createdBy: string
-  members: string[]
-  venueId?: string
-  missing?: boolean
-}) {
-  const calls = {
-    updatePartial: [] as unknown[],
-    addMembers: [] as string[][],
-    upsertUsers: [] as unknown[],
-  }
-  const client = {
-    key: "k",
-    upsertUsers(users: unknown) {
-      calls.upsertUsers.push(users)
-      return Promise.resolve()
-    },
-    channel() {
-      return {
-        query() {
-          if (channel.missing)
-            return Promise.reject(
-              Object.assign(new Error("not found"), { status: 404 })
-            )
-          return Promise.resolve({
-            channel: {
-              created_by: { id: channel.createdBy },
-              ...(channel.venueId ? { venueId: channel.venueId } : {}),
-            },
-            members: channel.members.map((id) => ({ user_id: id })),
-          })
-        },
-        updatePartial(update: unknown) {
-          calls.updatePartial.push(update)
-          return Promise.resolve()
-        },
-        addMembers(ids: string[]) {
-          calls.addMembers.push(ids)
-          return Promise.resolve()
-        },
-      }
-    },
-  }
-  return { client, calls }
-}
-
-async function makeStream(
-  client: ReturnType<typeof makeStreamClient>["client"],
-  users: DirectoryUser[] = []
-) {
-  const byId = new Map(users.map((u) => [u.id, u]))
-  const directory = {
-    getMany: (ids: string[]) =>
-      Promise.resolve(
-        ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []))
-      ),
-  }
-  const moduleRef = await Test.createTestingModule({
-    providers: [
-      StreamService,
-      { provide: STREAM_CLIENT, useValue: client },
-      { provide: getModelToken(Venue.name), useValue: {} },
-      { provide: getModelToken(Booking.name), useValue: {} },
-      { provide: getModelToken(Brand.name), useValue: {} },
-      { provide: ClerkDirectoryService, useValue: directory },
-    ],
-  }).compile()
-  return moduleRef.get(StreamService)
-}
-
-void test("renameGroup: any member renames a group (trimmed)", async () => {
-  const { client, calls } = makeStreamClient({
-    createdBy: "owner",
-    members: ["owner", "user-an", "user-bi"],
-  })
-  const service = await makeStream(client)
-  await service.renameGroup("user-an", "group-g", "  Hội cầu lông  ")
-  assert.deepEqual(calls.updatePartial, [{ set: { name: "Hội cầu lông" } }])
-})
-
-void test("renameGroup rejects non-members, DMs, venue chats and blank names", async () => {
-  const group = await makeStream(
-    makeStreamClient({ createdBy: "o", members: ["o", "a", "b"] }).client
-  )
-  await assert.rejects(
-    group.renameGroup("x", "group-g", "N"),
-    ForbiddenException
-  )
-  await assert.rejects(
-    group.renameGroup("a", "group-g", "   "),
-    BadRequestException
-  )
-
-  const dm = await makeStream(
-    makeStreamClient({ createdBy: "a", members: ["a", "b"] }).client
-  )
-  await assert.rejects(dm.renameGroup("a", "dm-1", "N"), BadRequestException)
-
-  const venue = await makeStream(
-    makeStreamClient({ createdBy: "a", members: ["a", "b"], venueId: "v1" })
-      .client
-  )
-  await assert.rejects(
-    venue.renameGroup("a", "venue-1", "N"),
-    BadRequestException
-  )
-
-  const missing = await makeStream(
-    makeStreamClient({ createdBy: "a", members: [], missing: true }).client
-  )
-  await assert.rejects(
-    missing.renameGroup("a", "group-g", "N"),
-    NotFoundException
-  )
-})
-
-void test("addGroupMembers: the creator adds new real users, skipping existing members", async () => {
-  const { client, calls } = makeStreamClient({
-    createdBy: "owner",
-    members: ["owner", "user-an"],
-  })
-  const service = await makeStream(client, [{ id: "user-bi", name: "Bình" }])
-  await service.addGroupMembers("owner", "group-g", ["user-an", "user-bi"])
-  assert.deepEqual(calls.addMembers, [["user-bi"]])
-  assert.equal(calls.upsertUsers.length, 1)
-})
-
-void test("addGroupMembers is creator-only, community-groups-only, capped and real-users-only", async () => {
-  const mk = (members: string[]) =>
-    makeStream(makeStreamClient({ createdBy: "owner", members }).client)
-
-  await assert.rejects(
-    (await mk(["owner", "a"])).addGroupMembers("a", "group-g", ["z"]),
-    ForbiddenException
-  )
-  await assert.rejects(
-    (await mk(["owner", "a"])).addGroupMembers("owner", "room-r", ["z"]),
-    BadRequestException
-  )
-  const full = Array.from({ length: MAX_GROUP_MEMBERS }, (_, i) => `u${i}`)
-  await assert.rejects(
-    (await mk(["owner", ...full.slice(1)])).addGroupMembers(
-      "owner",
-      "group-g",
-      ["new"]
-    ),
-    BadRequestException
-  )
-  await assert.rejects(
-    (await mk(["owner"])).addGroupMembers("owner", "group-g", ["ghost"]),
-    NotFoundException
   )
 })

@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query"
+import { queryKeys } from "@/lib/query-keys"
 import { useRouter } from "@tanstack/react-router"
 import * as React from "react"
 import { ArrowRight } from "lucide-react"
@@ -50,6 +52,7 @@ export function SkillsAssessmentView({
   nextPath?: string
 } = {}) {
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const [answers, setAnswers] = React.useState<DraftAnswers>({})
   const [submitted, setSubmitted] = React.useState(false)
@@ -140,12 +143,22 @@ export function SkillsAssessmentView({
     }
     writeStoredAssessment(nextAssessment)
     // Persist to Mongo (per Clerk user) so the assessment survives a
-    // device/browser switch. Fire-and-forget — the local cache above already
-    // drives the UI; a failed write just means a cold load falls back to cache.
-    void saveAssessment(nextAssessment).catch((error) => {
-      console.error("Failed to persist assessment", error)
-    })
-    setCompleted(nextAssessment)
+    // device/browser switch. Saving also makes a venue-only account a player,
+    // so wait for it and refresh the cached account/seed before showing the
+    // CTA — otherwise the dashboard still sees "venue" and bounces them back.
+    // A failed write just means a cold load falls back to the local cache.
+    void saveAssessment(nextAssessment)
+      .catch((error) => {
+        console.error("Failed to persist assessment", error)
+      })
+      .then(() =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.seed() }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.account() }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.assessment() }),
+        ])
+      )
+      .then(() => setCompleted(nextAssessment))
   }
 
   return (

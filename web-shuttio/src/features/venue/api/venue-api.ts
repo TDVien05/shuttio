@@ -13,12 +13,10 @@ import type {
 } from "@/lib/shared"
 
 import { api } from "@/lib/api"
-import { queryClient } from "@/lib/query-client"
-
-// Client calls for venue management. Each write hits the API's CRUD routes,
-// then invalidates the affected queries (the branch's `["venue", id]` bundle,
-// or everything for account-level changes) so open screens refetch. `api`
-// (lib/api.ts) attaches the Clerk bearer token and throws an `ApiError`
+// Raw client calls for venue management. Writes return the server record;
+// invalidation lives in the mutation hooks in `venue.queries.ts` so each
+// surface can decide whether to wait-then-refetch or patch optimistically.
+// `api` (lib/api.ts) attaches the Clerk bearer token and throws an `ApiError`
 // carrying the API's message, so callers can just `catch` it.
 
 export interface VenueInput {
@@ -78,18 +76,10 @@ export interface WalkInReservationInput {
   customerPhone: string
 }
 
-/** Fresh operator reservation list for the live approval queue. */
-export async function fetchVenueReservations(
-  venueId: string
-): Promise<Reservation[]> {
-  const seed = await api<VenueSeed>(`/api/venue/${venueId}/bundle`)
-  return seed.reservations
-}
-
 // An account's brand may own many venue branches (chi nhánh), so every branch-
 // scoped route carries the target `venueId` in the path (`/api/venues/:venueId/…`)
 // and the API authorizes the caller owns it. The same id also keys the
-// `["venue", id]` query invalidated after a write.
+// `queryKeys.venue.detail(id)` bundle invalidated after a write.
 
 /**
  * Provision a venue branch from the guided setup wizard (the first branch also
@@ -101,13 +91,12 @@ export async function provisionVenue(input: VenueSetupInput): Promise<string> {
     method: "POST",
     body: input,
   })
-  void queryClient.invalidateQueries()
   return seed.info.id
 }
 
 /** The banks a VietQR transfer can target (cached server-side for a day). */
-export async function listBanks(): Promise<BankInfo[]> {
-  return api<BankInfo[]>("/api/banks")
+export async function listBanks(signal?: AbortSignal): Promise<BankInfo[]> {
+  return api<BankInfo[]>("/api/banks", { signal })
 }
 
 /**
@@ -148,7 +137,6 @@ export async function savePayout(
       method: "PUT",
       body: input,
     })
-    void queryClient.invalidateQueries()
     return { ok: true }
   } catch (err) {
     return {
@@ -191,8 +179,6 @@ export async function saveVenuePhotos(
     method: "PUT",
     body: { photos },
   })
-  // The operator's workspace and every player surface (court cards, booking).
-  void queryClient.invalidateQueries()
   return res.photos
 }
 
@@ -204,7 +190,6 @@ export async function updateVenue(
     method: "PUT",
     body: input,
   })
-  void queryClient.invalidateQueries()
   return venue
 }
 
@@ -216,7 +201,6 @@ export async function updateVenue(
  */
 export async function archiveVenue(id: string): Promise<void> {
   await api(`/api/venues/${id}`, { method: "DELETE" })
-  void queryClient.invalidateQueries()
 }
 
 /** Restore a previously archived branch (clears `archived`). */
@@ -225,7 +209,6 @@ export async function restoreVenue(id: string): Promise<Venue> {
     method: "PUT",
     body: { archived: false },
   })
-  void queryClient.invalidateQueries()
   return venue
 }
 
@@ -237,7 +220,6 @@ export async function addCourt(
     method: "POST",
     body: input,
   })
-  void queryClient.invalidateQueries({ queryKey: ["venue", venueId] })
   return court
 }
 
@@ -253,7 +235,6 @@ export async function updateCourt(
       body: input,
     }
   )
-  void queryClient.invalidateQueries({ queryKey: ["venue", venueId] })
   return court
 }
 
@@ -262,7 +243,6 @@ export async function deleteCourt(
   courtId: string
 ): Promise<void> {
   await api(`/api/venues/${venueId}/courts/${courtId}`, { method: "DELETE" })
-  void queryClient.invalidateQueries({ queryKey: ["venue", venueId] })
 }
 
 export async function addWalkInReservation(
@@ -276,7 +256,6 @@ export async function addWalkInReservation(
       body: input,
     }
   )
-  void queryClient.invalidateQueries({ queryKey: ["venue", venueId] })
   return reservation
 }
 
@@ -295,7 +274,6 @@ async function setReservationStatus(
     `/api/venues/${venueId}/reservations/${reservationId}/status`,
     { method: "PUT", body: { status, reason } }
   )
-  void queryClient.invalidateQueries({ queryKey: ["venue", venueId] })
   return reservation
 }
 
@@ -347,7 +325,6 @@ export async function rescheduleReservation(
     `/api/venues/${venueId}/reservations/${reservationId}`,
     { method: "PUT", body: input }
   )
-  void queryClient.invalidateQueries({ queryKey: ["venue", venueId] })
   return reservation
 }
 
@@ -369,7 +346,6 @@ export async function createCustomer(
       body: input,
     }
   )
-  void queryClient.invalidateQueries({ queryKey: ["venue", venueId] })
   return customer
 }
 
@@ -395,7 +371,6 @@ export async function addCourtBlock(
     method: "POST",
     body: input,
   })
-  void queryClient.invalidateQueries({ queryKey: ["venue", venueId] })
   return block
 }
 
@@ -405,5 +380,4 @@ export async function removeCourtBlock(
   blockId: string
 ): Promise<void> {
   await api(`/api/venues/${venueId}/blocks/${blockId}`, { method: "DELETE" })
-  void queryClient.invalidateQueries({ queryKey: ["venue", venueId] })
 }

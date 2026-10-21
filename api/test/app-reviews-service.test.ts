@@ -15,7 +15,7 @@ import {
 } from "../src/features/app-reviews/app-reviews.service.js"
 import type { AppReviewDocument } from "../src/features/app-reviews/app-review.schema.js"
 import type { ProfileService } from "../src/features/players/profile.service.js"
-import type { ClerkDirectoryService } from "../src/features/stream/clerk-directory.service.js"
+import type { ClerkDirectoryService } from "../src/features/directory/clerk-directory.service.js"
 import type { AccountType } from "../src/shared/index.js"
 
 /**

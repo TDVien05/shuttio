@@ -24,15 +24,6 @@ export function AdminRefundsView({ refunds }: { refunds: AdminRefundRow[] }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-heading text-3xl font-bold tracking-tight">
-          {m.admin_refunds_title()}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {m.admin_refunds_subtitle()}
-        </p>
-      </div>
-
       {refunds.length === 0 ? (
         <VenueEmpty text={m.admin_refunds_empty()} />
       ) : (

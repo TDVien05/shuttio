@@ -4,8 +4,8 @@ import {
   Check,
   ChevronsUpDown,
   LogOut,
+  MoreHorizontal,
   Plus,
-  Search,
   Settings,
   ShieldCheck,
   Star,
@@ -32,14 +32,12 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
-  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { useData } from "@/features/dashboard/components/data-provider"
 import { useMatchmaking } from "@/features/play/components/matchmaking"
@@ -64,7 +62,18 @@ export function AppSidebar() {
   const [profileOpen, setProfileOpen] = React.useState(false)
   const [reviewOpen, setReviewOpen] = React.useState(false)
 
-  const { workspace, group, items, active, venueId } = navContext(pathname)
+  const { workspace, items, active, venueId } = navContext(pathname)
+  // Consecutive items sharing a `group` heading form one sidebar group; items
+  // with none sit in the first, unlabeled group.
+  const navGroups = items
+    .filter((item) => !item.hidden)
+    .reduce<{ label?: string; items: typeof items }[]>((acc, item) => {
+      const label = item.group?.()
+      const last = acc.at(-1)
+      if (last && last.label === label) last.items.push(item)
+      else acc.push({ label, items: [item] })
+      return acc
+    }, [])
   const isVenue = workspace === "venue"
   const isAdmin = workspace === "admin"
 
@@ -100,34 +109,20 @@ export function AppSidebar() {
   const handleSignOut = () => void signOut({ redirectUrl: "/" })
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader className="gap-3">
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="px-3 pt-4 pb-2">
         <SidebarMenu>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="flex items-center gap-1">
             <DropdownMenuTrigger>
               <SidebarMenuButton
                 size="lg"
-                className="aria-expanded:bg-sidebar-accent"
+                className="h-12 min-w-0 flex-1 rounded-xl aria-expanded:bg-sidebar-accent"
               >
-                <div
-                  className={cn(
-                    "flex aspect-square size-10 items-center justify-center rounded-xl",
-                    (isVenue || isAdmin) &&
-                      "bg-secondary text-xs font-bold text-secondary-foreground"
-                  )}
-                >
-                  {isAdmin ? (
-                    <ShieldCheck className="size-5" />
-                  ) : isVenue && VENUE ? (
-                    VENUE.initials
-                  ) : (
-                    <LogoMark className="size-9! text-primary" />
-                  )}
-                </div>
+                <LogoMark className="size-8! shrink-0 text-primary" />
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="truncate font-heading text-sm font-bold tracking-tight">
                     {isAdmin
-                      ? m.sidebar_admin_workspace()
+                      ? m.admin_nav_group()
                       : isVenue && VENUE
                         ? VENUE.name
                         : m.common_app_name()}
@@ -246,37 +241,21 @@ export function AppSidebar() {
                 ) : null}
               </DropdownMenu>
             </DropdownMenuTrigger>
+            <SidebarTrigger className="shrink-0 group-data-[collapsible=icon]:hidden" />
           </SidebarMenuItem>
         </SidebarMenu>
-
-        <div className="relative group-data-[collapsible=icon]:hidden">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <SidebarInput
-            placeholder={
-              isVenue
-                ? m.sidebar_search_venue()
-                : m.sidebar_search_placeholder()
-            }
-            className="pl-8"
-            aria-label={
-              isVenue
-                ? m.sidebar_search_venue()
-                : m.sidebar_search_placeholder()
-            }
-          />
-        </div>
       </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>{group()}</SidebarGroupLabel>
-          <SidebarMenu>
-            {items
-              .filter((item) => !item.hidden)
-              .map((item) => (
+      <SidebarContent className="px-3">
+        {navGroups.map((g) => (
+          <SidebarGroup key={g.label ?? "main"} className="p-0 pt-2">
+            {g.label ? <SidebarGroupLabel>{g.label}</SidebarGroupLabel> : null}
+            <SidebarMenu>
+              {g.items.map((item) => (
                 <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton
                     isActive={item.key === active.key}
+                    className="h-10 rounded-full px-4"
                     tooltip={item.label()}
                     href={item.href}
                     onPress={handleNavigate}
@@ -286,19 +265,20 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-          </SidebarMenu>
-        </SidebarGroup>
+            </SidebarMenu>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
-      <SidebarFooter>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
+      <SidebarFooter className="gap-0 px-3 pb-0">
+        <div className="mt-2 flex h-12 items-center">
+          <div className="flex w-full items-center gap-3">
             <SidebarMenu className="min-w-0 flex-1">
               <SidebarMenuItem>
                 <DropdownMenuTrigger>
                   <SidebarMenuButton
                     size="lg"
-                    className="aria-expanded:bg-sidebar-accent"
+                    className="h-10 rounded-xl border border-sidebar-border bg-background aria-expanded:bg-sidebar-accent"
                   >
                     <Avatar size="sm" className="size-8">
                       {accountImage ? (
@@ -316,11 +296,8 @@ export function AppSidebar() {
                       <span className="truncate text-sm font-medium">
                         {accountName}
                       </span>
-                      <span className="truncate text-xs text-sidebar-foreground/60">
-                        {accountSubtitle}
-                      </span>
                     </div>
-                    <ChevronsUpDown className="ml-auto size-4 text-sidebar-foreground/60" />
+                    <MoreHorizontal className="ml-auto size-4 text-sidebar-foreground/60" />
                   </SidebarMenuButton>
                   <DropdownMenu
                     placement="top end"
@@ -379,8 +356,6 @@ export function AppSidebar() {
           </div>
         </div>
       </SidebarFooter>
-
-      <SidebarRail />
 
       <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
       <AppReviewDialog open={reviewOpen} onOpenChange={setReviewOpen} />

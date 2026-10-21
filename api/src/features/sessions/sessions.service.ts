@@ -9,6 +9,7 @@ import { InjectModel } from "@nestjs/mongoose"
 import type { Model } from "mongoose"
 
 import {
+  withoutExpiredRsvps,
   type BookingRecordStatus,
   type PlaySession as PlaySessionData,
   type SessionStatus,
@@ -119,10 +120,13 @@ export class SessionsService {
       .map((d) => d.data.reservationId)
       .filter((id): id is string => Boolean(id))
     const statuses = await this.bookings.statusFor(linkedIds)
+    const now = Date.now()
     return [
-      ...ownDocs.map((d) => this.withBookingStatus(d.data, statuses)),
+      ...ownDocs.map((d) =>
+        this.withBookingStatus(withoutExpiredRsvps(d.data, now), statuses)
+      ),
       ...memberDocs.map((d) => ({
-        ...this.withBookingStatus(d.data, statuses),
+        ...this.withBookingStatus(withoutExpiredRsvps(d.data, now), statuses),
         groupSession: true as const,
       })),
     ]

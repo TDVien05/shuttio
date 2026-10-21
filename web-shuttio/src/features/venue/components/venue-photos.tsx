@@ -5,12 +5,9 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { useVenueData } from "@/features/venue/components/venue-data-provider"
+import { useVenueData, useSaveVenuePhotos } from "@/features/venue/api/venue.queries"
 import { VenuePanel } from "@/features/venue/components/shared"
-import {
-  saveVenuePhotos,
-  signVenuePhotoUpload,
-} from "@/features/venue/api/venue-api"
+import { signVenuePhotoUpload } from "@/features/venue/api/venue-api"
 import { m } from "@/paraglide/messages"
 
 /** Mirrors the api's MAX_VENUE_PHOTOS (venue-photos.service.ts). */
@@ -51,29 +48,31 @@ async function uploadPhoto(venueId: string, file: File): Promise<string> {
  */
 export function VenuePhotosPanel() {
   const { venueId, venue } = useVenueData()
-  // Local copy so the grid updates immediately; the server copy catches up
-  // through `saveVenuePhotos`' revalidation.
-  const [photos, setPhotos] = React.useState<string[]>(venue.photos ?? [])
+  const savePhotos = useSaveVenuePhotos(venueId)
+  // Pending un-saved edits only; the saved list is the query's `venue.photos`.
+  const [draft, setDraft] = React.useState<string[] | null>(null)
   const [uploading, setUploading] = React.useState(0)
-  const [saving, startSaving] = React.useTransition()
   const inputRef = React.useRef<HTMLInputElement>(null)
 
+  const photos = draft ?? venue.photos ?? []
+  const saving = savePhotos.isPending
   const busy = uploading > 0 || saving
   const remaining = MAX_PHOTOS - photos.length
 
   const persist = (next: string[], successMessage: string) => {
-    const previous = photos
-    setPhotos(next)
-    startSaving(async () => {
-      try {
-        setPhotos(await saveVenuePhotos(venueId, next))
+    const previous = draft
+    setDraft(next)
+    savePhotos.mutate(next, {
+      onSuccess: (saved) => {
+        setDraft(saved)
         toast.success(successMessage)
-      } catch (err) {
-        setPhotos(previous)
+      },
+      onError: (err) => {
+        setDraft(previous)
         toast.error(
           err instanceof Error ? err.message : m.venue_photos_save_error()
         )
-      }
+      },
     })
   }
 

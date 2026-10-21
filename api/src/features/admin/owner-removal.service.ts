@@ -8,14 +8,14 @@ import {
 } from "@nestjs/common"
 import { InjectConnection } from "@nestjs/mongoose"
 import type { Connection } from "mongoose"
-import { StreamChat } from "stream-chat"
 
 import { BookingsService } from "../bookings/bookings.service.js"
 import {
   CLERK_CLIENT,
   type ClerkBackendClient,
-} from "../stream/clerk-directory.service.js"
-import { STREAM_CLIENT } from "../stream/stream.service.js"
+} from "../directory/clerk-directory.service.js"
+import { CentrifugoService } from "../realtime/centrifugo.service.js"
+import { ChatImagesService } from "../chat/chat-images.service.js"
 
 export interface RemovedOwnerSummary {
   /** The Clerk account was deleted (a venue-only owner), not just their venues. */
@@ -39,27 +39,22 @@ interface SessionRow {
   data?: { courtId?: string; venueId?: string }
 }
 
-const chunk = <T>(items: T[], size: number): T[][] =>
-  Array.from({ length: Math.ceil(items.length / size) }, (_, i) =>
-    items.slice(i * size, i * size + size)
-  )
-
 /**
  * Admin: remove one venue owner (chủ sân) and everything their venues
- * produced — the single-owner, guarded version of
- * `scripts/remove-venue-owners.ts`.
+ * produced — the single-owner, guarded replacement for the
+ * retired one-off ops script.
  *
  * - The owner's brands, venues, the bookings/payments at those venues, the play
- *   sessions booked there and the related Stream chats are deleted.
+ *   sessions booked there and the related chats are deleted.
  * - A venue-only owner is deleted outright (profile, own sessions,
- *   notifications, wallet, Stream user and the Clerk account); an owner who is
+ *   notifications, wallet, chat memberships and the Clerk account); an owner who is
  *   also a player keeps the account and their player data, and their account
  *   type becomes "player".
  * - Refused while a venue still has a pending/confirmed future booking (the
  *   same rule that blocks archiving) — those players must be refunded first.
  * - Admin accounts are never removed.
  *
- * Irreversible: Clerk accounts and Stream messages cannot be restored.
+ * Irreversible: Clerk accounts and chat messages cannot be restored.
  */
 @Injectable()
 export class OwnerRemovalService {
@@ -67,7 +62,8 @@ export class OwnerRemovalService {
 
   constructor(
     @InjectConnection() private readonly connection: Connection,
-    @Inject(STREAM_CLIENT) private readonly stream: StreamChat,
+    @Inject(ChatImagesService) private readonly chatImages: ChatImagesService,
+    @Inject(CentrifugoService) private readonly centrifugo: CentrifugoService,
     @Inject(CLERK_CLIENT) private readonly clerk: ClerkBackendClient,
     private readonly bookings: BookingsService
   ) {}
@@ -143,26 +139,41 @@ export class OwnerRemovalService {
     )
     const sessionIds = sessions.map((s) => s.sessionId)
 
-    // Stream chats first: if listing fails nothing has been deleted yet.
-    const filters = [
+    // Chats first: if listing fails nothing has been deleted yet.
+    const chatFilters = [
       ...(venueIds.length ? [{ venueId: { $in: venueIds } }] : []),
       ...(brandIds.length ? [{ brandId: { $in: brandIds } }] : []),
       ...(sessionIds.length
-        ? [{ id: { $in: sessionIds.map((id) => `room-${id}`) } }]
+        ? [{ channelId: { $in: sessionIds.map((id) => `room-${id}`) } }]
         : []),
     ]
-    const cids = new Set<string>()
-    for (const filter of filters) {
-      for (let offset = 0; ; offset += 30) {
-        const page = await this.stream.queryChannels(
-          { type: "messaging", ...filter },
-          {},
-          { limit: 30, offset, state: false, watch: false, presence: false }
-        )
-        for (const c of page) cids.add(c.cid)
-        if (page.length < 30) break
-      }
+    const chatChannelIds = (
+      await col<{ channelId: string }>("chatchannels")
+        .find({ $or: chatFilters })
+        .project<{ channelId: string }>({ channelId: 1 })
+        .toArray()
+    ).map((c) => c.channelId)
+    // A deleted account takes its DMs with it (the other side loses them too).
+    if (!alsoPlayer) {
+      const mine = await col<{ channelId: string }>("chatmembers")
+        .find({ userId: ownerId })
+        .project<{ channelId: string }>({ channelId: 1 })
+        .toArray()
+      const dms = await col<{ channelId: string }>("chatchannels")
+        .find({ kind: "dm", channelId: { $in: mine.map((m) => m.channelId) } })
+        .project<{ channelId: string }>({ channelId: 1 })
+        .toArray()
+      chatChannelIds.push(...dms.map((c) => c.channelId))
     }
+    const pictures = (
+      await col<{ image?: { publicId?: string } }>("chatmessages")
+        .find({
+          channelId: { $in: chatChannelIds },
+          "image.publicId": { $exists: true },
+        })
+        .project<{ image?: { publicId?: string } }>({ "image.publicId": 1 })
+        .toArray()
+    ).flatMap((m) => (m.image?.publicId ? [m.image.publicId] : []))
 
     const bookings = await col("bookings").deleteMany({
       venueId: { $in: venueIds },
@@ -186,20 +197,16 @@ export class OwnerRemovalService {
       await col("wallettxes").deleteMany({ userId: ownerId })
     }
 
-    // Stream hard-deletes cap one batch at 100 channels.
-    for (const batch of chunk([...cids], 100)) {
-      await this.stream.deleteChannels(batch, { hard_delete: true })
-    }
+    await col("chatmessages").deleteMany({
+      channelId: { $in: chatChannelIds },
+    })
+    await col("chatmembers").deleteMany({ channelId: { $in: chatChannelIds } })
+    await col("chatchannels").deleteMany({ channelId: { $in: chatChannelIds } })
+    void this.chatImages.destroy(pictures)
     if (!alsoPlayer) {
-      await this.stream
-        .deleteUsers([ownerId], {
-          user: "hard",
-          messages: "hard",
-          conversations: "hard",
-        })
-        .catch((err: unknown) =>
-          this.logger.warn(`Stream user ${ownerId} not deleted: ${String(err)}`)
-        )
+      await col("chatmembers").deleteMany({ userId: ownerId })
+      // Cut their live realtime connections now, not at token expiry.
+      await this.centrifugo.disconnect(ownerId)
       if (clerkUser) await this.clerk.users.deleteUser(ownerId)
     }
 

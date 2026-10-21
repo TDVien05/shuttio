@@ -3,21 +3,33 @@ import { test } from "node:test"
 
 import "reflect-metadata"
 
-import { firstValueFrom, take, toArray } from "rxjs"
-
 import { RoomEventsService } from "../src/features/rooms/room-events.service.js"
+import { SessionEventsService } from "../src/features/sessions/session-events.service.js"
+import type { CentrifugoService } from "../src/features/realtime/centrifugo.service.js"
 
-void test("RoomEventsService fans a room change out to every subscriber", async () => {
-  const events = new RoomEventsService()
-  const a = firstValueFrom(events.stream().pipe(take(2), toArray()))
-  const b = firstValueFrom(events.stream().pipe(take(1), toArray()))
+function fakeCentrifugo() {
+  const published: { channel: string; data: unknown }[] = []
+  const service = {
+    publish: (channel: string, data: unknown) => {
+      published.push({ channel, data })
+      return Promise.resolve()
+    },
+  } as unknown as CentrifugoService
+  return { service, published }
+}
 
-  events.emit("room-1")
-  events.emit("room-2")
-
-  assert.deepEqual(await a, [
-    { type: "room", data: { roomId: "room-1" } },
-    { type: "room", data: { roomId: "room-2" } },
+void test("RoomEventsService publishes the room id to the shared channel", () => {
+  const { service, published } = fakeCentrifugo()
+  new RoomEventsService(service).emit("room-1")
+  assert.deepEqual(published, [
+    { channel: "rooms:changes", data: { roomId: "room-1" } },
   ])
-  assert.deepEqual(await b, [{ type: "room", data: { roomId: "room-1" } }])
+})
+
+void test("SessionEventsService publishes to the user's own channel", () => {
+  const { service, published } = fakeCentrifugo()
+  new SessionEventsService(service).emit("user_1")
+  assert.deepEqual(published, [
+    { channel: "personal:sessions#user_1", data: {} },
+  ])
 })

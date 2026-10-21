@@ -24,6 +24,8 @@ export async function saveSession(session: PlaySession): Promise<void> {
  * session's booking-derived fields (`bookingStatus`, `hold`, etc.) reflect
  * the latest venue decision. Used by `SessionProvider` for live polling.
  */
-export async function listPlayerSessions(): Promise<PlaySession[]> {
-  return api<PlaySession[]>("/api/sessions")
+export async function listPlayerSessions(
+  signal?: AbortSignal
+): Promise<PlaySession[]> {
+  return api<PlaySession[]>("/api/sessions", { signal })
 }

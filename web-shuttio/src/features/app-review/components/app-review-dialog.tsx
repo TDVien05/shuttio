@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { Star } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -18,9 +18,9 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  getMyAppReview,
-  saveAppReview,
-} from "@/features/app-review/api/app-review-api"
+  appReviewQueries,
+  useSaveAppReview,
+} from "@/features/app-review/api/app-review.queries"
 import { m } from "@/paraglide/messages"
 
 /** Caption under the stars, by rating (1★ first). */
@@ -64,12 +64,7 @@ export function AppReviewDialog({
 }
 
 function ReviewForm({ onDone }: { onDone: () => void }) {
-  const { data: existing, isPending } = useQuery({
-    queryKey: ["app-reviews", "me"],
-    queryFn: getMyAppReview,
-    // A failed load just starts a fresh review; saving still upserts.
-    retry: false,
-  })
+  const { data: existing, isPending } = useQuery(appReviewQueries.mine())
 
   if (isPending) {
     return (
@@ -93,7 +88,7 @@ function ReviewFields({
   existing: MyAppReview | null
   onDone: () => void
 }) {
-  const queryClient = useQueryClient()
+  const saveReview = useSaveAppReview()
   const [hover, setHover] = React.useState(0)
   const form = useAppForm({
     defaultValues: {
@@ -103,11 +98,10 @@ function ReviewFields({
     validators: { onChange: reviewSchema },
     onSubmit: async ({ value }) => {
       try {
-        const saved = await saveAppReview({
+        await saveReview.mutateAsync({
           rating: value.rating,
           comment: value.comment.trim(),
         })
-        queryClient.setQueryData(["app-reviews", "me"], saved)
         toast.success(existing ? m.app_review_updated() : m.app_review_thanks())
         onDone()
       } catch (err) {

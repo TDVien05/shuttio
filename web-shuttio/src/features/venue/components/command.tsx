@@ -16,9 +16,8 @@ import {
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { LinkButton } from "@/components/ui/button"
-import { useVenueData } from "@/features/venue/components/venue-data-provider"
+import { useVenueData } from "@/features/venue/api/venue.queries"
 import { SportTag } from "@/features/dashboard/components/shared"
-import { useVenue } from "@/features/venue/components/venue-provider"
 import { venueBase } from "@/features/venue/nav"
 import {
   MicroLabel,
@@ -39,8 +38,8 @@ export function VenueCommandView() {
     reservations: RESERVATIONS,
     venue: VENUE,
     venueCourts: VENUE_COURTS,
+    venueStats: stats,
   } = useVenueData()
-  const { stats } = useVenue()
 
   // Today's arrivals still to come through the door.
   const arrivals = RESERVATIONS.filter(

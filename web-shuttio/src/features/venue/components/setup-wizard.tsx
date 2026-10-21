@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "@tanstack/react-router"
 import * as React from "react"
 import { toast } from "sonner"
@@ -34,7 +33,7 @@ import {
 } from "@/components/ui/combobox"
 import { normalizeVnPhone } from "@/lib/shared"
 import type { SportKey } from "@/lib/shared"
-import { provisionVenue } from "@/features/venue/api/venue-api"
+import { useProvisionVenue } from "@/features/venue/api/venue.queries"
 import {
   PayoutFields,
   payoutSchema,
@@ -124,7 +123,7 @@ function AdminUnitCombobox({
   return (
     <Combobox
       aria-label={placeholder}
-      items={items.map((name) => ({ id: name }))}
+      defaultItems={items.map((name) => ({ id: name }))}
       value={value === "" ? null : value}
       onChange={(name) => onChange(typeof name === "string" ? name : "")}
       defaultFilter={vnNameFilter}
@@ -196,10 +195,10 @@ export function SetupWizard({
   exitHref: string
 }) {
   const router = useRouter()
-  const queryClient = useQueryClient()
+  const provision = useProvisionVenue()
 
   const [step, setStep] = React.useState(0)
-  const [submitting, setSubmitting] = React.useState(false)
+  const submitting = provision.isPending
   const [brand, setBrand] = React.useState<BrandDraft>({
     brandName: "",
     managerName: "",
@@ -243,7 +242,6 @@ export function SetupWizard({
     setBranches((b) => b.filter((_, idx) => idx !== i))
 
   const submit = async () => {
-    setSubmitting(true)
     try {
       const payload = addingBranch
         ? { branches }
@@ -258,12 +256,10 @@ export function SetupWizard({
             },
             branches,
           }
-      const venueId = await provisionVenue(payload)
+      const venueId = await provision.mutateAsync(payload)
       toast.success(m.venue_setup_toast_done({ name: branches[0]?.name ?? "" }))
       void router.navigate({ href: `/app/venue/${venueId}`, replace: true })
-      void queryClient.invalidateQueries()
     } catch (e) {
-      setSubmitting(false)
       toast.error(m.venue_setup_error(), {
         description: e instanceof Error ? e.message : undefined,
       })
@@ -584,7 +580,7 @@ function BranchesStep({
         setLocating(false)
         toast.error(m.venue_setup_form_geo_error())
       },
-      { enableHighAccuracy: true, timeout: 10_000 }
+      { timeout: 15_000, maximumAge: 60_000 }
     )
   }
 
@@ -725,6 +721,10 @@ function BranchesStep({
                   ? m.venue_setup_form_locating()
                   : m.venue_setup_form_use_current_location()}
               </Button>
+              {/* Keep the coordinate fields registered so the form's onChange
+                  listener fires when the geolocation callback sets them. */}
+              <form.Field name="lat">{() => null}</form.Field>
+              <form.Field name="lng">{() => null}</form.Field>
               {draft.lat !== undefined && draft.lng !== undefined ? (
                 <p className="flex items-center gap-1 text-xs text-brand">
                   <MapPin className="size-3.5" />

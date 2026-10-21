@@ -162,7 +162,7 @@ function makeService(opts: {
   }
   const profilesMock = { getProfile: () => Promise.resolve({}) }
   const notificationsMock = { create: () => Promise.resolve() }
-  const streamMock = {}
+  const chatMock = {}
 
   return new VenuesService(
     ...([
@@ -170,7 +170,7 @@ function makeService(opts: {
       bookingsMock,
       profilesMock,
       notificationsMock,
-      streamMock,
+      chatMock,
       opts.brands,
     ] as unknown as VenuesCtorArgs)
   )

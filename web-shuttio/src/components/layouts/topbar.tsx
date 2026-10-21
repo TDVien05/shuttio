@@ -8,9 +8,10 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Logo } from "@/components/logo"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { ActiveRoomPill } from "@/features/play/components/active-room"
 import { NotificationsButton } from "@/features/dashboard/components/notifications"
+import { useData } from "@/features/dashboard/components/data-provider"
 import { AccountMenu } from "@/features/dashboard/components/account-menu"
 import { SectionActions } from "@/features/dashboard/components/section-actions"
 import { navContext } from "@/features/dashboard/lib/workspace"
@@ -77,7 +78,13 @@ const HEADER_ICON_BUTTON =
 /** Sticky dashboard header — its title and actions track the active workspace. */
 export function DashboardTopbar() {
   const pathname = useLocation({ select: (l) => l.pathname })
-  const { active, workspace } = navContext(pathname)
+  const { active, workspace, venueId } = navContext(pathname)
+  const { isMobile, state } = useSidebar()
+  const { venues } = useData()
+  const root =
+    workspace === "admin"
+      ? m.admin_nav_group()
+      : (venues.find((v) => v.id === venueId)?.name ?? m.venue_nav_group())
   if (
     pathname === "/app" ||
     pathname === "/app/play" ||
@@ -135,16 +142,21 @@ export function DashboardTopbar() {
   }
 
   return (
-    <header className="flex h-20 shrink-0 items-center gap-2 px-3 pt-4 sm:px-4">
-      <SidebarTrigger className="-ml-1" />
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate font-heading text-xl leading-tight font-semibold">
-          {active.label()}
-        </h1>
-        <p className="truncate text-sm font-medium text-muted-foreground">
-          {active.caption()}
-        </p>
-      </div>
+    <header className="flex h-15 shrink-0 items-center gap-2 border-b px-4">
+      {isMobile || state === "collapsed" ? (
+        <SidebarTrigger className="-ml-1" />
+      ) : null}
+      <nav
+        aria-label="breadcrumb"
+        className="flex min-w-0 flex-1 items-center gap-2 text-sm"
+      >
+        <span className="truncate text-muted-foreground">{root}</span>
+        <span className="text-muted-foreground">/</span>
+        <span className="flex min-w-0 items-center gap-2 font-medium">
+          <active.icon className="size-4 shrink-0" />
+          <span className="truncate">{active.label()}</span>
+        </span>
+      </nav>
       {workspace === "player" ? <ActiveRoomPill /> : null}
       <NotificationsButton />
       <SectionActions workspace={workspace} sectionKey={active.key} />

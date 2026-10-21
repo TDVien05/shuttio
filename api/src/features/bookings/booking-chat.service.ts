@@ -2,19 +2,15 @@ import { Inject, Injectable, Logger } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
 import type { Model } from "mongoose"
 
-import { StreamService } from "../stream/stream.service.js"
+import { ChatMessagesService } from "../chat/chat-messages.service.js"
+import { ChatService } from "../chat/chat.service.js"
 import { Venue, type VenueDocument } from "../venues/venue.schema.js"
 import type { BookingRecord } from "../../shared/index.js"
 import { bookingLabel, formatVnTime } from "./booking.helpers.js"
 
 /** The moments of a booking's life that post into its chat. */
 export type BookingChatEvent =
-  | "proof"
-  | "approved"
-  | "rejected"
-  | "refunded"
-  | "received"
-  | "not_received"
+  "proof" | "approved" | "rejected" | "refunded" | "received" | "not_received"
 
 /** The booking fields a chat message reads. */
 export type BookingChatSource = Pick<
@@ -110,7 +106,9 @@ export class BookingChatService {
   private readonly logger = new Logger(BookingChatService.name)
 
   constructor(
-    @Inject(StreamService) private readonly stream: StreamService,
+    @Inject(ChatService) private readonly chat: ChatService,
+    @Inject(ChatMessagesService)
+    private readonly messages: ChatMessagesService,
     @InjectModel(Venue.name) private readonly venueModel: Model<VenueDocument>
   ) {}
 
@@ -130,7 +128,7 @@ export class BookingChatService {
         }>()
       if (!venue?.ownerId || venue.ownerId === booking.userId) return
 
-      const channelId = await this.stream.ensureBookingChannel({
+      const channelId = await this.chat.ensureBookingChannel({
         playerId: booking.userId,
         ownerId: venue.ownerId,
         venueId: booking.venueId,
@@ -138,7 +136,7 @@ export class BookingChatService {
         name: venue.info?.name ?? "Sân",
       })
       const msg = bookingChatMessage(booking, event)
-      await this.stream.sendBookingMessage(
+      await this.messages.sendSystem(
         channelId,
         msg.from === "player" ? booking.userId : venue.ownerId,
         msg.text,

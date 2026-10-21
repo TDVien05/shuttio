@@ -1,3 +1,7 @@
+import {
+  BLEED_TABLE_CLASS,
+  TableSection,
+} from "@/components/layouts/table-section"
 import { z } from "zod"
 import { formatVndText } from "@/lib/money"
 import * as React from "react"
@@ -38,16 +42,16 @@ import {
 } from "@/components/ui/table"
 import { courtStateAccent } from "@/lib/shared"
 import type { CourtState, SportKey, VenueCourt } from "@/lib/shared"
-import { useVenueData } from "@/features/venue/components/venue-data-provider"
 import {
-  addCourt,
-  deleteCourt,
-  updateCourt,
-} from "@/features/venue/api/venue-api"
+  useAddCourt,
+  useDeleteCourt,
+  useUpdateCourt,
+  useVenueData,
+} from "@/features/venue/api/venue.queries"
 import type { CourtInput } from "@/features/venue/api/venue-api"
 import { SportTag } from "@/features/dashboard/components/shared"
 import { VenuePhotosPanel } from "@/features/venue/components/venue-photos"
-import { VenueEmpty, VenuePanel } from "@/features/venue/components/shared"
+import { VenueEmpty } from "@/features/venue/components/shared"
 import { m } from "@/paraglide/messages"
 
 const stateMessages = {
@@ -106,7 +110,11 @@ export function VenueCourtsView({
   const [archiveTarget, setArchiveTarget] = React.useState<VenueCourt | null>(
     null
   )
-  const [isPending, startTransition] = React.useTransition()
+  const addCourt = useAddCourt(venueId)
+  const updateCourt = useUpdateCourt(venueId)
+  const deleteCourt = useDeleteCourt(venueId)
+  const isPending =
+    addCourt.isPending || updateCourt.isPending || deleteCourt.isPending
 
   const courts = React.useMemo(
     () => venueCourts.filter((court) => !court.archived),
@@ -144,13 +152,13 @@ export function VenueCourtsView({
         pricePerHour: draft.pricePerHour,
         state: draft.state,
       }
-      startTransition(async () => {
+      void (async () => {
         try {
           if (editingCourt) {
-            await updateCourt(venueId, editingCourt.id, input)
+            await updateCourt.mutateAsync({ courtId: editingCourt.id, input })
             toast.success(m.venue_courts_toasts_updated())
           } else {
-            await addCourt(venueId, input)
+            await addCourt.mutateAsync(input)
             toast.success(m.venue_courts_toasts_added())
           }
           closeFormDialog()
@@ -161,17 +169,17 @@ export function VenueCourtsView({
               : m.venue_courts_toasts_save_error()
           )
         }
-      })
+      })()
     },
-    [editingCourt, venueId, closeFormDialog]
+    [editingCourt, addCourt, updateCourt, closeFormDialog]
   )
 
   const handleArchive = React.useCallback(() => {
     if (!archiveTarget) return
     const court = archiveTarget
-    startTransition(async () => {
+    void (async () => {
       try {
-        await deleteCourt(venueId, court.id)
+        await deleteCourt.mutateAsync(court.id)
         toast.success(m.venue_courts_toasts_archived({ name: court.name }))
         setArchiveTarget(null)
       } catch (error) {
@@ -182,7 +190,7 @@ export function VenueCourtsView({
         )
       }
     })
-  }, [archiveTarget, venueId])
+  }, [archiveTarget, deleteCourt])
 
   return (
     <div className="flex flex-col gap-5">
@@ -200,7 +208,7 @@ export function VenueCourtsView({
       {/* Keyed so switching branch resets the panel's local gallery copy. */}
       <VenuePhotosPanel key={venueId} />
 
-      <VenuePanel
+      <TableSection
         title={m.venue_courts_list_title()}
         icon={LayoutGrid}
         action={
@@ -211,104 +219,98 @@ export function VenueCourtsView({
         }
       >
         {courts.length ? (
-          <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/50">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow hover="none">
-                  <TableHead density="compact">
-                    {m.venue_courts_col_name()}
-                  </TableHead>
-                  <TableHead density="compact">
-                    {m.venue_courts_col_sport()}
-                  </TableHead>
-                  <TableHead density="compact">
-                    {m.venue_courts_col_surface()}
-                  </TableHead>
-                  <TableHead density="compact" align="right">
-                    {m.venue_courts_col_price()}
-                  </TableHead>
-                  <TableHead density="compact">
-                    {m.venue_courts_col_state()}
-                  </TableHead>
-                  <TableHead density="compact">
-                    <span className="sr-only">
-                      {m.venue_courts_col_actions()}
-                    </span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {courts.map((court) => (
-                  <TableRow hover="subtle" key={court.id}>
-                    <TableCell density="roomy" weight="medium" tone="strong">
-                      {court.name}
-                    </TableCell>
-                    <TableCell density="roomy">
-                      <SportTag sport={court.sport} />
-                    </TableCell>
-                    <TableCell density="roomy" size="sm" tone="muted">
-                      {court.surface || "—"}
-                    </TableCell>
-                    <TableCell
-                      density="roomy"
-                      align="right"
-                      numeric="yes"
-                      weight="semibold"
-                      size="sm"
-                      tone="strong"
-                      className="font-heading"
+          <Table className={BLEED_TABLE_CLASS}>
+            <TableHeader className="bg-muted/30">
+              <TableHead density="compact">
+                {m.venue_courts_col_name()}
+              </TableHead>
+              <TableHead density="compact">
+                {m.venue_courts_col_sport()}
+              </TableHead>
+              <TableHead density="compact">
+                {m.venue_courts_col_surface()}
+              </TableHead>
+              <TableHead density="compact" align="right">
+                {m.venue_courts_col_price()}
+              </TableHead>
+              <TableHead density="compact">
+                {m.venue_courts_col_state()}
+              </TableHead>
+              <TableHead density="compact">
+                <span className="sr-only">{m.venue_courts_col_actions()}</span>
+              </TableHead>
+            </TableHeader>
+            <TableBody>
+              {courts.map((court) => (
+                <TableRow hover="subtle" key={court.id}>
+                  <TableCell density="roomy" weight="medium" tone="strong">
+                    {court.name}
+                  </TableCell>
+                  <TableCell density="roomy">
+                    <SportTag sport={court.sport} />
+                  </TableCell>
+                  <TableCell density="roomy" size="sm" tone="muted">
+                    {court.surface || "—"}
+                  </TableCell>
+                  <TableCell
+                    density="roomy"
+                    align="right"
+                    numeric="yes"
+                    weight="semibold"
+                    size="sm"
+                    tone="strong"
+                    className="font-heading"
+                  >
+                    {formatVndText(court.pricePerHour)}
+                  </TableCell>
+                  <TableCell density="roomy">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-mini font-medium",
+                        courtStateAccent[court.state]
+                      )}
                     >
-                      {formatVndText(court.pricePerHour)}
-                    </TableCell>
-                    <TableCell density="roomy">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-mini font-medium",
-                          courtStateAccent[court.state]
-                        )}
+                      {court.state === "maintenance" ? (
+                        <Wrench className="size-3" />
+                      ) : null}
+                      {stateLabel[court.state]}
+                    </span>
+                  </TableCell>
+                  <TableCell density="roomy" align="right">
+                    <DropdownMenuTrigger>
+                      <Button
+                        shape="pill"
+                        size="icon-sm"
+                        variant="ghost"
+                        className="text-muted-foreground"
+                        aria-label={m.venue_courts_row_actions()}
                       >
-                        {court.state === "maintenance" ? (
-                          <Wrench className="size-3" />
-                        ) : null}
-                        {stateLabel[court.state]}
-                      </span>
-                    </TableCell>
-                    <TableCell density="roomy" align="right">
-                      <DropdownMenuTrigger>
-                        <Button
-                          shape="pill"
-                          size="icon-sm"
-                          variant="ghost"
-                          className="text-muted-foreground"
-                          aria-label={m.venue_courts_row_actions()}
+                        <MoreVertical className="size-4" />
+                      </Button>
+                      <DropdownMenu placement="bottom end">
+                        <DropdownMenuItem
+                          onAction={() => openEditDialog(court)}
                         >
-                          <MoreVertical className="size-4" />
-                        </Button>
-                        <DropdownMenu placement="bottom end">
-                          <DropdownMenuItem
-                            onAction={() => openEditDialog(court)}
-                          >
-                            <Pencil />
-                            {m.venue_courts_edit()}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onAction={() => setArchiveTarget(court)}
-                          >
-                            {m.venue_courts_archive()}
-                          </DropdownMenuItem>
-                        </DropdownMenu>
-                      </DropdownMenuTrigger>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                          <Pencil />
+                          {m.venue_courts_edit()}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onAction={() => setArchiveTarget(court)}
+                        >
+                          {m.venue_courts_archive()}
+                        </DropdownMenuItem>
+                      </DropdownMenu>
+                    </DropdownMenuTrigger>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : (
           <VenueEmpty text={m.venue_courts_empty()} />
         )}
-      </VenuePanel>
+      </TableSection>
 
       {isFormOpen ? (
         <CourtFormDialog

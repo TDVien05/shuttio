@@ -1,4 +1,5 @@
 import { api } from "@/lib/api"
+import { queryKeys } from "@/lib/query-keys"
 import { queryClient } from "@/lib/query-client"
 import type { RoomComplaintRow } from "@/lib/shared"
 import type {
@@ -13,7 +14,7 @@ import type {
 // carrying the API's message, so callers can just `catch` it.
 
 function invalidateAdmin() {
-  void queryClient.invalidateQueries({ queryKey: ["admin"] })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.admin.all() })
 }
 
 export async function approveBrand(brandId: string): Promise<void> {
@@ -144,7 +145,9 @@ export async function setAppReviewHidden(
     method: "POST",
   })
   invalidateAdmin()
-  void queryClient.invalidateQueries({ queryKey: ["app-reviews"] })
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.appReviews(),
+  })
 }
 
 /** Hard-delete a venue; cancels all live bookings and notifies affected players. */

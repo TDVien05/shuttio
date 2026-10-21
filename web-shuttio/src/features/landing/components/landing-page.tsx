@@ -1,3 +1,4 @@
+import { AdvancedImage } from "@cloudinary/react"
 import { Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -14,6 +15,7 @@ import {
 import { Logo } from "@/components/logo"
 import { appReviewQueries } from "@/features/app-review/api/app-review.queries"
 import { rich } from "@/lib/i18n"
+import { CLOUDINARY_IMAGES, cloudinaryImage } from "@/lib/cloudinary"
 import { cn } from "@/lib/utils"
 import { Faq } from "@/features/landing/components/faq"
 import { Pricing } from "@/features/landing/components/pricing"
@@ -155,8 +157,8 @@ export function LandingPage() {
             <p className={styles.subtitle}>{m.landing_hero_subtitle()}</p>
           </div>
           <div className={styles.heroImage}>
-            <img
-              src="/landing-page-top.jpg"
+            <AdvancedImage
+              cldImg={cloudinaryImage(CLOUDINARY_IMAGES.landingHero)}
               alt={m.landing_hero_image_alt()}
               width={1440}
               height={2560}
@@ -198,8 +200,8 @@ export function LandingPage() {
         <div className={styles.lightPanel}>
           <section id="about" className={styles.about}>
             <div className={styles.aboutPhotoLeft}>
-              <img
-                src="/left-landing-page.jpg"
+              <AdvancedImage
+                cldImg={cloudinaryImage(CLOUDINARY_IMAGES.aboutLeft)}
                 alt={m.landing_about_section_left_image_alt()}
                 loading="lazy"
                 className="absolute inset-0 size-full object-cover"
@@ -218,8 +220,8 @@ export function LandingPage() {
               </Link>
             </div>
             <div className={styles.aboutPhotoRight}>
-              <img
-                src="/right-landing-page.jpg"
+              <AdvancedImage
+                cldImg={cloudinaryImage(CLOUDINARY_IMAGES.aboutRight)}
                 alt={m.landing_about_section_right_image_alt()}
                 loading="lazy"
                 className="absolute inset-0 size-full object-cover object-right"

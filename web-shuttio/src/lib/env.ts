@@ -12,3 +12,12 @@ export const CLERK_PUBLISHABLE_KEY: string =
 /** Mapbox token for the Find Courts map; the map shows a fallback without it. */
 export const MAPBOX_TOKEN: string | undefined =
   import.meta.env.VITE_MAPBOX_TOKEN || undefined
+
+/** Cloudinary cloud name for image delivery (public, not a secret). */
+export const CLOUDINARY_CLOUD_NAME: string =
+  import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? ""
+
+/** Centrifugo WebSocket endpoint (realtime). */
+export const CENTRIFUGO_URL: string =
+  import.meta.env.VITE_CENTRIFUGO_URL ??
+  "ws://localhost:8000/connection/websocket"

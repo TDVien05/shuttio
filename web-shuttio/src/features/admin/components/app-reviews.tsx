@@ -64,15 +64,6 @@ export function AdminAppReviewsView({
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-heading text-3xl font-bold tracking-tight">
-          {m.admin_app_reviews_title()}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {m.admin_app_reviews_subtitle()}
-        </p>
-      </div>
-
       {rows.length === 0 ? (
         <VenueEmpty text={m.admin_app_reviews_empty()} />
       ) : (

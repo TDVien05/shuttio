@@ -60,7 +60,7 @@ import {
   type RescheduleReservationInput,
   type WalkInReservationInput,
 } from "../bookings/bookings.service.js"
-import { roomChannelId, StreamService } from "../stream/stream.service.js"
+import { ChatService, roomChannelId } from "../chat/chat.service.js"
 import { BrandsService } from "../brands/brands.service.js"
 import { effectiveApproval, Venue, type VenueDocument } from "./venue.schema.js"
 
@@ -213,7 +213,7 @@ export class VenuesService implements OnModuleInit {
     private readonly notifications: NotificationsService,
     // Operator decline/cancel best-effort freezes the linked room's chat
     // (quyết định #13) — see updateReservationStatus.
-    @Inject(StreamService) private readonly stream: StreamService,
+    @Inject(ChatService) private readonly chat: ChatService,
     // Provisioning a venue ensures the account's brand (its branches' parent).
     @Inject(BrandsService) private readonly brands: BrandsService
   ) {}
@@ -1025,11 +1025,11 @@ export class VenuesService implements OnModuleInit {
       if (notify) await this.notifications.create(userId, notify)
       // Operator decline/cancel freezes the room's chat (quyết định #13) — keeps
       // history, blocks new sends. Best-effort: a chat failure (channel never
-      // opened, Stream outage) must never fail the booking decision itself.
+      // opened, chat outage) must never fail the booking decision itself.
       // Walk-ins have no linked session and skip cleanly.
       if (status === "cancelled" && reservation.sessionId) {
         try {
-          await this.stream.freezeChannelById(
+          await this.chat.freezeChannelById(
             roomChannelId(reservation.sessionId)
           )
         } catch (err) {

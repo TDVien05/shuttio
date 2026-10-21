@@ -1,31 +1,22 @@
-import { Injectable, type MessageEvent } from "@nestjs/common"
-import { interval, map, merge, Subject, type Observable } from "rxjs"
+import { Inject, Injectable } from "@nestjs/common"
 
-/** How often an idle stream sends a keep-alive, so proxies don't drop it. */
-const HEARTBEAT_MS = 25_000
+import { CentrifugoService } from "../realtime/centrifugo.service.js"
+import { ROOMS_CHANGES_CHANNEL } from "../realtime/channels.js"
 
 /**
- * In-process fan-out of "a room changed" signals to every connected client
- * (`GET /api/rooms/events`, server-sent events). A signal carries only the
- * room id — clients refetch `GET /api/rooms` for the data, so the stream
- * never leaks anything the rooms list doesn't already show. Single-instance
- * by design (the api runs as one process); a multi-instance deploy would
- * need a shared pub/sub behind this.
+ * Announces "a room changed" to every connected client over Centrifugo
+ * (`rooms:changes`). A signal carries only the room id — clients refetch
+ * `GET /api/rooms` for the data, so the channel never leaks anything the
+ * rooms list doesn't already show.
  */
 @Injectable()
 export class RoomEventsService {
-  private readonly changes = new Subject<string>()
+  constructor(
+    @Inject(CentrifugoService) private readonly centrifugo: CentrifugoService
+  ) {}
 
   /** Announce that a room was created, changed, or removed. */
   emit(roomId: string): void {
-    this.changes.next(roomId)
-  }
-
-  /** The event stream for one subscriber: room changes plus heartbeats. */
-  stream(): Observable<MessageEvent> {
-    return merge(
-      this.changes.pipe(map((roomId) => ({ type: "room", data: { roomId } }))),
-      interval(HEARTBEAT_MS).pipe(map(() => ({ type: "ping", data: "" })))
-    )
+    void this.centrifugo.publish(ROOMS_CHANGES_CHANNEL, { roomId })
   }
 }

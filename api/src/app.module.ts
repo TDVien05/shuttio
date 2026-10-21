@@ -17,17 +17,18 @@ import { AppReviewsModule } from "./features/app-reviews/app-reviews.module.js"
 import { AssessmentModule } from "./features/assessment/assessment.module.js"
 import { BanksModule } from "./features/banks/banks.module.js"
 import { BookingsModule } from "./features/bookings/bookings.module.js"
+import { ChatModule } from "./features/chat/chat.module.js"
 import { CourtsModule } from "./features/courts/courts.module.js"
 import { DiscountsModule } from "./features/discounts/discounts.module.js"
 import { HealthController } from "./features/health/health.controller.js"
 import { NotificationsModule } from "./features/notifications/notifications.module.js"
 import { PaymentsModule } from "./features/payments/payments.module.js"
 import { PlayersModule } from "./features/players/players.module.js"
+import { RealtimeModule } from "./features/realtime/realtime.module.js"
 import { RatingsModule } from "./features/ratings/ratings.module.js"
 import { RoomsModule } from "./features/rooms/rooms.module.js"
 import { SeedModule } from "./features/seed/seed.module.js"
 import { SessionsModule } from "./features/sessions/sessions.module.js"
-import { StreamModule } from "./features/stream/stream.module.js"
 import { VenueWorkspaceModule } from "./features/venue-workspace/venue-workspace.module.js"
 import { VenuesModule } from "./features/venues/venues.module.js"
 
@@ -71,7 +72,8 @@ import { VenuesModule } from "./features/venues/venues.module.js"
     VenuesModule,
     VenueWorkspaceModule,
     AccountModule,
-    StreamModule,
+    ChatModule,
+    RealtimeModule,
     NotificationsModule,
     DiscountsModule,
     PaymentsModule,

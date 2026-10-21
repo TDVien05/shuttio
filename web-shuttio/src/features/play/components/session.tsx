@@ -28,6 +28,11 @@ import type {
   SportKey,
 } from "@/lib/shared"
 import { useData } from "@/features/dashboard/components/data-provider"
+import {
+  ROOMS_CHANGES_CHANNEL,
+  subscribeToChannel,
+  userSessionsChannel,
+} from "@/lib/realtime"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import {
   PLAYER_ASSESSMENT_UPDATED_EVENT,
@@ -55,7 +60,7 @@ import {
   createRoomChat,
   freezeRoomChat,
   removeRoomMember,
-} from "@/features/chat/api/stream-api"
+} from "@/features/chat/api/chat-api"
 import { m } from "@/paraglide/messages"
 
 const sportsMessages = {
@@ -80,8 +85,8 @@ const INVITE_EXPIRY_MS = 6 * 60 * 60 * 1000
 // How often `GET /api/rooms` (every other user's listed rooms) is repolled —
 // mirrors `NotificationsProvider`'s POLL_MS.
 const ROOMS_POLL_MS = 30_000
-// How often `GET /api/sessions` is repolled as a fallback when the SSE stream
-// is unavailable — same cadence as rooms.
+// How often `GET /api/sessions` is repolled as a fallback when the live
+// connection is unavailable — same cadence as rooms.
 const SESSIONS_POLL_MS = 30_000
 
 /** Window event fired when the live stream reports a room change. */
@@ -546,12 +551,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Live: the api pushes a `room` event whenever any room is created,
-  // changed or removed (`/api/rooms/events`, bridged same-origin with the
-  // Clerk token), and every client refetches right away — so a new/cancelled
-  // room or a member joining/leaving shows up for everyone within a moment.
-  // The interval poll plus focus/visibility refetch stay as a fallback for
-  // when the stream is down (EventSource reconnects on its own).
+  // Live: the api publishes to Centrifugo's `rooms:changes` whenever any room
+  // is created, changed or removed, and every client refetches right away —
+  // so a new/cancelled room or a member joining/leaving shows up for everyone
+  // within a moment. The interval poll plus focus/visibility refetch stay as a
+  // fallback for when the connection is down (Centrifugo reconnects itself).
   React.useEffect(() => {
     let cancelled = false
     const poll = async () => {
@@ -585,23 +589,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         window.dispatchEvent(new Event(ROOMS_CHANGED_EVENT))
       }, 250)
     }
-    const events =
-      typeof EventSource === "undefined"
-        ? null
-        : new EventSource("/api/rooms/events")
-    events?.addEventListener("room", onRoomEvent)
+    const unsubscribe = subscribeToChannel(ROOMS_CHANGES_CHANNEL, onRoomEvent)
 
     return () => {
       cancelled = true
       clearInterval(interval)
       clearTimeout(debounce)
-      events?.close()
+      unsubscribe()
       document.removeEventListener("visibilitychange", onFocusOrVisible)
       window.removeEventListener("focus", onFocusOrVisible)
     }
   }, [])
 
-  // Live: poll `GET /api/sessions` and subscribe to per-user SSE so booking
+  // Live: poll `GET /api/sessions` and subscribe to the per-user channel so booking
   // status changes (venue approve/decline) reach the player without a refresh.
   // Uses the same pattern as the rooms live stream above.
   React.useEffect(() => {
@@ -629,21 +629,20 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(debounce)
       debounce = setTimeout(() => void fetchSessions(), 250)
     }
-    const events =
-      typeof EventSource === "undefined"
-        ? null
-        : new EventSource("/api/sessions/events")
-    events?.addEventListener("session", onSessionEvent)
+    const unsubscribe = subscribeToChannel(
+      userSessionsChannel(authUser.id),
+      onSessionEvent
+    )
 
     return () => {
       cancelled = true
       clearInterval(interval)
       clearTimeout(debounce)
-      events?.close()
+      unsubscribe()
       document.removeEventListener("visibilitychange", onFocusOrVisible)
       window.removeEventListener("focus", onFocusOrVisible)
     }
-  }, [])
+  }, [authUser.id])
 
   // A per-mount base keeps generated ids unique across reloads: the counter
   // resets to 0 on every mount, so without a base a new session could reuse an

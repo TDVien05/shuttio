@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Inject, Injectable } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
 import type { Model } from "mongoose"
 
@@ -8,6 +8,8 @@ import type {
 } from "../../shared/index.js"
 
 import { isDuplicateKeyError } from "../../common/mongo-util.js"
+import { CentrifugoService } from "../realtime/centrifugo.service.js"
+import { userNotificationsChannel } from "../realtime/channels.js"
 import {
   Notification,
   type NotificationDocument,
@@ -57,7 +59,8 @@ function toRecord(doc: LeanNotification): NotificationRecord {
 export class NotificationsService {
   constructor(
     @InjectModel(Notification.name)
-    private readonly notificationModel: Model<NotificationDocument>
+    private readonly notificationModel: Model<NotificationDocument>,
+    @Inject(CentrifugoService) private readonly centrifugo: CentrifugoService
   ) {}
 
   /**
@@ -79,7 +82,9 @@ export class NotificationsService {
       })
     } catch (err) {
       if (!isDuplicateKeyError(err)) throw err
+      return
     }
+    void this.centrifugo.publish(userNotificationsChannel(userId), {})
   }
 
   /** The signed-in user's notifications, newest first. */

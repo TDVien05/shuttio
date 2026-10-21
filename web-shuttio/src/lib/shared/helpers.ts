@@ -1601,3 +1601,41 @@ export function normalizeVnPhone(raw: string): string | null {
   const digits = raw.replace(/[\s.\-()]/g, "").replace(/^\+?84/, "0")
   return /^0\d{9,10}$/.test(digits) ? digits : null
 }
+
+// ── RSVP expiry ──────────────────────────────────────────────────────────────
+
+/** A join request the host hasn't answered auto-expires after this long. */
+export const REQUEST_EXPIRY_MS = 2 * 60 * 60 * 1000
+/** An invite a player hasn't responded to auto-expires after this long. */
+export const INVITE_EXPIRY_MS = 6 * 60 * 60 * 1000
+
+/**
+ * Whether an unanswered join request/invite has outlived its TTL. Hosts and
+ * confirmed members never expire; an entry without `rsvpAt` has no clock to
+ * measure and is left alone. The TTL boundary itself is still live (`>`, not
+ * `>=`), matching the original client sweep.
+ */
+export function isRsvpExpired(
+  player: SessionPlayer,
+  now: number = Date.now()
+): boolean {
+  if (player.rsvp !== "requested" && player.rsvp !== "pending") return false
+  if (player.rsvpAt == null) return false
+  const ttl =
+    player.rsvp === "requested" ? REQUEST_EXPIRY_MS : INVITE_EXPIRY_MS
+  return now - player.rsvpAt > ttl
+}
+
+/** Drop expired join requests/invites from a room's roster (read-time view). */
+export function withoutExpiredRsvps(
+  session: PlaySession,
+  now: number = Date.now()
+): PlaySession {
+  if (!session.roster.some((player) => isRsvpExpired(player, now))) {
+    return session
+  }
+  return {
+    ...session,
+    roster: session.roster.filter((player) => !isRsvpExpired(player, now)),
+  }
+}

@@ -184,15 +184,6 @@
     ),
     linear-gradient(135deg, var(--background), var(--muted));
 }
-@utility bg-hero-court {
-  background-image: url("/hero-court.jpg");
-}
-@utility bg-hero-photo {
-  background-image: url("/e42e9841354b4ff0e4b8f1da29efc7bcb5b0b2c8.png");
-}
-@utility bg-fill-stretch {
-  background-size: 100% 100%;
-}
 /* Hatched "blocked" slot pattern on the venue schedule */
 @utility bg-slot-stripes {
   background-image: repeating-linear-gradient(
@@ -303,11 +294,11 @@
   --chart-4: oklch(0.508 0.118 165.612);
   --chart-5: oklch(0.432 0.095 166.913);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+  --sidebar: oklch(0.985 0.004 100);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.596 0.145 163.225);
   --sidebar-primary-foreground: oklch(0.979 0.021 166.113);
-  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent: oklch(0.955 0.04 160);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);

@@ -1,0 +1,34 @@
+{
+  "client": {
+    "allowed_origins": ["http://localhost:3000", "http://localhost:3001"],
+    "token": {
+      "issuer": "shuttio-api",
+      "audience": "centrifugo"
+    },
+    "disallow_anonymous_connection_tokens": true,
+    "channel_limit": 8
+  },
+  "http_server": {
+    "internal_port": "9000"
+  },
+  "websocket": {
+    "message_size_limit": 8192
+  },
+  "channel": {
+    "namespaces": [
+      {
+        "name": "rooms",
+        "allow_subscribe_for_client": true,
+        "channel_regex": "^changes$"
+      },
+      {
+        "name": "personal",
+        "allow_user_limited_channels": true,
+        "channel_regex": "^(sessions|notifications|chat)#[A-Za-z0-9_-]{1,64}$"
+      }
+    ]
+  },
+  "health": {
+    "enabled": true
+  }
+}

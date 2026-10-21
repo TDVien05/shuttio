@@ -231,6 +231,7 @@ export function FindCourtsView({
             {m.find_courts_nearby({ count: items.length })}
           </span>
           <Select
+            aria-label={m.find_courts_sort_by()}
             value={sort}
             onChange={(value) => {
               const next = SORTS.find((key) => key === value)
@@ -503,6 +504,7 @@ function FilterSelect({
         {label}
       </span>
       <Select
+        aria-label={label}
         value={value}
         onChange={(next) => {
           if (typeof next === "string") onChange(next)

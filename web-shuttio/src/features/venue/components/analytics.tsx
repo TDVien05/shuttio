@@ -45,8 +45,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
 import { useData } from "@/features/dashboard/components/data-provider"
 import { venueBase } from "@/features/venue/nav"
-import { addCourtBlock } from "@/features/venue/api/venue-api"
-import { useVenueData } from "@/features/venue/components/venue-data-provider"
+import {
+  useAddCourtBlock,
+  useVenueData,
+} from "@/features/venue/api/venue.queries"
 import {
   COLD_SLOT_THRESHOLD,
   COURT_BLOCK_REASONS,
@@ -63,7 +65,6 @@ import {
 import type {
   BookingSource,
   ColdSlot,
-  CourtBlock,
   CourtBlockReason,
   VenueCourt,
 } from "@/lib/shared"
@@ -115,7 +116,6 @@ export function VenueAnalyticsView({
     revenueSeries: REVENUE_SERIES,
     venueCourts: VENUE_COURTS,
     venueStats: VENUE_STATS,
-    addBlock,
   } = useVenueData()
 
   // ── Revenue rollup (deterministic — no Date/random) ──
@@ -375,7 +375,6 @@ export function VenueAnalyticsView({
         todayIso={todayIso}
         venueId={venueId}
         courts={VENUE_COURTS}
-        onBlocked={addBlock}
       />
 
       <VenuePanel title={m.venue_analytics_channels_title()} icon={Smartphone}>
@@ -554,7 +553,6 @@ function ColdSlotsPanel({
   todayIso,
   venueId,
   courts,
-  onBlocked,
 }: {
   coldSlots: ColdSlot[]
   hasActivity: boolean
@@ -562,7 +560,6 @@ function ColdSlotsPanel({
   todayIso: string
   venueId: string
   courts: VenueCourt[]
-  onBlocked: (block: CourtBlock) => void
 }) {
   const [blockTarget, setBlockTarget] = React.useState<ColdSlot | null>(null)
 
@@ -604,10 +601,6 @@ function ColdSlotsPanel({
         venueId={venueId}
         courts={courts}
         onClose={() => setBlockTarget(null)}
-        onCreated={(block) => {
-          onBlocked(block)
-          setBlockTarget(null)
-        }}
       />
     </VenuePanel>
   )
@@ -741,7 +734,6 @@ function ColdSlotBlockDialog({
   venueId,
   courts,
   onClose,
-  onCreated,
 }: {
   target: ColdSlot | null
   locale: string
@@ -749,8 +741,8 @@ function ColdSlotBlockDialog({
   venueId: string
   courts: VenueCourt[]
   onClose: () => void
-  onCreated: (block: CourtBlock) => void
 }) {
+  const addBlock = useAddCourtBlock(venueId)
   const durationMin = 120
   const resolvedDate = target
     ? nextDateForWeekday(target.weekdayIdx, todayIso)
@@ -776,7 +768,7 @@ function ColdSlotBlockDialog({
           onCancel={onClose}
           onSubmit={async (value) => {
             try {
-              const block = await addCourtBlock(venueId, {
+              await addBlock.mutateAsync({
                 courtId: value.courtId,
                 dateKey: resolvedDate,
                 start,
@@ -784,10 +776,10 @@ function ColdSlotBlockDialog({
                 reason: value.reason,
                 note: value.note.trim() || undefined,
               })
-              onCreated(block)
               toast.success(m.venue_schedule_toast_block_title(), {
                 description: slotLabel,
               })
+              onClose()
             } catch (error) {
               toast.error(
                 error instanceof Error ? error.message : "Failed to block slot"

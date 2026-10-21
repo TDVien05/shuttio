@@ -21,6 +21,7 @@ CMD ["pnpm", "dev", "--host", "0.0.0.0"]
 # runtime env vars. None of them are secrets.
 FROM deps AS build
 ARG VITE_API_URL
+ARG VITE_CENTRIFUGO_URL
 ARG VITE_CLERK_PUBLISHABLE_KEY
 ARG VITE_MAPBOX_TOKEN
 ARG VITE_CLOUDINARY_CLOUD_NAME

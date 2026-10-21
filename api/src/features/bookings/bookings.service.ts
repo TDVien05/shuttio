@@ -47,7 +47,7 @@ import {
   PlaySession,
   type PlaySessionDocument,
 } from "../sessions/session.schema.js"
-import { ClerkDirectoryService } from "../stream/clerk-directory.service.js"
+import { ClerkDirectoryService } from "../directory/clerk-directory.service.js"
 import { BookingChatService } from "./booking-chat.service.js"
 import {
   effectiveApproval,
@@ -1038,6 +1038,22 @@ export class BookingsService {
       input.start,
       input.durationMin
     )
+
+    // Idempotent retry: a reload between "hold created" and the payment screen
+    // loses the client's `linkedId`, so a second checkout attempt must reuse
+    // the same unpaid hold instead of tripping the self-overlap guard below.
+    // Keyed on the slot (not `sessionId`, which is regenerated per attempt).
+    const existingHold = await this.bookingModel
+      .findOne({
+        userId,
+        courtId: input.courtId,
+        dateKey: input.dateKey,
+        start: input.start,
+        durationMin: input.durationMin,
+        status: "awaiting_payment",
+      })
+      .lean<BookingRecord>()
+    if (existingHold) return bookingSummaryFrom(existingHold)
 
     const unpaid = await this.bookingModel.countDocuments({
       userId,

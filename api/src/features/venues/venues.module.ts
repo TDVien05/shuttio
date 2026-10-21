@@ -5,7 +5,7 @@ import { BookingsModule } from "../bookings/bookings.module.js"
 import { BrandsModule } from "../brands/brands.module.js"
 import { NotificationsModule } from "../notifications/notifications.module.js"
 import { PlayersModule } from "../players/players.module.js"
-import { StreamModule } from "../stream/stream.module.js"
+import { ChatModule } from "../chat/chat.module.js"
 import { Venue, VenueSchema } from "./venue.schema.js"
 import { VenuePhotosController } from "./venue-photos.controller.js"
 import { VenuePhotosService } from "./venue-photos.service.js"
@@ -25,8 +25,8 @@ import { VenuesService } from "./venues.service.js"
     BrandsModule,
     PlayersModule,
     NotificationsModule,
-    // StreamModule: cancel/decline freezes the room's chat (best-effort hook).
-    StreamModule,
+    // ChatModule: cancel/decline freezes the room's chat (best-effort hook).
+    ChatModule,
   ],
   controllers: [VenuesController, VenuePhotosController],
   providers: [VenuesService, VenuePhotosService],

@@ -23,8 +23,8 @@ export type RoomActionResult<T> = ApiResult<T>
  * the source of truth for which rooms the caller has joined outside their own
  * session doc, and to browse rooms other players host.
  */
-export async function listRooms(): Promise<PlaySession[]> {
-  return api<PlaySession[]>("/api/rooms")
+export async function listRooms(signal?: AbortSignal): Promise<PlaySession[]> {
+  return api<PlaySession[]>("/api/rooms", { signal })
 }
 
 /** Ask to join someone else's room — takes a `requested` seat pending the host. */

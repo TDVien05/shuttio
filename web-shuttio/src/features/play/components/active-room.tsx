@@ -26,6 +26,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { roomChannelId } from "@/features/chat/lib/channel-ids"
 import {
   markSharePaid,
   remindSharePayment,
@@ -285,9 +286,11 @@ function RoomDetail({
     setProfileOpen(true)
   }
 
-  // Messaging isn't available yet — the chat page says so.
   const openChat = () => {
-    void router.navigate({ to: "/app/chat" })
+    void router.navigate({
+      to: "/app/chat",
+      search: { channel: roomChannelId(room.id) },
+    })
     onClose()
   }
 

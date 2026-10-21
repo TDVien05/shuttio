@@ -8,10 +8,16 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   CLERK_SECRET_KEY: z.string().min(1, "CLERK_SECRET_KEY is required"),
   CLERK_PUBLISHABLE_KEY: z.string().min(1, "CLERK_PUBLISHABLE_KEY is required"),
-  // GetStream.io Stream Chat — server key + secret. The secret signs user JWTs
-  // locally (no network) and authenticates server-side channel/user upserts.
-  STREAM_API_KEY: z.string().min(1, "STREAM_API_KEY is required"),
-  STREAM_API_SECRET: z.string().min(1, "STREAM_API_SECRET is required"),
+  // Centrifugo (realtime). The api publishes over its HTTP API and signs the
+  // browser's connection JWTs with the shared HMAC secret.
+  CENTRIFUGO_API_URL: z.string().min(1, "CENTRIFUGO_API_URL is required"),
+  CENTRIFUGO_API_KEY: z
+    .string()
+    .min(16, "CENTRIFUGO_API_KEY must be at least 16 characters"),
+  // Centrifugo recommends a random secret of 32+ bytes for HMAC tokens.
+  CENTRIFUGO_TOKEN_HMAC_SECRET: z
+    .string()
+    .min(32, "CENTRIFUGO_TOKEN_HMAC_SECRET must be at least 32 characters"),
   WEB_URL: z.string().min(1).default("http://localhost:3000"),
   PORT: z.coerce.number().int().positive().default(6969),
   // Booking sweeper (`bookings.sweeper.ts`) SLA — decision #5: a pending

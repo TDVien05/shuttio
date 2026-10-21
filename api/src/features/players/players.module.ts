@@ -9,7 +9,7 @@ import { Player, PlayerSchema } from "./player.schema.js"
 import { Profile, ProfileSchema } from "./profile.schema.js"
 import { PlayerService } from "./player.service.js"
 import { ProfileService } from "./profile.service.js"
-import { StreamModule } from "../stream/stream.module.js"
+import { DirectoryModule } from "../directory/directory.module.js"
 
 @Module({
   imports: [
@@ -19,7 +19,7 @@ import { StreamModule } from "../stream/stream.module.js"
       { name: PlayerAssessment.name, schema: PlayerAssessmentSchema },
     ]),
     // Clerk directory: a new profile starts from the account's real name.
-    StreamModule,
+    DirectoryModule,
   ],
   providers: [PlayerService, ProfileService],
   exports: [PlayerService, ProfileService],

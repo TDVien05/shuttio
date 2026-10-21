@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -28,8 +29,11 @@ export function useAdminPagination(total: number) {
 
 export function AdminPagination({
   pagination,
+  bleed = false,
 }: {
   pagination: ReturnType<typeof useAdminPagination>
+  /** Full-width footer pinned to the bottom of an edge-to-edge page. */
+  bleed?: boolean
 }) {
   const { total, page, pageSize, pageCount, offset, setPage, setPageSize } =
     pagination
@@ -39,7 +43,11 @@ export function AdminPagination({
   return (
     <nav
       aria-label={m.admin_pagination_label()}
-      className="flex flex-wrap items-center justify-between gap-3"
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3",
+        bleed &&
+          "sticky -bottom-4 -mx-4 mt-auto h-12 shrink-0 flex-nowrap border-t bg-background px-4 sm:-bottom-6 sm:-mx-6 sm:px-6"
+      )}
     >
       <p className="text-sm text-muted-foreground" aria-live="polite">
         {m.admin_pagination_range({
@@ -48,11 +56,11 @@ export function AdminPagination({
           total,
         })}
       </p>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <label className="flex items-center gap-2 text-sm">
           {m.admin_pagination_page_size()}
           <select
-            className="rounded-md border border-input bg-background px-2 py-1.5"
+            className="rounded-md border border-input bg-background px-2 py-1"
             value={pageSize}
             onChange={(event) => setPageSize(Number(event.target.value))}
           >
@@ -75,7 +83,7 @@ export function AdminPagination({
         <label className="flex items-center gap-2 text-sm">
           {m.admin_pagination_page()}
           <select
-            className="rounded-md border border-input bg-background px-2 py-1.5"
+            className="rounded-md border border-input bg-background px-2 py-1"
             value={page}
             onChange={(event) => setPage(Number(event.target.value))}
           >

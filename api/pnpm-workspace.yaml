@@ -1,7 +1,6 @@
 allowBuilds:
   esbuild: true
   "@clerk/shared": false
-  stream-chat: false
   "@openrouter/sdk": false
 
 minimumReleaseAgeExclude:

@@ -11,7 +11,10 @@ import { getModelToken } from "@nestjs/mongoose"
 import { SessionsService } from "../src/features/sessions/sessions.service.js"
 import { PlaySession } from "../src/features/sessions/session.schema.js"
 import { BookingsService } from "../src/features/bookings/bookings.service.js"
-import type { PlaySession as PlaySessionData } from "../src/shared/index.js"
+import {
+  REQUEST_EXPIRY_MS,
+  type PlaySession as PlaySessionData,
+} from "../src/shared/index.js"
 
 /**
  * The `session.schema.ts` doc stores the whole client `PlaySession` under a
@@ -116,7 +119,7 @@ async function makeService(
       SessionsService,
       { provide: getModelToken(PlaySession.name), useValue: modelMock },
       { provide: BookingsService, useValue: bookingsMock },
-      RoomEventsService,
+      { provide: RoomEventsService, useValue: { emit: () => {} } },
     ],
   }).compile()
   return moduleRef.get(SessionsService)
@@ -404,4 +407,31 @@ void test("listUserSessions leaves a session with no linked booking untouched", 
   const [session] = await service.listUserSessions("user-1")
 
   assert.deepEqual(session, data)
+})
+
+void test("listUserSessions hides an expired join request", async () => {
+  const data = makeSession({
+    status: "forming",
+    roster: [
+      { name: "Quan", initials: "Q", rsvp: "host" },
+      {
+        name: "Nam",
+        initials: "NM",
+        rsvp: "requested",
+        rsvpAt: Date.now() - REQUEST_EXPIRY_MS - 1,
+        userId: "guest-1",
+      },
+    ],
+  })
+  const service = await makeService(
+    { find: () => findChain([{ data }]) },
+    { statusFor: () => Promise.resolve(new Map()) }
+  )
+
+  const [session] = await service.listUserSessions("user-1")
+
+  assert.deepEqual(
+    session.roster.map((p) => p.initials),
+    ["Q"]
+  )
 })

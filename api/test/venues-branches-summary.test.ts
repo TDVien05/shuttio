@@ -62,7 +62,7 @@ function makeService(venueModel: ReturnType<typeof makeVenueModel>) {
   }
   const profilesMock = { getProfile: () => Promise.resolve({}) }
   const notificationsMock = { create: () => Promise.resolve() }
-  const streamMock = {}
+  const chatMock = {}
   const brandsMock = { myBrand: () => Promise.resolve(null), ensureBrand: () => Promise.resolve(null) }
 
   return new VenuesService(
@@ -71,7 +71,7 @@ function makeService(venueModel: ReturnType<typeof makeVenueModel>) {
       bookingsMock,
       profilesMock,
       notificationsMock,
-      streamMock,
+      chatMock,
       brandsMock,
     ] as unknown as VenuesCtorArgs)
   )

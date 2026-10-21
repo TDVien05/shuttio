@@ -4,15 +4,10 @@ import {
   Delete,
   Get,
   Inject,
-  type MessageEvent,
   Param,
   Post,
   Put,
-  Sse,
 } from "@nestjs/common"
-import type { Observable } from "rxjs"
-
-import { RoomEventsService } from "./room-events.service.js"
 
 import { UserId } from "../../common/user-id.decorator.js"
 import {
@@ -31,25 +26,12 @@ import { RoomsService } from "./rooms.service.js"
 export class RoomsController {
   // Explicit tokens: tsx-based runners don't emit the constructor metadata
   // implicit injection relies on (same note as SessionsService).
-  constructor(
-    @Inject(RoomsService) private readonly rooms: RoomsService,
-    @Inject(RoomEventsService) private readonly roomEvents: RoomEventsService
-  ) {}
+  constructor(@Inject(RoomsService) private readonly rooms: RoomsService) {}
 
   /** Every listed, non-demo, still-open room across all users. */
   @Get()
   list() {
     return this.rooms.listRooms()
-  }
-
-  /**
-   * Server-sent events: a `room` event (just `{ roomId }`) whenever any room
-   * is created, changed or removed, so clients refetch `GET /api/rooms`
-   * right away instead of waiting for their next poll.
-   */
-  @Sse("events")
-  events(): Observable<MessageEvent> {
-    return this.roomEvents.stream()
   }
 
   /** The match a group chat is coordinating — any member of the chat may read it. */

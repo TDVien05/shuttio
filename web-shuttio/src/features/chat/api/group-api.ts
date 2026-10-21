@@ -19,7 +19,7 @@ export async function renameGroup(
   channelId: string,
   name: string
 ): Promise<void> {
-  await api("/api/stream/groups/name", {
+  await api("/api/chat/groups/name", {
     method: "PATCH",
     body: { channelId, name },
   })
@@ -30,7 +30,7 @@ export async function addGroupMembers(
   channelId: string,
   memberIds: string[]
 ): Promise<void> {
-  await api("/api/stream/groups/members", {
+  await api("/api/chat/groups/members", {
     method: "POST",
     body: { channelId, memberIds },
   })
@@ -38,7 +38,7 @@ export async function addGroupMembers(
 
 /** Group creator deletes their community group for every member. */
 export async function deleteGroup(channelId: string): Promise<void> {
-  await api("/api/stream/groups", {
+  await api("/api/chat/groups", {
     method: "DELETE",
     body: { channelId },
   })
@@ -49,7 +49,7 @@ export async function removeGroupMember(
   channelId: string,
   memberId: string
 ): Promise<void> {
-  await api("/api/stream/rooms/members", {
+  await api("/api/chat/rooms/members", {
     method: "DELETE",
     body: { channelId, memberId },
   })

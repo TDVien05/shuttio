@@ -15,6 +15,7 @@ import { z } from "zod"
 
 import { useAppForm } from "@/components/form"
 import { cn } from "@/lib/utils"
+import { queryKeys } from "@/lib/query-keys"
 import { Button, LinkButton } from "@/components/ui/button"
 import {
   EMPTY_PAYOUT,
@@ -276,7 +277,7 @@ export function PaymentScreen({
         return
       }
       setScreen({ kind: "sent", venueId: screen.pay.venueId })
-      void queryClient.invalidateQueries()
+      void queryClient.invalidateQueries({ queryKey: queryKeys.seed() })
     } catch {
       toast.error(m.payment_viet_qr_submit_failed())
     } finally {

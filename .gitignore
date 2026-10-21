@@ -42,3 +42,6 @@ api/src/generated/
 .pnpm-store/
 
 image/
+
+# local env overrides (never committed)
+*.local.env

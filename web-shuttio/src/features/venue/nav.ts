@@ -45,6 +45,7 @@ export function venueNav(venueId: string): NavItem<VenueSectionKey>[] {
     },
     {
       key: "messages",
+      group: m.venue_nav_group_insights,
       href: `${base}/messages`,
       label: m.venue_nav_messages_label,
       icon: MessageSquare,
@@ -52,6 +53,7 @@ export function venueNav(venueId: string): NavItem<VenueSectionKey>[] {
     },
     {
       key: "analytics",
+      group: m.venue_nav_group_insights,
       href: `${base}/analytics`,
       label: m.venue_nav_analytics_label,
       icon: BarChart3,
@@ -59,6 +61,7 @@ export function venueNav(venueId: string): NavItem<VenueSectionKey>[] {
     },
     {
       key: "customers",
+      group: m.venue_nav_group_insights,
       href: `${base}/customers`,
       label: m.venue_nav_customers_label,
       icon: Users,

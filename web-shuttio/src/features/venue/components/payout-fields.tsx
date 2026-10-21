@@ -1,5 +1,4 @@
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { CheckCircle2, Loader2 } from "lucide-react"
 import { z } from "zod"
@@ -26,29 +25,11 @@ import {
   toBankAccountName,
 } from "@/lib/bank-account"
 import type { PayoutDraft } from "@/lib/bank-account"
-import type { BankInfo } from "@/lib/shared"
-import {
-  listBanks,
-  lookupBankAccount,
-  savePayout,
-} from "@/features/venue/api/venue-api"
+import { lookupBankAccount } from "@/features/venue/api/venue-api"
+import { useBanks, useSavePayout } from "@/features/venue/api/venue.queries"
 import { m } from "@/paraglide/messages"
 
 type LookupState = "idle" | "loading" | "verified" | "failed"
-
-/**
- * The bank list for the picker (cached for the session). `error` is set when
- * VietQR's list couldn't be fetched, so the form can say so rather than
- * showing an empty dropdown.
- */
-export function useBanks(): { banks: BankInfo[] | undefined; error: boolean } {
-  const { data: banks, isError } = useQuery({
-    queryKey: ["banks"],
-    queryFn: listBanks,
-    staleTime: Infinity,
-  })
-  return { banks, error: isError }
-}
 
 /**
  * Bank + account number + holder name: where players transfer a booking's
@@ -220,11 +201,12 @@ export const payoutSchema = z.object({
 
 /** The manage-screen editor: shows the saved account and lets the owner change it. */
 export function PayoutEditor({ initial }: { initial: PayoutDraft | null }) {
+  const savePayout = useSavePayout()
   const form = useAppForm({
     defaultValues: initial ?? EMPTY_PAYOUT,
     validators: { onChange: payoutSchema, onMount: payoutSchema },
     onSubmit: async ({ value }) => {
-      const result = await savePayout({
+      const result = await savePayout.mutateAsync({
         bankBin: value.bankBin,
         accountNo: normalizeAccountNo(value.accountNo),
         accountName: toBankAccountName(value.accountName),

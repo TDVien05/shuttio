@@ -3,8 +3,7 @@ allowBuilds:
   lightningcss: true
   unrs-resolver: true
   "@clerk/shared": false
-  stream-chat: false
-  stream-chat-react: false
+  protobufjs: false
 minimumReleaseAgeExclude:
   - "@tanstack/query-core@5.104.5"
   - "@tanstack/query-devtools@5.104.5"

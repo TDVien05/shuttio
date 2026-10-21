@@ -12,29 +12,27 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { subscribeToChannel, userNotificationsChannel } from "@/lib/realtime"
+import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { relativeTime } from "@/lib/relative-time"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverTrigger } from "@/components/ui/popover"
 import type {
   NotificationItem,
   NotificationKind,
-  NotificationRecord,
 } from "@/lib/shared"
 import {
-  listNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-} from "@/features/dashboard/api/notification-api"
+  notificationQueries,
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+} from "@/features/dashboard/api/dashboard.queries"
 import { useMatchmaking } from "@/features/play/components/matchmaking"
 import { ROOMS_CHANGED_EVENT } from "@/features/play/components/session"
+import { queryKeys } from "@/lib/query-keys"
 import { m } from "@/paraglide/messages"
 
-/** How often the notification centre polls `GET /api/notifications`. */
-const POLL_MS = 10_000
 /** A notification this recent still toasts on the first load. */
 const FRESH_NOTIFICATION_MS = 60_000
-
-const NOTIFICATIONS_KEY = ["notifications"]
 
 interface NotificationsContextValue {
   items: NotificationItem[]
@@ -68,20 +66,29 @@ export function NotificationsProvider({
   children: React.ReactNode
 }) {
   const queryClient = useQueryClient()
+  const authUser = useAuthUser()
   const { expiredEvents } = useMatchmaking()
-  const { data: records = [] } = useQuery({
-    queryKey: NOTIFICATIONS_KEY,
-    queryFn: listNotifications,
-    refetchInterval: POLL_MS,
-    refetchOnWindowFocus: true,
-  })
+  const { data: records = [] } = useQuery(notificationQueries.list())
+  const markReadMutation = useMarkNotificationRead()
+  const markAllReadMutation = useMarkAllNotificationsRead()
   // Client-only items (expiry events) have no server row to flip.
   const [readLocal, setReadLocal] = React.useState<Set<string>>(new Set())
+
+  // A new notification row is announced on the user's own channel.
+  React.useEffect(
+    () =>
+      subscribeToChannel(userNotificationsChannel(authUser.id), () =>
+        queryClient.invalidateQueries({ queryKey: queryKeys.notifications() })
+      ),
+    [authUser.id, queryClient]
+  )
 
   // A live room change usually comes with a notification for this user.
   React.useEffect(() => {
     const refetch = () =>
-      void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY })
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.notifications(),
+      })
     window.addEventListener(ROOMS_CHANGED_EVENT, refetch)
     return () => window.removeEventListener(ROOMS_CHANGED_EVENT, refetch)
   }, [queryClient])
@@ -120,22 +127,15 @@ export function NotificationsProvider({
     return [...expired.reverse(), ...server]
   }, [expiredEvents, records, readLocal])
 
-  const setServerRead = (read: (r: NotificationRecord) => boolean) =>
-    queryClient.setQueryData<NotificationRecord[]>(NOTIFICATIONS_KEY, (prev) =>
-      prev?.map((r) => (read(r) ? { ...r, read: true } : r))
-    )
-
   // Optimistic: flip local state immediately, mirror to the server in the
   // background (a client-only id no-ops server-side harmlessly).
   const markRead = (id: string) => {
     setReadLocal((prev) => new Set(prev).add(id))
-    setServerRead((r) => r.id === id)
-    markNotificationRead(id).catch(() => {})
+    markReadMutation.mutate(id)
   }
   const markAllRead = () => {
     setReadLocal(new Set(items.map((n) => n.id)))
-    setServerRead(() => true)
-    markAllNotificationsRead().catch(() => {})
+    markAllReadMutation.mutate()
   }
 
   const unreadCount = items.reduce((n, item) => n + (item.read ? 0 : 1), 0)

@@ -1,3 +1,7 @@
+import {
+  BLEED_TABLE_CLASS,
+  TableSection,
+} from "@/components/layouts/table-section"
 import { cva } from "class-variance-authority"
 import { formatVndText } from "@/lib/money"
 import * as React from "react"
@@ -43,10 +47,11 @@ import {
   MicroLabel,
   ReasonDialog,
   VenueEmpty,
-  VenuePanel,
 } from "@/features/venue/components/shared"
-import { useVenueData } from "@/features/venue/components/venue-data-provider"
-import { decideReservation } from "@/features/venue/api/venue-api"
+import {
+  useDecideReservation,
+  useVenueData,
+} from "@/features/venue/api/venue.queries"
 import {
   PaymentProofDialog,
   RefundQueuePanel,
@@ -343,8 +348,8 @@ export function VenueReservationsView({
     venueId,
     reservations: RESERVATIONS,
     refundQueue: REFUND_QUEUE,
-    updateReservation,
   } = useVenueData()
+  const decideMutation = useDecideReservation(venueId)
 
   const [filter, setFilter] = React.useState<FilterKey>("all")
   // Optimistic overlay of just-decided rows — shows the "decided" affordance and
@@ -395,15 +400,10 @@ export function VenueReservationsView({
       setDecisions((prev) => ({ ...prev, [r.id]: decision }))
       startTransition(async () => {
         try {
-          const updated = await decideReservation(
-            venueId,
-            r.id,
+          await decideMutation.mutateAsync({
+            id: r.id,
             decision,
-            reason
-          )
-          updateReservation(r.id, {
-            status: updated.status,
-            declineReason: updated.declineReason,
+            reason,
           })
           if (decision === "approved") {
             toast.success(m.venue_reservations_toast_approved({ name }))
@@ -422,7 +422,7 @@ export function VenueReservationsView({
         }
       })
     },
-    [venueId, updateReservation]
+    [decideMutation]
   )
 
   // Approve fires immediately; decline first collects a required reason.
@@ -515,7 +515,7 @@ export function VenueReservationsView({
         />
       </div>
 
-      <VenuePanel
+      <TableSection
         title={m.venue_reservations_list_title()}
         icon={Users}
         action={
@@ -541,40 +541,38 @@ export function VenueReservationsView({
           </Tabs>
         }
       >
-        <Table>
+        <Table className={BLEED_TABLE_CLASS}>
           <TableHeader>
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow hover="none" key={hg.id}>
-                {hg.headers.map((header) => {
-                  const sorted = header.column.getIsSorted()
-                  return (
-                    <TableHead
-                      key={header.id}
-                      aria-sort={
-                        !header.column.getCanSort()
-                          ? undefined
-                          : sorted === "asc"
-                            ? "ascending"
-                            : sorted === "desc"
-                              ? "descending"
-                              : "none"
-                      }
-                      className={cn(
-                        "h-9 font-mono text-mini font-medium tracking-wider text-muted-foreground uppercase",
-                        columnClass(header.column.id)
-                      )}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
+            {table.getHeaderGroups().flatMap((hg) =>
+              hg.headers.map((header) => {
+                const sorted = header.column.getIsSorted()
+                return (
+                  <TableHead
+                    key={header.id}
+                    aria-sort={
+                      !header.column.getCanSort()
+                        ? undefined
+                        : sorted === "asc"
+                          ? "ascending"
+                          : sorted === "desc"
+                            ? "descending"
+                            : "none"
+                    }
+                    className={cn(
+                      "h-9 font-mono text-mini font-medium tracking-wider text-muted-foreground uppercase",
+                      columnClass(header.column.id)
+                    )}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                )
+              })
+            )}
           </TableHeader>
           <TableBody>
             {pageRows.length ? (
@@ -614,10 +612,10 @@ export function VenueReservationsView({
             )}
           </TableBody>
         </Table>
-        <div className="mt-4 border-t border-border pt-4">
+        <div className="border-t px-4 py-3 sm:px-6">
           <ReservationPagination pagination={pagination} />
         </div>
-      </VenuePanel>
+      </TableSection>
 
       {/* Refunds the venue owes: the player's account + QR, closed by a screenshot. */}
       <RefundQueuePanel items={REFUND_QUEUE} />

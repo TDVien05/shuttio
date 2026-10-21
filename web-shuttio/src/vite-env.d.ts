@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_API_URL?: string
   readonly VITE_CLERK_PUBLISHABLE_KEY?: string
   readonly VITE_MAPBOX_TOKEN?: string
+  readonly VITE_CLOUDINARY_CLOUD_NAME?: string
 }
 
 interface ImportMeta {

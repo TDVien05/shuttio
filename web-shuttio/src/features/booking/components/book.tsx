@@ -1384,6 +1384,7 @@ function CourtFinder({
         <div className="flex flex-col gap-2">
           <FilterLabel icon={MapPin}>{m.booking_filter_area()}</FilterLabel>
           <Select
+            aria-label={m.booking_filter_province()}
             value={draft.province}
             onChange={(v) => {
               if (typeof v === "string") patch({ province: v, ward: "all" })
@@ -1412,6 +1413,7 @@ function CourtFinder({
             </SelectContent>
           </Select>
           <Select
+            aria-label={m.booking_filter_ward()}
             value={draft.ward}
             onChange={(v) => {
               if (typeof v === "string") patch({ ward: v })
@@ -1483,6 +1485,7 @@ function CourtFinder({
             {m.booking_filter_time()}
           </FilterLabel>
           <Select
+            aria-label={m.booking_filter_time()}
             value={draft.day || "any"}
             onChange={(v) => {
               if (typeof v === "string") patch({ day: v === "any" ? "" : v })
@@ -1512,6 +1515,7 @@ function CourtFinder({
             </SelectContent>
           </Select>
           <Select
+            aria-label={m.booking_filter_time()}
             value={draft.period}
             onChange={(v) => {
               const period = PERIODS.find((p) => p === v)
@@ -1644,6 +1648,7 @@ function CourtFinder({
             </p>
           </div>
           <Select
+            aria-label={m.find_courts_sort_by()}
             value={sort}
             onChange={(v) => {
               const next = SORTS.find((key) => key === v)

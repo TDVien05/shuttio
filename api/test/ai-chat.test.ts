@@ -8,14 +8,15 @@ import { plainToInstance } from "class-transformer"
 import { validate } from "class-validator"
 
 // Give required boot-time env vars a value so any module transitively pulling
-// in env.validation.ts (Clerk/DB/Stream/SePay/OpenRouter config) doesn't crash
+// in env.validation.ts (Clerk/DB/Centrifugo/SePay/OpenRouter config) doesn't crash
 // the process at import time — this file never boots the Nest app, but stubs
 // them defensively, mirroring auth.test.ts's Clerk stubs.
 process.env.CLERK_SECRET_KEY ??= "sk_test_dummy"
 process.env.CLERK_PUBLISHABLE_KEY ??= "pk_test_dummy"
 process.env.DATABASE_URL ??= "mongodb://localhost:27017/test"
-process.env.STREAM_API_KEY ??= "stream_test_dummy"
-process.env.STREAM_API_SECRET ??= "stream_test_dummy"
+process.env.CENTRIFUGO_API_URL ??= "http://localhost:8000/api"
+process.env.CENTRIFUGO_API_KEY ??= "centrifugo_test_dummy"
+process.env.CENTRIFUGO_TOKEN_HMAC_SECRET ??= "centrifugo_test_dummy"
 process.env.SEPAY_ENV ??= "sandbox"
 process.env.SEPAY_MERCHANT_ID ??= "sepay_test_dummy"
 process.env.SEPAY_SECRET_KEY ??= "sepay_test_dummy"

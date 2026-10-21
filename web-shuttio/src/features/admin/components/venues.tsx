@@ -1,3 +1,7 @@
+import {
+  BLEED_TABLE_CLASS,
+  TableSection,
+} from "@/components/layouts/table-section"
 import * as React from "react"
 import { toast } from "sonner"
 
@@ -16,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { VenuePanel, VenueEmpty } from "@/features/venue/components/shared"
+import { VenueEmpty } from "@/features/venue/components/shared"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -132,20 +136,11 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-heading text-3xl font-bold tracking-tight">
-          {m.admin_venues_title()}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {m.admin_venues_subtitle()}
-        </p>
-      </div>
-
       {totalVenues === 0 ? (
         <VenueEmpty text={m.admin_venues_empty()} />
       ) : (
         visibleGroups.map((group) => (
-          <VenuePanel
+          <TableSection
             key={group.key}
             title={group.brand?.name ?? m.admin_venues_no_brand()}
             action={
@@ -174,23 +169,21 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
               ) : null
             }
           >
-            <Table>
+            <Table className={BLEED_TABLE_CLASS}>
               <TableHeader>
-                <TableRow>
-                  <TableHead>{m.admin_venues_table_venue()}</TableHead>
-                  <TableHead>{m.admin_venues_table_ward()}</TableHead>
-                  <TableHead>{m.admin_venues_table_approval()}</TableHead>
-                  <TableHead>{m.admin_venues_table_status()}</TableHead>
-                  <TableHead align="right">
-                    {m.admin_venues_table_bookings()}
-                  </TableHead>
-                  <TableHead align="right">
-                    {m.admin_venues_table_revenue()}
-                  </TableHead>
-                  <TableHead align="right">
-                    {m.admin_venues_table_actions()}
-                  </TableHead>
-                </TableRow>
+                <TableHead>{m.admin_venues_table_venue()}</TableHead>
+                <TableHead>{m.admin_venues_table_ward()}</TableHead>
+                <TableHead>{m.admin_venues_table_approval()}</TableHead>
+                <TableHead>{m.admin_venues_table_status()}</TableHead>
+                <TableHead align="right">
+                  {m.admin_venues_table_bookings()}
+                </TableHead>
+                <TableHead align="right">
+                  {m.admin_venues_table_revenue()}
+                </TableHead>
+                <TableHead align="right">
+                  {m.admin_venues_table_actions()}
+                </TableHead>
               </TableHeader>
               <TableBody>
                 {group.venues.map((venue) => (
@@ -264,7 +257,7 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
                 ))}
               </TableBody>
             </Table>
-          </VenuePanel>
+          </TableSection>
         ))
       )}
       <AdminPagination pagination={pagination} />

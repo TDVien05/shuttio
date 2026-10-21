@@ -1,3 +1,4 @@
+import { BLEED_TABLE_CLASS } from "@/components/layouts/table-section"
 import * as React from "react"
 import { flexRender, useTable } from "@tanstack/react-table"
 import type { Column, ColumnDef, SortingState } from "@tanstack/react-table"
@@ -304,16 +305,12 @@ export function AdminDiscountsView({
     .rows.slice(pagination.offset, pagination.offset + pagination.pageSize)
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">
-            {m.admin_discounts_title()}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {m.admin_discounts_subtitle()}
-          </p>
-        </div>
+    <div
+      className={
+        "-m-4 flex flex-1 flex-col gap-5 p-4 pb-0 sm:-m-6 sm:p-6 sm:pb-0"
+      }
+    >
+      <div className="flex justify-end">
         <Button
           shape="pill"
 
@@ -326,38 +323,43 @@ export function AdminDiscountsView({
       {rows.length === 0 ? (
         <VenueEmpty text={m.admin_discounts_empty()} />
       ) : (
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {visibleRows.map((row) => (
-              <TableRow key={row.original.code}>
-                {row.getAllCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="-mx-4 border-t sm:-mx-6">
+          <Table className={BLEED_TABLE_CLASS}>
+            <TableHeader>
+              {table
+                .getHeaderGroups()
+                .flatMap((headerGroup) =>
+                  headerGroup.headers.map((header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))
+                )}
+            </TableHeader>
+            <TableBody>
+              {visibleRows.map((row) => (
+                <TableRow key={row.original.code}>
+                  {row.getAllCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
-      <AdminPagination pagination={pagination} />
+      <AdminPagination bleed pagination={pagination} />
 
       <DiscountFormDialog
         target={dialogTarget}
@@ -514,6 +516,7 @@ function DiscountFormDialog({
             <div className="flex flex-col gap-1.5 text-sm font-medium">
               <span>{m.admin_discounts_dialog_type_label()}</span>
               <Select
+                aria-label={m.admin_discounts_dialog_type_label()}
                 selectedKey={type}
                 onSelectionChange={(k) => {
                   if (k) setType(k as DiscountType)

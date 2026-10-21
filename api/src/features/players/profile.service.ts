@@ -8,7 +8,7 @@ import {
   type BankAccount,
   type Streak,
 } from "../../shared/index.js"
-import { ClerkDirectoryService } from "../stream/clerk-directory.service.js"
+import { ClerkDirectoryService } from "../directory/clerk-directory.service.js"
 import {
   Profile,
   toProfileData,

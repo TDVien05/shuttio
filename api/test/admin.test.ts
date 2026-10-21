@@ -26,7 +26,7 @@ import { Booking } from "../src/features/bookings/booking.schema.js"
 import { BookingLock } from "../src/features/bookings/booking-lock.schema.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
 import { ProfileService } from "../src/features/players/profile.service.js"
-import { ClerkDirectoryService } from "../src/features/stream/clerk-directory.service.js"
+import { ClerkDirectoryService } from "../src/features/directory/clerk-directory.service.js"
 import { Venue } from "../src/features/venues/venue.schema.js"
 
 /**

@@ -16,9 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
-import { playerRatingSummary } from "@/features/chat/api/group-api"
-import { playerSkillLevels } from "@/features/assessment/api/assessment-api"
 import { useData } from "@/features/dashboard/components/data-provider"
+import { assessmentQueries } from "@/features/assessment/api/assessment.queries"
 import { useMatchmaking } from "@/features/play/components/matchmaking"
 import { LevelChip, SportDot } from "@/features/dashboard/components/shared"
 import {
@@ -319,8 +318,7 @@ function PlayerSkillLevels({
     isPending: loading,
     isError,
   } = useQuery({
-    queryKey: ["assessment", "levels", userId],
-    queryFn: () => playerSkillLevels(userId),
+    ...assessmentQueries.playerLevels(userId),
     enabled: open && Boolean(userId),
   })
 
@@ -369,8 +367,7 @@ function PlayerReviews({ userId, open }: { userId: string; open: boolean }) {
     isPending: loading,
     isError,
   } = useQuery({
-    queryKey: ["ratings", userId],
-    queryFn: () => playerRatingSummary(userId),
+    ...assessmentQueries.playerReviews(userId),
     enabled: open && Boolean(userId),
   })
   const average = summary?.average ?? 0

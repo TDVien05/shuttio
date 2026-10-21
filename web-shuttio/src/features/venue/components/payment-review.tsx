@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
+import { useParams } from "@tanstack/react-router"
 import * as React from "react"
 import { Banknote, Check, Copy, Upload, X } from "lucide-react"
 import { getLocale } from "@/paraglide/runtime"
@@ -19,6 +20,7 @@ import {
   uploadToCloudinary,
 } from "@/lib/cloudinary-upload"
 import { formatVndText } from "@/lib/money"
+import { queryKeys } from "@/lib/query-keys"
 import { locStr } from "@/lib/shared"
 import type { RefundQueueItem, Reservation } from "@/lib/shared"
 import {
@@ -138,6 +140,7 @@ export function PaymentProofDialog({
 export function RefundQueuePanel({ items }: { items: RefundQueueItem[] }) {
   const locale = getLocale()
   const queryClient = useQueryClient()
+  const { venueId }: { venueId?: string } = useParams({ strict: false })
   const inputRef = React.useRef<HTMLInputElement>(null)
   const targetRef = React.useRef<RefundQueueItem | null>(null)
   const [done, setDone] = React.useState<ReadonlySet<string>>(new Set())
@@ -177,7 +180,11 @@ export function RefundQueuePanel({ items }: { items: RefundQueueItem[] }) {
       }
       setDone((prev) => new Set(prev).add(item.bookingId))
       toast.success(m.venue_payment_review_refund_done())
-      void queryClient.invalidateQueries()
+      void queryClient.invalidateQueries({
+        queryKey: venueId
+          ? queryKeys.venue.detail(venueId)
+          : queryKeys.venue.all(),
+      })
     } catch (error) {
       toast.error(
         error instanceof Error

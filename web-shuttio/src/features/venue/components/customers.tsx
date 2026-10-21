@@ -1,3 +1,7 @@
+import {
+  BLEED_TABLE_CLASS,
+  TableSection,
+} from "@/components/layouts/table-section"
 import { formatVndText } from "@/lib/money"
 import * as React from "react"
 import { getLocale } from "@/paraglide/runtime"
@@ -39,9 +43,11 @@ import {
 } from "@/components/ui/table"
 import { customerTierAccent, locStr } from "@/lib/shared"
 import type { CustomerTier, VenueCustomer } from "@/lib/shared"
-import { useVenueData } from "@/features/venue/components/venue-data-provider"
-import { createCustomer } from "@/features/venue/api/venue-api"
-import { VenueEmpty, VenuePanel } from "@/features/venue/components/shared"
+import {
+  useCreateCustomer,
+  useVenueData,
+} from "@/features/venue/api/venue.queries"
+import { VenueEmpty } from "@/features/venue/components/shared"
 import { SportTag } from "@/features/dashboard/components/shared"
 import { m } from "@/paraglide/messages"
 
@@ -81,11 +87,7 @@ export function VenueCustomersView({
   embedded?: boolean
 } = {}) {
   const locale = getLocale()
-  const {
-    venueId,
-    venueCustomers: VENUE_CUSTOMERS,
-    addCustomer,
-  } = useVenueData()
+  const { venueId, venueCustomers: VENUE_CUSTOMERS } = useVenueData()
   const [segment, setSegment] = React.useState<Segment>("all")
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [isAddOpen, setIsAddOpen] = React.useState(false)
@@ -319,7 +321,7 @@ export function VenueCustomersView({
         </div>
       ) : null}
 
-      <VenuePanel
+      <TableSection
         title={m.venue_customers_list_title()}
         icon={Users}
         action={
@@ -347,56 +349,51 @@ export function VenueCustomersView({
         }
       >
         {rows.length ? (
-          <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/50">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow hover="none" key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead density="compact" key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className={cn(
-                      "transition-colors",
-                      row.original.tier === "at-risk"
-                        ? "bg-destructive/[0.02] hover:bg-destructive/[0.06] data-[state=selected]:bg-destructive/[0.08]"
-                        : "hover:bg-muted/40"
-                    )}
-                  >
-                    {row.getAllCells().map((cell) => (
-                      <TableCell density="roomy" key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
+          <Table className={BLEED_TABLE_CLASS}>
+            <TableHeader className="bg-muted/30">
+              {table.getHeaderGroups().flatMap((headerGroup) =>
+                headerGroup.headers.map((header) => (
+                  <TableHead density="compact" key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
                         )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHead>
+                ))
+              )}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className={cn(
+                    "transition-colors",
+                    row.original.tier === "at-risk"
+                      ? "bg-destructive/[0.02] hover:bg-destructive/[0.06] data-[state=selected]:bg-destructive/[0.08]"
+                      : "hover:bg-muted/40"
+                  )}
+                >
+                  {row.getAllCells().map((cell) => (
+                    <TableCell density="roomy" key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : (
           <VenueEmpty text={m.venue_customers_empty()} />
         )}
-      </VenuePanel>
+      </TableSection>
       <AddCustomerDialog
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
-        onAdd={addCustomer}
         venueId={venueId}
         customersList={VENUE_CUSTOMERS}
       />
@@ -420,7 +417,6 @@ function TierChip({ tier, label }: { tier: CustomerTier; label: string }) {
 interface AddCustomerDialogProps {
   isOpen: boolean
   onClose: () => void
-  onAdd: (customer: VenueCustomer) => void
   venueId: string
   customersList: VenueCustomer[]
 }
@@ -433,7 +429,6 @@ const addCustomerSchema = z.object({
 function AddCustomerDialog({
   isOpen,
   onClose,
-  onAdd,
   venueId,
   customersList,
 }: AddCustomerDialogProps) {
@@ -454,7 +449,6 @@ function AddCustomerDialog({
         <AddCustomerForm
           venueId={venueId}
           customersList={customersList}
-          onAdd={onAdd}
           onClose={onClose}
         />
       ) : null}
@@ -464,10 +458,10 @@ function AddCustomerDialog({
 
 function AddCustomerForm({
   onClose,
-  onAdd,
   venueId,
   customersList,
 }: Omit<AddCustomerDialogProps, "isOpen">) {
+  const createCustomer = useCreateCustomer(venueId)
   const [error, setError] = React.useState("")
   const form = useAppForm({
     defaultValues: { name: "", phone: "" },
@@ -483,12 +477,11 @@ function AddCustomerForm({
         return
       }
       try {
-        const created = await createCustomer(venueId, {
+        await createCustomer.mutateAsync({
           name,
           phone,
           favoriteSport: "badminton",
         })
-        onAdd(created)
         toast.success(m.venue_customers_add_dialog_added())
         onClose()
       } catch (err) {

@@ -6,6 +6,7 @@ import "reflect-metadata"
 import { Test } from "@nestjs/testing"
 import { getModelToken } from "@nestjs/mongoose"
 
+import { CentrifugoService } from "../src/features/realtime/centrifugo.service.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
 import { Notification } from "../src/features/notifications/notification.schema.js"
 
@@ -29,6 +30,10 @@ async function makeService(
   const moduleRef = await Test.createTestingModule({
     providers: [
       NotificationsService,
+      {
+        provide: CentrifugoService,
+        useValue: { publish: () => Promise.resolve() },
+      },
       { provide: getModelToken(Notification.name), useValue: modelMock },
     ],
   }).compile()

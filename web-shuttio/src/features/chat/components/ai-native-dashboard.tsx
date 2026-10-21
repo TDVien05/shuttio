@@ -7,10 +7,13 @@ import { useNavigate } from "@tanstack/react-router"
 import {
   ArrowLeft,
   ArrowUp,
+  Brain,
   CheckCheck,
   ChevronLeft,
   ChevronRight,
   Clock,
+  CornerDownRight,
+  Lightbulb,
   LogIn,
   Loader2,
   MapPin,
@@ -21,6 +24,7 @@ import {
   Star,
   Users,
   UserPlus,
+  Wrench,
   X,
   Zap,
 } from "lucide-react"
@@ -44,6 +48,7 @@ import {
   MatchMeter,
   SportTag,
 } from "@/features/dashboard/components/shared"
+import { LogoMark } from "@/components/logo"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -77,6 +82,7 @@ import {
   TraceLine,
   TraceIcon,
   TraceTitle,
+  TraceDescription,
   TraceCollapsible,
   TraceCollapsibleTrigger,
   TraceCollapsibleContent,
@@ -909,12 +915,16 @@ export function AiNativeDashboardView() {
           ) : null}
 
           {isLoading && messages[messages.length - 1]?.role === "user" ? (
-            <div className="flex items-start gap-3">
-              <AiAvatar />
-              <div className={cn(AI_BUBBLE, "flex items-center gap-2")}>
-                <Loader2 className="size-3.5 animate-spin text-brand" />
-                {m.ai_dashboard_thinking()}
-              </div>
+            <div className="flex flex-col gap-3">
+              <AssistantHeader />
+              <Trace>
+                <TraceLine status="running">
+                  <TraceIcon>
+                    <Loader2 className="size-3.5 animate-spin text-brand" />
+                  </TraceIcon>
+                  <TraceTitle>{m.ai_dashboard_thinking()}</TraceTitle>
+                </TraceLine>
+              </Trace>
             </div>
           ) : null}
         </div>
@@ -1039,8 +1049,7 @@ export function AiNativeDashboardView() {
 
 // ─── Shared chat chrome ───────────────────────────────────────────────────────
 
-const AI_BUBBLE =
-  "max-w-pct-85 rounded-3xl rounded-tl-md border border-line bg-white px-5 py-3 text-sm text-ink-strong shadow-card-lift sm:text-base"
+const AI_TEXT = "text-sm leading-relaxed text-ink-strong sm:text-base"
 
 const CHOICE_CHIP =
   "inline-flex cursor-pointer items-center rounded-full border-2 border-lime bg-white px-4 py-2 text-sm font-semibold text-brand transition-colors hover:bg-lime/30 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1055,16 +1064,27 @@ function AiAvatar({ className }: { className?: string }) {
     <span
       aria-hidden
       className={cn(
-        "grid size-8 shrink-0 place-items-center rounded-full bg-volt text-electric-deep shadow-volt-glow",
+        "grid size-8 shrink-0 place-items-center rounded-full bg-brand text-white",
         className
       )}
     >
-      <Sparkles className="size-pct-45" />
+      <LogoMark className="size-5 text-current" />
     </span>
   )
 }
 
 // ─── Message row ──────────────────────────────────────────────────────────────
+
+function AssistantHeader() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <AiAvatar />
+      <span className="font-heading text-base font-bold">
+        {m.ai_dashboard_assistant_name()}
+      </span>
+    </div>
+  )
+}
 
 function ChatMessageRow({
   message,
@@ -1094,7 +1114,7 @@ function ChatMessageRow({
       .join("")
     return (
       <div className="flex justify-end">
-        <div className="max-w-pct-85 rounded-3xl rounded-tr-md bg-electric px-5 py-3 text-sm whitespace-pre-wrap text-white shadow-electric-soft sm:text-base">
+        <div className="max-w-pct-85 rounded-2xl bg-muted px-4 py-2.5 text-sm whitespace-pre-wrap text-ink-strong sm:text-base">
           {text}
         </div>
       </div>
@@ -1104,36 +1124,30 @@ function ChatMessageRow({
   if (message.role !== "assistant") return null
 
   const parts = message.parts
+  // Reasoning + tool calls form the visible thought process; the answer text
+  // reads first, followed by the rich tool results it refers to.
+  const steps = parts.filter(
+    (p) => (isReasoningUIPart(p) && p.text.trim()) || isToolUIPart(p)
+  )
+  const texts = parts.filter(isTextUIPart).filter((p) => p.text)
 
   return (
-    <div className="flex items-start gap-3">
-      <AiAvatar className="mt-0.5" />
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
+    <div className="flex flex-col gap-3">
+      <AssistantHeader />
+      <div className="flex min-w-0 flex-col gap-3">
+        {steps.length ? (
+          <ThoughtProcess steps={steps} done={!isStreaming} />
+        ) : null}
+
+        {texts.map((part, i) => (
+          <div key={`text-${i}`} className={AI_TEXT}>
+            <Streamdown animated isAnimating={isStreaming}>
+              {part.text}
+            </Streamdown>
+          </div>
+        ))}
+
         {parts.map((part, i) => {
-          if (isReasoningUIPart(part)) {
-            if (!part.text.trim()) return null
-            return (
-              <ReasoningTrace
-                key={i}
-                text={part.text}
-                done={part.state !== "streaming"}
-              />
-            )
-          }
-
-          if (isTextUIPart(part)) {
-            if (!part.text) return null
-            return (
-              <div key={i} className="flex justify-start">
-                <div className={AI_BUBBLE}>
-                  <Streamdown animated isAnimating={isStreaming}>
-                    {part.text}
-                  </Streamdown>
-                </div>
-              </div>
-            )
-          }
-
           if (isToolUIPart(part)) {
             const isDone = part.state === "output-available"
             const result = isDone
@@ -1205,10 +1219,6 @@ function ChatMessageRow({
               )
             }
 
-            if (!isDone) {
-              return <ToolTraceIndicator key={i} toolName={getToolName(part)} />
-            }
-
             return null
           }
 
@@ -1219,78 +1229,182 @@ function ChatMessageRow({
   )
 }
 
-// ─── Trace blocks ────────────────────────────────────────────────────────────
+// ─── Thought process (reasoning + tool calls) ────────────────────────────────
 
-function ReasoningTrace({ text, done }: { text: string; done: boolean }) {
-  const [isExpanded, setIsExpanded] = React.useState(!done)
+type MessagePart = UIMessage["parts"][number]
 
-  React.useEffect(() => {
-    if (!done) {
-      setIsExpanded(true)
-    } else {
-      const timer = setTimeout(() => setIsExpanded(false), 1200)
-      return () => clearTimeout(timer)
-    }
-  }, [done])
+function toolLabel(toolName: string, running: boolean) {
+  switch (toolName) {
+    case "findCourts":
+      return running
+        ? m.ai_dashboard_searching_courts()
+        : m.ai_dashboard_tool_find_courts()
+    case "findPlayers":
+      return running
+        ? m.ai_dashboard_matching_players()
+        : m.ai_dashboard_tool_find_players()
+    case "findRooms":
+      return running
+        ? m.ai_dashboard_finding_rooms()
+        : m.ai_dashboard_tool_find_rooms()
+    case "bookCourt":
+      return running
+        ? m.ai_dashboard_booking_court()
+        : m.ai_dashboard_tool_book_court()
+    case "requestAssessment":
+      return running
+        ? m.ai_dashboard_working()
+        : m.ai_dashboard_tool_request_assessment()
+    default:
+      return running ? m.ai_dashboard_working() : toolName
+  }
+}
+
+function toolOutputSummary(output: unknown) {
+  const result = toolResult(output)
+  if (!result) return null
+  switch (result.kind) {
+    case "courts":
+      return m.ai_dashboard_tool_result_courts({
+        count: String(result.value.courts.length),
+      })
+    case "players":
+      return m.ai_dashboard_tool_result_players({
+        count: String(result.value.players.length),
+      })
+    case "rooms":
+      return m.ai_dashboard_tool_result_rooms({
+        count: String(result.value.rooms.length),
+      })
+    case "booking":
+      return result.value.success
+        ? (result.value.bookingId ?? m.ai_dashboard_booking_confirmed())
+        : (result.value.reason ?? m.ai_dashboard_booking_failed())
+    case "clarify":
+      return result.value.question
+    case "assessment":
+      return m.ai_dashboard_tool_result_assessment()
+  }
+}
+
+function ThoughtProcess({
+  steps,
+  done,
+}: {
+  steps: MessagePart[]
+  done: boolean
+}) {
+  // Open while the assistant works, collapsed once it answers — unless the
+  // user has toggled it themselves.
+  const [userExpanded, setUserExpanded] = React.useState<boolean | null>(null)
+  const isExpanded = userExpanded ?? !done
 
   return (
-    <Trace className="w-fit max-w-full">
+    <Trace>
       <TraceCollapsible
         isExpanded={isExpanded}
-        onExpandedChange={setIsExpanded}
+        onExpandedChange={setUserExpanded}
       >
         <TraceCollapsibleTrigger>
           <TraceLine status={done ? undefined : "running"}>
             <TraceIcon>
               {done ? (
-                <Sparkles className="size-3.5 text-brand" />
+                <Brain className="size-3.5" />
               ) : (
                 <Loader2 className="size-3.5 animate-spin text-brand" />
               )}
             </TraceIcon>
             <TraceTitle>
-              {done ? m.ai_dashboard_reasoning() : m.ai_dashboard_thinking()}
+              {done
+                ? m.ai_dashboard_thought_steps({ count: String(steps.length) })
+                : m.ai_dashboard_thinking()}
             </TraceTitle>
           </TraceLine>
         </TraceCollapsibleTrigger>
-        <TraceCollapsibleContent>
-          <div className="no-scrollbar max-h-44 overflow-y-auto pr-1 text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground sm:text-sm">
-            {text}
-            {!done ? (
-              <span className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse rounded-full bg-brand/70" />
-            ) : null}
-          </div>
+        <TraceCollapsibleContent className="flex flex-col gap-3 text-sm">
+          {steps.map((part, i) => (
+            <ThoughtStep key={i} part={part} />
+          ))}
         </TraceCollapsibleContent>
       </TraceCollapsible>
     </Trace>
   )
 }
 
-function ToolTraceIndicator({ toolName }: { toolName: string }) {
-  const label =
-    toolName === "findCourts"
-      ? m.ai_dashboard_searching_courts()
-      : toolName === "findPlayers"
-        ? m.ai_dashboard_matching_players()
-        : toolName === "findRooms"
-          ? m.ai_dashboard_finding_rooms()
-          : toolName === "bookCourt"
-            ? m.ai_dashboard_booking_court()
-            : m.ai_dashboard_working()
-
-  return (
-    <Trace className="w-fit max-w-full">
-      <div className="rounded-full border border-line bg-white px-3.5 py-1.5 shadow-card-lift">
-        <TraceLine status="running">
+function ThoughtStep({ part }: { part: MessagePart }) {
+  if (isReasoningUIPart(part)) {
+    const streaming = part.state === "streaming"
+    return (
+      <div className="flex flex-col gap-1">
+        <TraceLine status={streaming ? "running" : undefined}>
           <TraceIcon>
-            <Loader2 className="size-3.5 animate-spin text-brand" />
+            <Lightbulb className="size-3.5" />
           </TraceIcon>
-          <TraceTitle className="text-xs font-medium sm:text-sm">
-            {label}
+          <TraceTitle className="font-medium text-foreground">
+            {m.ai_dashboard_reasoning()}
           </TraceTitle>
         </TraceLine>
+        <p className="pl-6 whitespace-pre-wrap">{part.text}</p>
       </div>
-    </Trace>
+    )
+  }
+
+  if (!isToolUIPart(part)) return null
+
+  const name = getToolName(part)
+  const isDone = part.state === "output-available"
+  const isError = part.state === "output-error"
+  const input = (part as { input?: unknown }).input
+  const params =
+    input && typeof input === "object"
+      ? Object.entries(input as Record<string, unknown>)
+      : []
+  const summary = isDone
+    ? toolOutputSummary((part as { output: unknown }).output)
+    : null
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <TraceLine status={isError ? "error" : isDone ? undefined : "running"}>
+        <TraceIcon>
+          {isDone || isError ? (
+            <Wrench className="size-3.5" />
+          ) : (
+            <Loader2 className="size-3.5 animate-spin text-brand" />
+          )}
+        </TraceIcon>
+        <TraceTitle className="font-medium text-foreground">
+          {toolLabel(name, !isDone && !isError)}
+        </TraceTitle>
+        <TraceDescription className="font-mono text-xs">
+          {name}
+        </TraceDescription>
+      </TraceLine>
+      {params.length ? (
+        <div className="flex flex-wrap gap-1.5 pl-6">
+          {params.map(([key, value]) => (
+            <span
+              key={key}
+              className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs"
+            >
+              {key}: {typeof value === "string" ? value : JSON.stringify(value)}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {summary ? (
+        <p className="flex items-center gap-1 pl-6 text-xs">
+          <CornerDownRight className="size-3 shrink-0" />
+          {summary}
+        </p>
+      ) : null}
+      {isError ? (
+        <p className="pl-6 text-xs text-destructive">
+          {(part as { errorText?: string }).errorText ??
+            m.ai_dashboard_error_message()}
+        </p>
+      ) : null}
+    </div>
   )
 }
 
@@ -1309,9 +1423,7 @@ function ClarifyChatResult({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex justify-start">
-        <div className={AI_BUBBLE}>{question}</div>
-      </div>
+      <p className={AI_TEXT}>{question}</p>
       <div className="flex flex-wrap gap-2">
         {options.map((option) => (
           <button
@@ -1336,11 +1448,7 @@ function RequestAssessmentChatResult({ sport }: { sport: SportKey }) {
 
   return (
     <div className="flex flex-col gap-3 self-start">
-      <div className="flex justify-start">
-        <div className={AI_BUBBLE}>
-          {m.ai_dashboard_require_assessment({ sport })}
-        </div>
-      </div>
+      <p className={AI_TEXT}>{m.ai_dashboard_require_assessment({ sport })}</p>
       <div>
         <Button
           variant="lime"
@@ -1369,11 +1477,9 @@ function BookingChatResult({
   if (!booking.success) {
     return (
       <div className="flex flex-col gap-2">
-        <div className="flex justify-start">
-          <div className={cn(AI_BUBBLE, "text-muted-foreground")}>
-            {booking.reason ?? m.ai_dashboard_booking_failed()}
-          </div>
-        </div>
+        <p className={cn(AI_TEXT, "text-muted-foreground")}>
+          {booking.reason ?? m.ai_dashboard_booking_failed()}
+        </p>
         {booking.suggestTime ? (
           <div className="flex flex-wrap gap-2">
             <button

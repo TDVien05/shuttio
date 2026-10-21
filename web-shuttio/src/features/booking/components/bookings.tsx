@@ -20,8 +20,10 @@ import {
 } from "lucide-react"
 import { getLocale } from "@/paraglide/runtime"
 import { toast } from "sonner"
+import { openVenueChat } from "@/features/chat/api/chat-api"
 
 import { cn } from "@/lib/utils"
+import { queryKeys } from "@/lib/query-keys"
 import {
   AlertDialogAction,
   AlertDialogCancel,
@@ -385,14 +387,6 @@ export function BookingsView() {
   const { bookings } = useBooking()
   const { todayIso } = useData()
   const now = useNow()
-  const queryClient = useQueryClient()
-
-  // Pull the freshest seed on entry so an operator's approve/decline made
-  // elsewhere in this session (same account, venue workspace) reconciles into
-  // the player's bookings — see SessionProvider's reconcile-from-seed effect.
-  React.useEffect(() => {
-    void queryClient.invalidateQueries({ queryKey: ["seed"] })
-  }, [queryClient])
 
   const [view, setView] = React.useState<CalendarView>("week")
   const [cursor, setCursor] = React.useState<string>(todayIso)
@@ -835,8 +829,17 @@ function CalendarEvent({
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  // Messaging isn't available yet — the chat page says so.
-  const messageVenue = () => void router.navigate({ to: "/app/chat" })
+  // Opens (or creates) the thread with the venue's owner, then shows it.
+  const messageVenue = async () => {
+    try {
+      const { id } = await openVenueChat({
+        bookingId: booking.reservationId ?? booking.id,
+      })
+      void router.navigate({ to: "/app/chat", search: { channel: id } })
+    } catch {
+      toast.error(m.chat_venue_chat_failed())
+    }
+  }
 
   const start = startOf(booking.time)
   const dur = durationOf(booking.time)
@@ -879,7 +882,7 @@ function CalendarEvent({
           ? m.bookings_refund_received_thanks()
           : m.bookings_refund_complaint_sent()
       )
-      void queryClient.invalidateQueries()
+      void queryClient.invalidateQueries({ queryKey: queryKeys.seed() })
     })
   }
 
@@ -1111,7 +1114,7 @@ function CalendarEvent({
                     size="sm"
                     variant="outline"
                     className="w-full justify-start"
-                    onPress={messageVenue}
+                    onPress={() => void messageVenue()}
                   >
                     <MessageSquare />
                     {m.bookings_message_venue()}
@@ -1149,7 +1152,7 @@ function CalendarEvent({
                     size="sm"
                     variant="outline"
                     className="w-full justify-start"
-                    onPress={messageVenue}
+                    onPress={() => void messageVenue()}
                   >
                     <MessageSquare />
                     {m.bookings_message_venue()}

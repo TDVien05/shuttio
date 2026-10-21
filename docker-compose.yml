@@ -7,15 +7,58 @@
 # Every service sets CI=true: with no TTY, pnpm's pre-run deps check must
 # reinstall without prompting.
 
+# Dev-only Centrifugo secrets below are shared by `centrifugo` and `api`;
+# override them with a root `.env` (never reuse these outside local dev).
+
 services:
+  # Realtime transport (WebSocket pub/sub). The browser connects to :8000 with
+  # a JWT the api signs. The HTTP API, health and admin UI live on the internal
+  # port 9000 (centrifugo/config.json `http_server.internal_port`) — published
+  # on loopback only, and reached by the api over the compose network.
+  # Admin UI (off by default): set CENTRIFUGO_ADMIN_ENABLED=true plus
+  # CENTRIFUGO_ADMIN_PASSWORD and CENTRIFUGO_ADMIN_SECRET in `.env`, then open
+  # http://localhost:9000.
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    command: centrifugo --config /centrifugo/config.json
+    volumes: ["./centrifugo/config.json:/centrifugo/config.json:ro"]
+    environment:
+      CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_TOKEN_HMAC_SECRET:-dev-centrifugo-hmac-secret-change-me}
+      CENTRIFUGO_HTTP_API_KEY: ${CENTRIFUGO_API_KEY:-dev-centrifugo-api-key}
+      CENTRIFUGO_ADMIN_ENABLED: ${CENTRIFUGO_ADMIN_ENABLED:-false}
+      CENTRIFUGO_ADMIN_PASSWORD: ${CENTRIFUGO_ADMIN_PASSWORD:-}
+      CENTRIFUGO_ADMIN_SECRET: ${CENTRIFUGO_ADMIN_SECRET:-}
+    ports:
+      - "8000:8000"
+      - "127.0.0.1:9000:9000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # Optional local MongoDB for dev/tests (`docker compose --profile localdb up
+  # -d mongo`). The api still uses DATABASE_URL (Atlas) unless you point it here:
+  # mongodb://localhost:27017/shuttio
+  mongo:
+    image: mongo:8
+    profiles: ["localdb"]
+    ports: ["27017:27017"]
+    volumes: ["mongo-data:/data/db"]
+
   api:
     build: { context: ./api, target: dev }
     env_file: ./api/.env
     environment:
       CI: "true"
+      CENTRIFUGO_API_URL: http://centrifugo:9000/api
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:-dev-centrifugo-api-key}
+      CENTRIFUGO_TOKEN_HMAC_SECRET: ${CENTRIFUGO_TOKEN_HMAC_SECRET:-dev-centrifugo-hmac-secret-change-me}
       # CORS allow-list: the Next.js app and the TanStack app side by side.
       WEB_URL: http://localhost:3000,http://localhost:3001
     ports: ["6969:6969"]
+    depends_on:
+      centrifugo: { condition: service_healthy }
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:6969/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 5s
@@ -60,6 +103,7 @@ services:
       CI: "true"
       # The browser calls the api through the host port, not the network name.
       VITE_API_URL: http://localhost:6969
+      VITE_CENTRIFUGO_URL: ws://localhost:8000/connection/websocket
     ports: ["3000:3000"]
     depends_on:
       api: { condition: service_healthy }
@@ -71,3 +115,6 @@ services:
           ignore: [node_modules/, .output/, .tanstack/, src/paraglide/, project.inlang/cache/, .env.local]
         - { action: rebuild, path: ./web-shuttio/package.json }
         - { action: rebuild, path: ./web-shuttio/pnpm-lock.yaml }
+
+volumes:
+  mongo-data:

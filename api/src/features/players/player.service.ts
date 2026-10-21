@@ -11,7 +11,7 @@ import {
   PlayerAssessment,
   type PlayerAssessmentDocument,
 } from "../assessment/assessment.schema.js"
-import { ClerkDirectoryService } from "../stream/clerk-directory.service.js"
+import { ClerkDirectoryService } from "../directory/clerk-directory.service.js"
 
 import { Player, toPlayer, type PlayerDocument } from "./player.schema.js"
 import { Profile, type ProfileDocument } from "./profile.schema.js"

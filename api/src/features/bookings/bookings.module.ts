@@ -7,7 +7,8 @@ import { PlayersModule } from "../players/players.module.js"
 import { RoomEventsModule } from "../rooms/room-events.module.js"
 import { SessionEventsModule } from "../sessions/session-events.module.js"
 import { PlaySession, PlaySessionSchema } from "../sessions/session.schema.js"
-import { StreamModule } from "../stream/stream.module.js"
+import { DirectoryModule } from "../directory/directory.module.js"
+import { ChatModule } from "../chat/chat.module.js"
 import {
   RoomComplaint,
   RoomComplaintSchema,
@@ -45,7 +46,8 @@ import { BookingsService } from "./bookings.service.js"
     ]),
     PlayersModule,
     NotificationsModule,
-    StreamModule,
+    DirectoryModule,
+    ChatModule,
     RoomEventsModule,
     SessionEventsModule,
     // Creating a booking needs the venue to have a payout account.

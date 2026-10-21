@@ -15,6 +15,9 @@ import type { Model } from "mongoose"
 import {
   activeRoster,
   initialsOf,
+  isRsvpExpired,
+  REQUEST_EXPIRY_MS,
+  withoutExpiredRsvps,
   vnNowIso,
   type GroupMatchResult,
   type LeaveRoomResult,
@@ -32,8 +35,8 @@ import {
   PlaySession,
   type PlaySessionDocument,
 } from "../sessions/session.schema.js"
-import { ClerkDirectoryService } from "../stream/clerk-directory.service.js"
-import { roomChannelId, StreamService } from "../stream/stream.service.js"
+import { ClerkDirectoryService } from "../directory/clerk-directory.service.js"
+import { ChatService, roomChannelId } from "../chat/chat.service.js"
 import { RoomEventsService } from "./room-events.service.js"
 import {
   RoomComplaint,
@@ -111,8 +114,8 @@ export class RoomsService {
     private readonly notifications: NotificationsService,
     @Inject(ProfileService)
     private readonly profiles: ProfileService,
-    @Inject(StreamService)
-    private readonly stream: StreamService,
+    @Inject(ChatService)
+    private readonly chat: ChatService,
     @Inject(ClerkDirectoryService)
     private readonly directory: ClerkDirectoryService,
     @Inject(RoomEventsService)
@@ -154,6 +157,7 @@ export class RoomsService {
       ])
     )
     const courts = await this.courtShares(docs.map((d) => d.data))
+    const now = Date.now()
     return docs.map((d) => {
       // Stored names come from the client and older profiles carry the shared
       // demo identity ("Nguyễn Minh") — show each account's real Clerk name.
@@ -161,11 +165,12 @@ export class RoomsService {
       const court = d.data.reservationId
         ? courts.get(d.data.reservationId)
         : undefined
+      const room = withoutExpiredRsvps(d.data, now)
       return {
-        ...d.data,
+        ...room,
         ...(court ? { sharePrice: court.amount } : {}),
-        host: host ?? d.data.host,
-        roster: d.data.roster.map((p) => {
+        host: host ?? room.host,
+        roster: room.roster.map((p) => {
           // The host's own entry is written client-side without a userId;
           // stamp it with the doc owner so a browsing player can open the
           // host's profile (and peer reviews) before deciding to join.
@@ -242,14 +247,31 @@ export class RoomsService {
     if (!ACTIVE_ROOM_STATUSES.includes(room.status)) {
       throw new ConflictException("Phòng đã đóng")
     }
-    if (room.roster.some((p) => p.userId === userId)) {
+    const now = Date.now()
+    // A stale request is treated as absent so the player can ask again instead
+    // of being blocked by a row the host can no longer approve.
+    const liveRoster = room.roster.filter((p) => !isRsvpExpired(p, now))
+    if (liveRoster.some((p) => p.userId === userId)) {
       throw new ConflictException(
         "Bạn đã gửi yêu cầu hoặc đã ở trong phòng này"
       )
     }
-    if (activeRoster(room).length >= room.capacity) {
+    if (activeRoster({ ...room, roster: liveRoster }).length >= room.capacity) {
       throw new ConflictException("Phòng đã đầy")
     }
+    // Lazily clean this user's expired request before pushing the new one.
+    await this.sessionModel.updateOne(
+      { _id: doc._id },
+      {
+        $pull: {
+          "data.roster": {
+            userId,
+            rsvp: "requested",
+            rsvpAt: { $lte: now - REQUEST_EXPIRY_MS },
+          },
+        },
+      }
+    )
 
     // Prefer the real Clerk name — older profiles still hold the shared demo
     // identity — and fall back to the profile when the directory is down.
@@ -260,7 +282,7 @@ export class RoomsService {
       name: requester.name,
       initials: requester.initials,
       rsvp: "requested",
-      rsvpAt: Date.now(),
+      rsvpAt: now,
       userId,
     }
     await this.sessionModel.updateOne(
@@ -287,7 +309,7 @@ export class RoomsService {
    * The host's decision on a pending join request — the only caller allowed
    * is the room's owner (`doc.userId`). Approve re-checks capacity (seats
    * may have filled since the request was made) and adds the requester to
-   * the room's real Stream chat; decline just drops their roster entry.
+   * the room's real chat; decline just drops their roster entry.
    * Either way the requester is notified so they learn the outcome without
    * reloading (they poll `/api/notifications`).
    */
@@ -306,6 +328,11 @@ export class RoomsService {
       (p) => p.userId === targetUserId && p.rsvp === "requested"
     )
     if (!entry) throw new NotFoundException("Yêu cầu tham gia không tồn tại")
+    if (decision === "approve" && isRsvpExpired(entry)) {
+      throw new ConflictException(
+        "Yêu cầu tham gia đã hết hạn — người chơi cần gửi lại yêu cầu"
+      )
+    }
 
     if (decision === "decline") {
       await this.sessionModel.updateOne(
@@ -389,7 +416,7 @@ export class RoomsService {
     // A member always has standing to remove themselves from the chat —
     // `removeRoomMember` skips the host-only check when memberId === userId.
     try {
-      await this.stream.removeRoomMember(
+      await this.chat.removeRoomMember(
         memberId,
         roomChannelId(roomId),
         memberId
@@ -638,7 +665,7 @@ export class RoomsService {
     userId: string,
     channelId: string
   ): Promise<GroupMatchResult> {
-    const membership = await this.stream.assertMember(userId, channelId)
+    const membership = await this.chat.assertMember(userId, channelId)
     const doc = await this.findChannelSessionDoc(channelId)
     if (!doc) {
       return {
@@ -689,7 +716,7 @@ export class RoomsService {
     memberId: string
   ): Promise<void> {
     try {
-      await this.stream.addRoomMember(
+      await this.chat.addRoomMember(
         hostUserId,
         roomChannelId(roomId),
         memberId
@@ -706,7 +733,7 @@ export class RoomsService {
     memberId: string
   ): Promise<void> {
     try {
-      await this.stream.removeRoomMember(
+      await this.chat.removeRoomMember(
         hostUserId,
         roomChannelId(roomId),
         memberId
@@ -716,9 +743,9 @@ export class RoomsService {
     }
   }
 
-  // A chat-lifecycle hiccup (misconfigured Stream, a room with no chat
+  // A chat-lifecycle hiccup (a chat outage, a room with no chat
   // channel yet) must never fail the roster decision itself — log loudly and
-  // move on, matching `StreamService#freezeChannelById`'s best-effort note.
+  // move on, matching `ChatService#freezeChannelById`'s best-effort note.
   private logChatFailure(op: string, roomId: string, err: unknown): void {
     this.logger.error(
       `Room chat ${op} failed for room ${roomId}`,

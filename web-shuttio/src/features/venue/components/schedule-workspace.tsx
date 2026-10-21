@@ -2,7 +2,7 @@ import * as React from "react"
 import { CalendarRange, Users } from "lucide-react"
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useVenueData } from "@/features/venue/components/venue-data-provider"
+import { useVenueData } from "@/features/venue/api/venue.queries"
 import { VenueScheduleView } from "@/features/venue/components/schedule"
 import { VenueReservationsView } from "@/features/venue/components/reservations"
 import { hasOpenCancelRequest } from "@/lib/shared"

@@ -72,7 +72,10 @@ export function PlayerAssessmentGate({
   const workspace = workspaceForPath(pathname)
   const venueOnly = accountType === "venue"
   const exempt = workspace === "venue" || isAdmin
-  const lockedOut = venueOnly && !exempt
+  // The assessment page sits outside /app but is still "player" by path, and
+  // this gate stays mounted for a render while navigating to it — a venue-only
+  // account heading there to become a player must not be bounced back.
+  const lockedOut = venueOnly && !exempt && pathname.startsWith("/app")
   const needsAssessment = !exempt && !venueOnly
   const [ready, setReady] = React.useState(!needsAssessment)
   const [hasAssessment, setHasAssessment] = React.useState(false)
@@ -128,7 +131,7 @@ function AssessmentLoading() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Progress value={55} />
+          <Progress value={55} aria-label={m.assessment_loading_title()} />
         </CardContent>
       </Card>
     </div>

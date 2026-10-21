@@ -21,9 +21,13 @@ import { BookingsService } from "../src/features/bookings/bookings.service.js"
 import { PlaySession } from "../src/features/sessions/session.schema.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
 import { ProfileService } from "../src/features/players/profile.service.js"
-import { StreamService } from "../src/features/stream/stream.service.js"
-import { ClerkDirectoryService } from "../src/features/stream/clerk-directory.service.js"
-import type { PlaySession as PlaySessionData } from "../src/shared/index.js"
+import { ChatService } from "../src/features/chat/chat.service.js"
+import { ClerkDirectoryService } from "../src/features/directory/clerk-directory.service.js"
+import {
+  INVITE_EXPIRY_MS,
+  REQUEST_EXPIRY_MS,
+  type PlaySession as PlaySessionData,
+} from "../src/shared/index.js"
 
 /**
  * `RoomsService` (VienTD-Review Phase 9 G2, decision #16) is the only surface
@@ -32,7 +36,7 @@ import type { PlaySession as PlaySessionData } from "../src/shared/index.js"
  * leaving on their own. The court cost is split between the players
  * themselves (the app only shows each share), so no money moves here. These
  * tests mock the Mongoose model plus its collaborators (profile lookup,
- * notifications, Stream chat), the same pattern `sessions-service.test.ts` and
+ * notifications, chat), the same pattern `sessions-service.test.ts` and
  * `bookings-service.test.ts` use.
  */
 function makeRoom(overrides: Partial<PlaySessionData> = {}): PlaySessionData {
@@ -105,7 +109,7 @@ async function makeService(
   modelMock: Record<string, (...args: unknown[]) => unknown>,
   opts: {
     profile?: { name: string; initials: string }
-    streamFails?: boolean
+    chatFails?: boolean
     /** Clerk directory: user id → real display name. */
     directory?: Record<string, string>
     /** Bookings the court-share lookup finds (by `bookingId`). */
@@ -162,19 +166,19 @@ async function makeService(
         user: opts.profile ?? { name: "Người chơi", initials: "NC" },
       }),
   }
-  const streamMock = {
+  const chatMock = {
     addRoomMember: (
       hostUserId: string,
       channelId: string,
       memberId: string
     ) => {
       recorder.addMember.push({ hostUserId, channelId, memberId })
-      if (opts.streamFails) return Promise.reject(new Error("stream down"))
+      if (opts.chatFails) return Promise.reject(new Error("chat down"))
       return Promise.resolve()
     },
     removeRoomMember: (userId: string, channelId: string, memberId: string) => {
       recorder.removeMember.push({ userId, channelId, memberId })
-      if (opts.streamFails) return Promise.reject(new Error("stream down"))
+      if (opts.chatFails) return Promise.reject(new Error("chat down"))
       return Promise.resolve()
     },
   }
@@ -219,7 +223,7 @@ async function makeService(
       { provide: getModelToken(PlaySession.name), useValue: modelMock },
       { provide: NotificationsService, useValue: notificationsMock },
       { provide: ProfileService, useValue: profilesMock },
-      { provide: StreamService, useValue: streamMock },
+      { provide: ChatService, useValue: chatMock },
       { provide: ClerkDirectoryService, useValue: directoryMock },
       { provide: RoomEventsService, useValue: eventsMock },
       { provide: getModelToken(Booking.name), useValue: bookingModelMock },
@@ -315,6 +319,51 @@ void test("listRooms keeps stored names when the Clerk directory is unavailable"
   const [room] = await service.listRooms()
 
   assert.deepEqual(room?.host, { name: "Host", initials: "HO" })
+})
+
+void test("listRooms hides expired requests and invites but keeps the TTL boundary", async () => {
+  const now = Date.now()
+  const room = makeRoom({
+    roster: [
+      { name: "Host", initials: "HO", rsvp: "host" },
+      {
+        name: "Old request",
+        initials: "OR",
+        rsvp: "requested",
+        rsvpAt: now - REQUEST_EXPIRY_MS - 1,
+        userId: "guest-old",
+      },
+      {
+        name: "Old invite",
+        initials: "OI",
+        rsvp: "pending",
+        rsvpAt: now - INVITE_EXPIRY_MS - 1,
+      },
+      {
+        name: "Boundary request",
+        initials: "BR",
+        rsvp: "requested",
+        rsvpAt: now - REQUEST_EXPIRY_MS + 1_000,
+        userId: "guest-boundary",
+      },
+      {
+        name: "Boundary invite",
+        initials: "BI",
+        rsvp: "pending",
+        rsvpAt: now - INVITE_EXPIRY_MS + 1_000,
+      },
+    ],
+  })
+  const { service } = await makeService({
+    find: () => findChain([makeDoc("host-1", room)]),
+  })
+
+  const [listed] = await service.listRooms()
+
+  assert.deepEqual(
+    listed?.roster.map((p) => p.initials),
+    ["HO", "BR", "BI"]
+  )
 })
 
 // ── requestJoin ──────────────────────────────────────────────────────────────
@@ -467,6 +516,33 @@ void test("decideRequest approve flips the roster entry, notifies the requester,
   assert.equal(recorder.addMember[0]?.memberId, "guest-1")
 })
 
+void test("decideRequest approve refuses an expired join request", async () => {
+  const room = makeRoom({
+    roster: [
+      { name: "Host", initials: "HO", rsvp: "host" },
+      {
+        name: "Nam",
+        initials: "NM",
+        rsvp: "requested",
+        rsvpAt: Date.now() - REQUEST_EXPIRY_MS - 1,
+        userId: "guest-1",
+      },
+    ],
+  })
+  const doc = makeDoc("host-1", room)
+  const { service, recorder } = await makeService({
+    findOne: () => Promise.resolve(doc),
+    updateOne: () => Promise.resolve({ matchedCount: 1 }),
+  })
+
+  await assert.rejects(
+    () => service.decideRequest("host-1", "room-1", "guest-1", "approve"),
+    ConflictException
+  )
+  assert.equal(recorder.notifications.length, 0)
+  assert.equal(recorder.addMember.length, 0)
+})
+
 void test("decideRequest approve still succeeds when the chat add fails (best-effort)", async () => {
   const room = makeRoom({
     roster: [
@@ -480,12 +556,12 @@ void test("decideRequest approve still succeeds when the chat add fails (best-ef
       findOne: () => Promise.resolve(doc),
       updateOne: () => Promise.resolve({ matchedCount: 1 }),
     },
-    { streamFails: true }
+    { chatFails: true }
   )
 
   await service.decideRequest("host-1", "room-1", "guest-1", "approve")
 
-  // The roster/notification side effect still lands even though Stream failed.
+  // The roster/notification side effect still lands even though chat failed.
   assert.equal(recorder.notifications.length, 1)
 })
 

@@ -25,6 +25,8 @@ export interface NavItem<TKey extends string = string> {
    * a route but no permanent menu slot.
    */
   hidden?: boolean
+  /** Sidebar sub-group heading; items without one sit in the first, unlabeled group. */
+  group?: () => string
 }
 
 export const NAV: NavItem<SectionKey>[] = [

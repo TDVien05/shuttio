@@ -4,7 +4,7 @@ import { test } from "node:test"
 import "reflect-metadata"
 
 import { VenuesService } from "../src/features/venues/venues.service.js"
-import { roomChannelId } from "../src/features/stream/stream.service.js"
+import { roomChannelId } from "../src/features/chat/chat.ids.js"
 import type { BookingRecordStatus, Reservation } from "../src/shared/index.js"
 
 /**
@@ -12,10 +12,10 @@ import type { BookingRecordStatus, Reservation } from "../src/shared/index.js"
  * cancel decision lands. Reservation mutation itself lives in
  * `BookingsService#updateStatus` (the canonical `bookings` collection) —
  * `VenuesService` only wraps that with the player notification + this Phase 8
- * addition, a best-effort freeze of the linked room's Stream chat on decline/
+ * addition, a best-effort freeze of the linked room's chat on decline/
  * cancel. These tests pin that wrapper against a fully mocked
- * Bookings/Profile/Notifications/Stream collaborators, no real database or
- * Stream app.
+ * Bookings/Profile/Notifications/chat collaborators, no real database or
+ * chat store.
  *
  * `VenuesService` is constructed directly (bypassing `@nestjs/testing`'s DI
  * container, unlike sessions-service.test.ts) rather than via
@@ -77,7 +77,7 @@ function makeService(
   }
   const profilesMock = {}
   const notificationsMock = { create: () => Promise.resolve() }
-  const streamMock = { freezeChannelById }
+  const chatMock = { freezeChannelById }
   // Unused by the freeze path, but VenuesService's constructor now takes a
   // BrandsService too — pass a stub so the arity matches and `this.brands` isn't
   // undefined if a future assertion reaches a brand-dependent branch.
@@ -89,7 +89,7 @@ function makeService(
       bookingsMock,
       profilesMock,
       notificationsMock,
-      streamMock,
+      chatMock,
       brandsMock,
     ] as unknown as VenuesCtorArgs)
   )
@@ -152,7 +152,7 @@ void test("a chat freeze failure never fails the booking decision itself", async
   const reservation = makeReservation({ status: "cancelled" })
   const service = makeService(reservation, {
     prevStatus: "confirmed",
-    freezeChannelById: () => Promise.reject(new Error("Stream is down")),
+    freezeChannelById: () => Promise.reject(new Error("chat is down")),
   })
 
   const result = await service.updateReservationStatus(

@@ -1,3 +1,4 @@
+import { BLEED_TABLE_CLASS } from "@/components/layouts/table-section"
 import * as React from "react"
 import { flexRender, useTable } from "@tanstack/react-table"
 import type { Column, ColumnDef, SortingState } from "@tanstack/react-table"
@@ -161,51 +162,47 @@ export function AdminApprovalsView({ brands }: { brands: AdminApprovalRow[] }) {
     .rows.slice(pagination.offset, pagination.offset + pagination.pageSize)
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-heading text-3xl font-bold tracking-tight">
-          {m.admin_approvals_title()}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {m.admin_approvals_subtitle()}
-        </p>
-      </div>
-
+    <div className="-m-4 flex flex-1 flex-col gap-5 px-4 pb-0 sm:-m-6 sm:px-6 sm:pb-0">
       {rows.length === 0 ? (
         <VenueEmpty text={m.admin_approvals_empty()} />
       ) : (
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {visibleRows.map((row) => (
-              <TableRow key={row.original.brand.id}>
-                {row.getAllCells().map((cell) => (
-                  <TableCell key={cell.id} className="align-top">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="-mx-4 sm:-mx-6">
+          <Table className={BLEED_TABLE_CLASS}>
+            <TableHeader>
+              {table
+                .getHeaderGroups()
+                .flatMap((headerGroup) =>
+                  headerGroup.headers.map((header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))
+                )}
+            </TableHeader>
+            <TableBody>
+              {visibleRows.map((row) => (
+                <TableRow key={row.original.brand.id}>
+                  {row.getAllCells().map((cell) => (
+                    <TableCell key={cell.id} className="align-top">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
-      <AdminPagination pagination={pagination} />
+      <AdminPagination bleed pagination={pagination} />
 
       <ReasonDialog
         {...dialogProps}

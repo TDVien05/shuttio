@@ -2,11 +2,32 @@
 #
 # - Environment tab → Dokploy writes the variables to `.env` next to this
 #   file: the api's runtime config plus the VITE_* build args below.
-# - Domains tab → add a domain per service (web-shuttio :3000, api :6969);
-#   Dokploy generates the Traefik labels, so nothing is published here.
+# - Domains tab → add a domain per service (web-shuttio :3000, api :6969,
+#   centrifugo :8000); Dokploy generates the Traefik labels, so nothing is
+#   published here. Give centrifugo a TLS domain (wss://…/connection/websocket)
+#   and route ONLY port 8000 — its HTTP API/admin/health sit on the internal
+#   port 9000, which must never get a domain.
 # Both images build from their Dockerfile's final (production) stage.
 
 services:
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    command: centrifugo --config /centrifugo/config.json
+    restart: unless-stopped
+    volumes: ["./centrifugo/config.json:/centrifugo/config.json:ro"]
+    environment:
+      # Same values as the api's (generate with `openssl rand -hex 32`).
+      CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_TOKEN_HMAC_SECRET:?min 32 random chars}
+      CENTRIFUGO_HTTP_API_KEY: ${CENTRIFUGO_API_KEY:?min 16 random chars}
+      # Space-separated browser origins allowed to open a WebSocket.
+      CENTRIFUGO_CLIENT_ALLOWED_ORIGINS: ${CENTRIFUGO_ALLOWED_ORIGINS:?e.g. https://app.example.com}
+    expose: ["8000"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
   api:
     build: ./api
     restart: unless-stopped
@@ -14,6 +35,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 6969
+      CENTRIFUGO_API_URL: http://centrifugo:9000/api
+    depends_on:
+      centrifugo: { condition: service_healthy }
     expose: ["6969"]
 
   web-shuttio:
@@ -23,6 +47,7 @@ services:
       # one and redeploy to rebuild.
       args:
         VITE_API_URL: ${VITE_API_URL:?set VITE_API_URL to the api's public URL}
+        VITE_CENTRIFUGO_URL: ${VITE_CENTRIFUGO_URL:?set to wss://<centrifugo domain>/connection/websocket}
         VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?}
         VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN:-}
         VITE_CLOUDINARY_CLOUD_NAME: ${VITE_CLOUDINARY_CLOUD_NAME:-}

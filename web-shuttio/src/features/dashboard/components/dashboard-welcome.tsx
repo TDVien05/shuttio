@@ -10,9 +10,11 @@ import {
   Users,
   Zap,
 } from "lucide-react"
+import { AdvancedImage } from "@cloudinary/react"
 import { Link } from "@tanstack/react-router"
 
 import { useData } from "@/features/dashboard/components/data-provider"
+import { CLOUDINARY_IMAGES, cloudinaryImage } from "@/lib/cloudinary"
 import { CourtMap } from "@/features/play/components/court-map"
 import { useSession } from "@/features/play/components/session"
 import { formatVnd } from "@/lib/shared"
@@ -20,20 +22,20 @@ import { hasCoordinates } from "@/lib/shared/location"
 import { m } from "@/paraglide/messages"
 
 const art = {
-  court: "/e42e9841354b4ff0e4b8f1da29efc7bcb5b0b2c8.png",
-  right: "/4e1489ef75c40c81925a318f078a63a3dbf086c9.png",
-  left: "/58f807168247ee67c3cc674f3c7df3619d1d9941.png",
-  tag: "/8321355891a8a575f035c362894f3bd2281dbc34.png",
-  hand: "/e5e166fc8d2d38138b18decee02a39e3524aeaaf.png",
-  star: "/9fef9e72b783aefbcbb079dd0cad3c2d1d2896d5.png",
+  courtLines: cloudinaryImage(CLOUDINARY_IMAGES.courtLines),
+  right: cloudinaryImage(CLOUDINARY_IMAGES.badgeJoinMatch),
+  left: cloudinaryImage(CLOUDINARY_IMAGES.badgeRightPeople),
+  tag: cloudinaryImage(CLOUDINARY_IMAGES.badgeRightCourt),
+  hand: cloudinaryImage(CLOUDINARY_IMAGES.stickerPeaceHand),
+  star: cloudinaryImage(CLOUDINARY_IMAGES.stickerPinkAsterisk),
 }
 
 const players = [
-  "/34401653753550da64baa8faaff5e25aae4fe8f4.png",
-  "/3279719c11352d5050f371d6946698edbfe4834e.png",
-  "/98b50bde8a094813f2eca3263846268723361a13.png",
-  "/3b2b9cc9ae1c305a085d180b4fc32ee4147d0c13.png",
-  "/9f6df729514f9e5bf3c5deb3ffef3a76104f3c79.png",
+  CLOUDINARY_IMAGES.playerPurpleHair,
+  CLOUDINARY_IMAGES.playerGreenBuns,
+  CLOUDINARY_IMAGES.playerBlueAfro,
+  CLOUDINARY_IMAGES.playerBlueBuns,
+  CLOUDINARY_IMAGES.playerPinkHair,
 ]
 
 export function DashboardWelcome({
@@ -93,41 +95,43 @@ export function DashboardWelcome({
   return (
     <div className="min-h-full bg-white text-ink-strong">
       <section className="relative isolate overflow-hidden bg-black pb-9 text-white sm:pb-11">
-        <div
-          className="absolute inset-0 bg-hero-photo bg-fill-stretch bg-center bg-no-repeat opacity-85"
+        <AdvancedImage
+          cldImg={art.courtLines}
+          alt=""
           aria-hidden
+          className="absolute inset-0 size-full object-fill opacity-85"
         />
         <div className="relative mx-auto flex max-w-6xl flex-col items-center px-5 pt-14 sm:pt-20">
-          <img
-            src={art.left}
+          <AdvancedImage
+            cldImg={art.left}
             alt=""
             width={240}
             height={90}
             className="absolute top-12 left-1 w-36 -rotate-6 sm:left-5 sm:w-48"
           />
-          <img
-            src={art.tag}
+          <AdvancedImage
+            cldImg={art.tag}
             alt=""
             width={190}
             height={82}
             className="absolute top-44 right-0 w-28 rotate-6 sm:right-4 sm:w-40"
           />
-          <img
-            src={art.hand}
+          <AdvancedImage
+            cldImg={art.hand}
             alt=""
             width={95}
             height={105}
             className="absolute top-3 right-pct-20 hidden w-16 rotate-12 sm:block"
           />
-          <img
-            src={art.star}
+          <AdvancedImage
+            cldImg={art.star}
             alt=""
             width={75}
             height={75}
             className="absolute top-44 left-pct-8 hidden w-12 sm:block"
           />
-          <img
-            src={art.right}
+          <AdvancedImage
+            cldImg={art.right}
             alt=""
             width={210}
             height={205}
@@ -156,10 +160,10 @@ export function DashboardWelcome({
             </button>
           ) : null}
           <div className="relative z-10 mt-10 flex h-32 w-full max-w-2xl items-end justify-center gap-3 sm:h-44 sm:gap-7">
-            {players.map((src, i) => (
-              <img
-                key={src}
-                src={src}
+            {players.map((publicId, i) => (
+              <AdvancedImage
+                key={publicId}
+                cldImg={cloudinaryImage(publicId)}
                 alt=""
                 width={145}
                 height={175}
@@ -187,15 +191,15 @@ export function DashboardWelcome({
       </section>
 
       <section className="relative mx-auto max-w-6xl px-5 py-16 sm:py-20">
-        <img
-          src={art.star}
+        <AdvancedImage
+          cldImg={art.star}
           alt=""
           width={70}
           height={70}
           className="absolute top-28 left-0 hidden w-14 -rotate-12 lg:block"
         />
-        <img
-          src={art.star}
+        <AdvancedImage
+          cldImg={art.star}
           alt=""
           width={70}
           height={70}
@@ -278,7 +282,6 @@ export function DashboardWelcome({
         </h2>
         <div className="relative h-72 overflow-hidden rounded-panel-lg bg-surface-dark text-white sm:h-96">
           <CourtMap
-            forceDark
             courts={mapCourts}
             venues={mapVenues}
             selectedId={mapSelectedId}
@@ -298,7 +301,11 @@ export function DashboardWelcome({
               key={court.id}
               className="overflow-hidden rounded-panel border border-white/15 bg-electric text-white"
             >
-              <div className="h-36 bg-hero-court bg-cover bg-center opacity-90" />
+              <AdvancedImage
+                cldImg={cloudinaryImage(CLOUDINARY_IMAGES.courtBackdrop)}
+                alt=""
+                className="h-36 w-full object-cover opacity-90"
+              />
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="line-clamp-1 font-bold">{court.name}</h3>

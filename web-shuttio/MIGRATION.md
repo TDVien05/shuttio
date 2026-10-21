@@ -6,7 +6,7 @@ done and deletion is approved.
 ## Done
 
 1. **Foundation**: TanStack Start (only `/` is prerendered to `index.html`;
-   every other route is client-only via `defaultSsr: false`, served the
+   every other route is client-only via the root route's `ssr` gate, served the
    `_shell.html` SPA loading shell — the `/app` entry in the build log is that
    shell, not server-rendered page content), React Query with the browser api client
    (`src/lib/api.ts`, Clerk bearer token), Clerk (`@clerk/react`, vi), Paraglide
@@ -75,13 +75,14 @@ limited to:
 
 ## Intentional differences from web
 
-- Chat (Stream) is **unavailable**: `/app/chat` and the venue messages page show
-  `ChatUnavailable`. "Open chat" buttons link there; `stream-chat` is not installed.
+- Chat is rebuilt on the api's own MongoDB chat + Centrifugo instead of Stream
+  Chat (`src/features/chat/`, `/api/chat/*`); pictures are private Cloudinary
+  uploads. The legacy `web` app still targets Stream and no longer works
+  against this api.
 - Web-side demo/seed data is removed (demo room titles, demo notifications and
   booking day labels, the static nav badge).
-- SSE (rooms/sessions events) goes straight to the api with
-  `@microsoft/fetch-event-source` (`src/lib/events.ts`); the Next proxy routes
-  are gone.
+- Live updates (rooms, sessions, notifications, chat) arrive over Centrifugo
+  (`src/lib/realtime.ts`); the SSE endpoints and Next proxy routes are gone.
 - Mutations are client modules (`features/*/api/*-api.ts`, same names as the
   old server actions) that invalidate React Query keys instead of
   `revalidatePath`.

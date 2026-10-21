@@ -62,6 +62,7 @@ export const ADMIN_NAV: NavItem<AdminSectionKey>[] = [
   },
   {
     key: "complaints",
+    group: m.admin_nav_group_moderation,
     href: `${ADMIN_BASE_PREFIX}/complaints`,
     label: m.admin_nav_complaints_label,
     icon: MessageSquareWarning,
@@ -69,6 +70,7 @@ export const ADMIN_NAV: NavItem<AdminSectionKey>[] = [
   },
   {
     key: "approvals",
+    group: m.admin_nav_group_moderation,
     href: `${ADMIN_BASE_PREFIX}/approvals`,
     label: m.admin_nav_approvals_label,
     icon: BadgeCheck,
@@ -76,6 +78,7 @@ export const ADMIN_NAV: NavItem<AdminSectionKey>[] = [
   },
   {
     key: "reviews",
+    group: m.admin_nav_group_moderation,
     href: `${ADMIN_BASE_PREFIX}/reviews`,
     label: m.admin_nav_reviews_label,
     icon: MessageSquareQuote,

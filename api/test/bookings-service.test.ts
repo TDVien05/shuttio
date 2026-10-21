@@ -24,7 +24,7 @@ import { Booking } from "../src/features/bookings/booking.schema.js"
 import { BookingLock } from "../src/features/bookings/booking-lock.schema.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
 import { ProfileService } from "../src/features/players/profile.service.js"
-import { ClerkDirectoryService } from "../src/features/stream/clerk-directory.service.js"
+import { ClerkDirectoryService } from "../src/features/directory/clerk-directory.service.js"
 import { Venue } from "../src/features/venues/venue.schema.js"
 import { vnNowIso } from "../src/shared/index.js"
 import type { BookingRecordStatus, PaymentStatus } from "../src/shared/index.js"
@@ -177,6 +177,8 @@ interface Deps {
   directoryUsers?: { id: string; name: string }[]
   /** Unpaid (`awaiting_payment`) bookings the player already has open. */
   unpaidBookings?: number
+  /** An existing hold matching the requested slot, for the idempotency test. */
+  identicalHold?: FakeBookingDoc | null
   /** Whether `bookingModel.exists({ venueId })` reports a booking already on file. */
   bookingsExist?: boolean
   /** What `bookingModel.findOneAndUpdate` resolves to — defaults to
@@ -197,7 +199,12 @@ async function makeService(deps: Deps = {}) {
   const chatPosts: { bookingId: string; event: string }[] = []
   const roomEvents: string[] = []
   const bookingModelMock = {
-    findOne: () => makeQuery(bookingDoc),
+    findOne: (filter: { status?: string } = {}) =>
+      makeQuery(
+        filter.status === "awaiting_payment"
+          ? (deps.identicalHold ?? null)
+          : bookingDoc
+      ),
     countDocuments: () => Promise.resolve(deps.unpaidBookings ?? 0),
     find: (filter: { dateKey?: string; venueId?: string }) =>
       makeQuery(
@@ -400,6 +407,33 @@ void test("createHold does not duplicate an app booker already in the venue's CR
   })
 
   assert.equal(venueDoc.ops.customers.length, 1)
+})
+
+void test("createHold returns the same unpaid hold on a retry (idempotent on the slot)", async () => {
+  const held = makeBookingDoc({
+    bookingId: "held-1",
+    courtId: "v9c1",
+    dateKey: "2099-07-21",
+    start: "18:00",
+    durationMin: 60,
+    status: "awaiting_payment",
+    paymentStatus: "awaiting",
+  })
+  const { service, created } = await makeService({
+    overlapExisting: [],
+    identicalHold: held,
+  })
+
+  const summary = await service.createHold("user-1", {
+    courtId: "v9c1",
+    dateKey: "2099-07-21",
+    start: "18:00",
+    durationMin: 60,
+    sessionId: "s-new-attempt",
+  })
+
+  assert.equal(summary.bookingId, "held-1")
+  assert.equal(created.length, 0)
 })
 
 void test("createHold hard-blocks the user's own overlapping booking on another court", async () => {

@@ -470,6 +470,7 @@ function CreateRoomDialog() {
               <Field>
                 <FieldLabel>{m.match_maker_dialog_format()}</FieldLabel>
                 <Select
+                  aria-label={m.match_maker_dialog_format()}
                   value={field.state.value}
                   onChange={(v) =>
                     field.handleChange(v as "Singles" | "Doubles")
@@ -536,6 +537,7 @@ function CreateRoomDialog() {
               <Field>
                 <FieldLabel>{m.match_maker_dialog_court_optional()}</FieldLabel>
                 <Select
+                  aria-label={m.match_maker_dialog_court_optional()}
                   value={field.state.value}
                   onChange={(v) => field.handleChange(v as string)}
                 >
@@ -695,6 +697,7 @@ function CreateRoomDialog() {
                 <Field>
                   <FieldLabel>{m.match_maker_dialog_level()}</FieldLabel>
                   <Select
+                    aria-label={m.match_maker_dialog_level()}
                     value={field.state.value}
                     onChange={(v) => field.handleChange(v as RoomLevel)}
                   >

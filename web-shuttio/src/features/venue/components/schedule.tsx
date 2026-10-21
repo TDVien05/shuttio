@@ -44,9 +44,7 @@ import {
   sportAccent,
 } from "@/lib/shared"
 import type {
-  CourtBlock,
   CourtBlockReason,
-  Reservation,
   ScheduleEvent,
   SlotKind,
   VenueCourt,
@@ -74,21 +72,20 @@ import {
   useNow,
 } from "@/features/booking/components/calendar-ui"
 import type { TimelineColumn } from "@/features/booking/components/calendar-ui"
-import { useVenueData } from "@/features/venue/components/venue-data-provider"
+import {
+  useAddCourtBlock,
+  useAddWalkInReservation,
+  useCancelReservation,
+  useRemoveCourtBlock,
+  useRescheduleReservation,
+  useVenueData,
+} from "@/features/venue/api/venue.queries"
 import {
   MicroLabel,
   Meter,
   ReasonDialog,
   VenuePanel,
 } from "@/features/venue/components/shared"
-import { useVenue } from "@/features/venue/components/venue-provider"
-import {
-  addCourtBlock,
-  addWalkInReservation,
-  cancelReservation,
-  rescheduleReservation,
-  removeCourtBlock,
-} from "@/features/venue/api/venue-api"
 import { m } from "@/paraglide/messages"
 
 const legendMessages = {
@@ -145,7 +142,6 @@ export function VenueScheduleView({
   initialDay?: string
 } = {}) {
   const locale = getLocale()
-  const { stats } = useVenue()
   const { todayIso } = useData()
   const {
     venueId,
@@ -153,10 +149,7 @@ export function VenueScheduleView({
     venueCourts: VENUE_COURTS,
     reservations: RESERVATIONS,
     blocks: BLOCKS,
-    addReservation,
-    updateReservation,
-    addBlock,
-    removeBlock,
+    venueStats: stats,
     courtDayEvents,
     venueScheduleFor,
   } = useVenueData()
@@ -216,6 +209,8 @@ export function VenueScheduleView({
   } | null>(null)
   const [, startCancel] = React.useTransition()
   const [, startReopen] = React.useTransition()
+  const cancelReservationMutation = useCancelReservation(venueId)
+  const removeCourtBlockMutation = useRemoveCourtBlock(venueId)
   // The API requires a reason for any cancellation, so Cancel opens this
   // dialog to collect one instead of firing straight from the popover.
   const [cancelTarget, setCancelTarget] = React.useState<ScheduleEvent | null>(
@@ -233,8 +228,10 @@ export function VenueScheduleView({
       setCancelTarget(null)
       startCancel(async () => {
         try {
-          await cancelReservation(venueId, event.id, reason)
-          updateReservation(event.id, { status: "cancelled" })
+          await cancelReservationMutation.mutateAsync({
+            id: event.id,
+            reason,
+          })
           toast(m.venue_schedule_toast_cancelled_event(), {
             description: event.customer,
           })
@@ -245,7 +242,7 @@ export function VenueScheduleView({
         }
       })
     },
-    [cancelTarget, venueId, updateReservation]
+    [cancelTarget, venueId, cancelReservationMutation]
   )
 
   // "Mở lại khung giờ" — reopen a real CourtBlock (no reason needed, unlike
@@ -255,8 +252,7 @@ export function VenueScheduleView({
     (event: ScheduleEvent, courtName: string) => {
       startReopen(async () => {
         try {
-          await removeCourtBlock(venueId, event.id)
-          removeBlock(event.id)
+          await removeCourtBlockMutation.mutateAsync(event.id)
           toast.success(m.venue_schedule_toast_reopened(), {
             description: courtName,
           })
@@ -267,7 +263,7 @@ export function VenueScheduleView({
         }
       })
     },
-    [venueId, removeBlock]
+    [venueId, removeCourtBlockMutation]
   )
 
   const monthsShort = [
@@ -713,14 +709,12 @@ export function VenueScheduleView({
         venueId={venueId}
         reservation={walkInDialog}
         onClose={() => setWalkInDialog(null)}
-        onCreated={addReservation}
       />
 
       <BlockDialog
         venueId={venueId}
         target={blockDialog}
         onClose={() => setBlockDialog(null)}
-        onCreated={addBlock}
       />
 
       <RescheduleDialog
@@ -728,16 +722,6 @@ export function VenueScheduleView({
         venueId={venueId}
         reservation={rescheduleDialog}
         onClose={() => setRescheduleDialog(null)}
-        onRescheduled={(updated) =>
-          updateReservation(updated.id, {
-            dayKey: updated.dayKey,
-            day: updated.day,
-            start: updated.start,
-            durationMin: updated.durationMin,
-            time: updated.time,
-            price: updated.price,
-          })
-        }
       />
 
       <ReasonDialog
@@ -1024,12 +1008,10 @@ function WalkInDialog({
   venueId,
   reservation,
   onClose,
-  onCreated,
 }: {
   venueId: string
   reservation: SlotTarget | null
   onClose: () => void
-  onCreated: (reservation: Reservation) => void
 }) {
   return (
     <Dialog
@@ -1049,7 +1031,6 @@ function WalkInDialog({
           venueId={venueId}
           target={reservation}
           onClose={onClose}
-          onCreated={onCreated}
         />
       ) : null}
     </Dialog>
@@ -1060,13 +1041,12 @@ function WalkInForm({
   venueId,
   target,
   onClose,
-  onCreated,
 }: {
   venueId: string
   target: SlotTarget
   onClose: () => void
-  onCreated: (reservation: Reservation) => void
 }) {
+  const addWalkIn = useAddWalkInReservation(venueId)
   const form = useAppForm({
     defaultValues: {
       name: "",
@@ -1077,7 +1057,7 @@ function WalkInForm({
     validators: { onChange: walkInSchema },
     onSubmit: async ({ value }) => {
       try {
-        const created = await addWalkInReservation(venueId, {
+        const created = await addWalkIn.mutateAsync({
           courtId: target.courtId,
           dayKey: target.dayKey,
           start: value.start,
@@ -1085,7 +1065,6 @@ function WalkInForm({
           customerName: value.name,
           customerPhone: value.phone,
         })
-        onCreated(created)
         toast.success(m.venue_schedule_toast_walk_in_title(), {
           description: `${target.courtName} · ${created.time}`,
         })
@@ -1184,12 +1163,10 @@ function BlockDialog({
   venueId,
   target,
   onClose,
-  onCreated,
 }: {
   venueId: string
   target: SlotTarget | null
   onClose: () => void
-  onCreated: (block: CourtBlock) => void
 }) {
   return (
     <Dialog
@@ -1209,7 +1186,6 @@ function BlockDialog({
           venueId={venueId}
           target={target}
           onClose={onClose}
-          onCreated={onCreated}
         />
       ) : null}
     </Dialog>
@@ -1220,13 +1196,12 @@ function BlockForm({
   venueId,
   target,
   onClose,
-  onCreated,
 }: {
   venueId: string
   target: SlotTarget
   onClose: () => void
-  onCreated: (block: CourtBlock) => void
 }) {
+  const addBlockMutation = useAddCourtBlock(venueId)
   const form = useAppForm({
     defaultValues: {
       reason: "maintenance" as CourtBlockReason,
@@ -1237,7 +1212,7 @@ function BlockForm({
     validators: { onChange: blockSchema },
     onSubmit: async ({ value }) => {
       try {
-        const created = await addCourtBlock(venueId, {
+        await addBlockMutation.mutateAsync({
           courtId: target.courtId,
           dateKey: target.dayKey,
           start: value.start,
@@ -1245,7 +1220,6 @@ function BlockForm({
           reason: value.reason,
           note: value.note.trim() || undefined,
         })
-        onCreated(created)
         toast.success(m.venue_schedule_toast_block_title(), {
           description: `${target.courtName} · ${value.start}`,
         })
@@ -1360,13 +1334,11 @@ function RescheduleDialog({
   venueId,
   reservation,
   onClose,
-  onRescheduled,
 }: {
   locale: string
   venueId: string
   reservation: RescheduleTarget | null
   onClose: () => void
-  onRescheduled: (reservation: Reservation) => void
 }) {
   return (
     <Dialog
@@ -1387,7 +1359,6 @@ function RescheduleDialog({
           venueId={venueId}
           target={reservation}
           onClose={onClose}
-          onRescheduled={onRescheduled}
         />
       ) : null}
     </Dialog>
@@ -1399,15 +1370,14 @@ function RescheduleForm({
   venueId,
   target,
   onClose,
-  onRescheduled,
 }: {
   locale: string
   venueId: string
   target: RescheduleTarget
   onClose: () => void
-  onRescheduled: (reservation: Reservation) => void
 }) {
   const { bookingDays } = useData()
+  const reschedule = useRescheduleReservation(venueId)
   const form = useAppForm({
     defaultValues: {
       dayKey: target.dayKey,
@@ -1417,12 +1387,10 @@ function RescheduleForm({
     validators: { onChange: rescheduleSchema },
     onSubmit: async ({ value }) => {
       try {
-        const updated = await rescheduleReservation(
-          venueId,
-          target.reservationId,
-          value
-        )
-        onRescheduled(updated)
+        const updated = await reschedule.mutateAsync({
+          id: target.reservationId,
+          input: value,
+        })
         toast.success(m.venue_schedule_toast_rescheduled(), {
           description: `${target.courtName} · ${updated.time}`,
         })

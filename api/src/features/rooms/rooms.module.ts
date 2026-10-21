@@ -6,7 +6,8 @@ import { BookingsModule } from "../bookings/bookings.module.js"
 import { NotificationsModule } from "../notifications/notifications.module.js"
 import { PlayersModule } from "../players/players.module.js"
 import { PlaySession, PlaySessionSchema } from "../sessions/session.schema.js"
-import { StreamModule } from "../stream/stream.module.js"
+import { DirectoryModule } from "../directory/directory.module.js"
+import { ChatModule } from "../chat/chat.module.js"
 import { RoomEventsModule } from "./room-events.module.js"
 import { RoomComplaint, RoomComplaintSchema } from "./room-complaint.schema.js"
 import { RoomsController } from "./rooms.controller.js"
@@ -19,7 +20,7 @@ import { RoomsService } from "./rooms.service.js"
 // unlike the owner-scoped model `SessionsModule` wires up for
 // `SessionsService`. `PlayersModule` gives it the requester's real
 // name/initials (`ProfileService`, never trusted from the request body);
-// `NotificationsModule` and `StreamModule` back the join/approve/decline
+// `NotificationsModule` and `ChatModule` back the join/approve/decline
 // notify + real-chat-membership side effects.
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { RoomsService } from "./rooms.service.js"
     ]),
     PlayersModule,
     NotificationsModule,
-    StreamModule,
+    DirectoryModule,
+    ChatModule,
     RoomEventsModule,
     // A booked room's court is read through the booking.
     BookingsModule,

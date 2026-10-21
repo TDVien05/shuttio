@@ -11,7 +11,8 @@ import {
   bookingChatMessage,
   type BookingChatSource,
 } from "../src/features/bookings/booking-chat.service.js"
-import { StreamService } from "../src/features/stream/stream.service.js"
+import { ChatMessagesService } from "../src/features/chat/chat-messages.service.js"
+import { ChatService } from "../src/features/chat/chat.service.js"
 import { Venue } from "../src/features/venues/venue.schema.js"
 
 const booking: BookingChatSource = {
@@ -64,20 +65,22 @@ void test("the refund message shows the amount and the refund screenshot", () =>
   assert.equal(msg.imageUrl, "https://res.cloudinary.com/x/refund.png")
 })
 
-async function makeChat(opts: { streamFails?: boolean } = {}) {
+async function makeChat(opts: { chatFails?: boolean } = {}) {
   const calls: string[] = []
-  const stream = {
+  const chatService = {
     ensureBookingChannel: (input: { playerId: string }) => {
       calls.push(`ensure:${input.playerId}`)
-      if (opts.streamFails) return Promise.reject(new Error("stream down"))
+      if (opts.chatFails) return Promise.reject(new Error("chat down"))
       return Promise.resolve("venue-shared")
-    },
-    sendBookingMessage: (_id: string, from: string) => {
-      calls.push(`send:${from}`)
-      return Promise.resolve()
     },
     freezeChannelById: (id: string) => {
       calls.push(`freeze:${id}`)
+      return Promise.resolve()
+    },
+  }
+  const messages = {
+    sendSystem: (_id: string, from: string) => {
+      calls.push(`send:${from}`)
       return Promise.resolve()
     },
   }
@@ -92,7 +95,8 @@ async function makeChat(opts: { streamFails?: boolean } = {}) {
   const moduleRef = await Test.createTestingModule({
     providers: [
       BookingChatService,
-      { provide: StreamService, useValue: stream },
+      { provide: ChatService, useValue: chatService },
+      { provide: ChatMessagesService, useValue: messages },
       { provide: getModelToken(Venue.name), useValue: venueModel },
     ],
   }).compile()
@@ -112,7 +116,7 @@ void test("proof opens the channel and the player speaks; approval is the owner'
 })
 
 void test("a chat outage never throws into the booking flow", async () => {
-  const { chat } = await makeChat({ streamFails: true })
+  const { chat } = await makeChat({ chatFails: true })
   await assert.doesNotReject(() => chat.post(booking, "approved"))
 })
 

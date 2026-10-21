@@ -1,3 +1,7 @@
+import {
+  BLEED_TABLE_CLASS,
+  TableSection,
+} from "@/components/layouts/table-section"
 import { useRouter } from "@tanstack/react-router"
 import * as React from "react"
 import { toast } from "sonner"
@@ -26,9 +30,12 @@ import type { BranchSummary, CourtState } from "@/lib/shared"
 import { VenuePanel } from "@/features/venue/components/shared"
 import { PayoutEditor } from "@/features/venue/components/payout-fields"
 import type { PayoutDraft } from "@/lib/bank-account"
-import { useVenueData } from "@/features/venue/components/venue-data-provider"
+import {
+  useArchiveVenue,
+  useRestoreVenue,
+  useVenueData,
+} from "@/features/venue/api/venue.queries"
 import { venueBase } from "@/features/venue/nav"
-import { archiveVenue, restoreVenue } from "@/features/venue/api/venue-api"
 import { m } from "@/paraglide/messages"
 
 const overviewApprovalMessages = {
@@ -71,7 +78,9 @@ export function VenueManageView({
   const router = useRouter()
   const { venueId, venue: VENUE } = useVenueData()
   const [confirmOpen, setConfirmOpen] = React.useState(false)
-  const [isPending, startTransition] = React.useTransition()
+  const archive = useArchiveVenue()
+  const restore = useRestoreVenue()
+  const isPending = archive.isPending || restore.isPending
 
   const stateLabel: Record<CourtState, string> = {
     available: m.venue_manage_overview_states_available(),
@@ -88,9 +97,9 @@ export function VenueManageView({
 
   const handleArchive = () => {
     setConfirmOpen(false)
-    startTransition(async () => {
+    void (async () => {
       try {
-        await archiveVenue(venueId)
+        await archive.mutateAsync(venueId)
         toast.success(m.venue_manage_archive_venue_done({ name: VENUE.name }))
       } catch (error) {
         const message =
@@ -109,9 +118,9 @@ export function VenueManageView({
   }
 
   const handleRestore = () => {
-    startTransition(async () => {
+    void (async () => {
       try {
-        await restoreVenue(venueId)
+        await restore.mutateAsync(venueId)
         toast.success(m.venue_manage_restore_venue_done({ name: VENUE.name }))
       } catch (error) {
         toast.error(
@@ -136,24 +145,22 @@ export function VenueManageView({
         <PayoutEditor initial={payout} />
       </VenuePanel>
 
-      <VenuePanel title={m.venue_manage_overview_title()}>
-        <p className="mb-3 text-sm text-muted-foreground">
+      <TableSection title={m.venue_manage_overview_title()}>
+        <p className="px-4 py-3 text-sm text-muted-foreground sm:px-6">
           {m.venue_manage_overview_subtitle()}
         </p>
-        <Table>
+        <Table className={BLEED_TABLE_CLASS}>
           <TableHeader>
-            <TableRow>
-              <TableHead>{m.venue_manage_overview_col_branch()}</TableHead>
-              <TableHead>{m.venue_manage_overview_col_area()}</TableHead>
-              <TableHead align="right">
-                {m.venue_manage_overview_col_courts()}
-              </TableHead>
-              <TableHead>{m.venue_manage_overview_col_states()}</TableHead>
-              <TableHead>{m.venue_manage_overview_col_approval()}</TableHead>
-              <TableHead align="right">
-                {m.venue_manage_overview_col_actions()}
-              </TableHead>
-            </TableRow>
+            <TableHead>{m.venue_manage_overview_col_branch()}</TableHead>
+            <TableHead>{m.venue_manage_overview_col_area()}</TableHead>
+            <TableHead align="right">
+              {m.venue_manage_overview_col_courts()}
+            </TableHead>
+            <TableHead>{m.venue_manage_overview_col_states()}</TableHead>
+            <TableHead>{m.venue_manage_overview_col_approval()}</TableHead>
+            <TableHead align="right">
+              {m.venue_manage_overview_col_actions()}
+            </TableHead>
           </TableHeader>
           <TableBody>
             {branches.map((b) => (
@@ -220,7 +227,7 @@ export function VenueManageView({
             ))}
           </TableBody>
         </Table>
-      </VenuePanel>
+      </TableSection>
 
       {VENUE.archived ? (
         <div className="flex flex-col gap-4 rounded-4xl bg-card p-5 shadow-md ring-1 ring-amber-500/30 sm:flex-row sm:items-center sm:justify-between">

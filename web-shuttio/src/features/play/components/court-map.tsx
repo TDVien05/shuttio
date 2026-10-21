@@ -6,10 +6,11 @@ import { MapPin } from "lucide-react"
 import "mapbox-gl/dist/mapbox-gl.css"
 
 import { cn } from "@/lib/utils"
+import { MAPBOX_TOKEN } from "@/lib/env"
 import { formatVnd } from "@/lib/shared"
 import type { Court, VenuePin } from "@/lib/shared"
 
-const TOKEN = process.env.NEXT_PUBLIC_BOXMAP_TOKEN
+const TOKEN = MAPBOX_TOKEN
 
 export type LatLng = { lat: number; lng: number }
 
@@ -30,7 +31,6 @@ const HCMC = { longitude: 106.7009, latitude: 10.7769, zoom: 11.2 }
 export const CourtMap = React.memo(
   CourtMapImpl,
   (prev, next) =>
-    prev.forceDark === next.forceDark &&
     prev.blueMarkers === next.blueMarkers &&
     prev.courts === next.courts &&
     prev.venues === next.venues &&
@@ -39,7 +39,6 @@ export const CourtMap = React.memo(
 )
 
 function CourtMapImpl({
-  forceDark = false,
   blueMarkers = false,
   courts,
   venues,
@@ -47,7 +46,6 @@ function CourtMapImpl({
   onSelect,
   userLoc,
 }: {
-  forceDark?: boolean
   blueMarkers?: boolean
   courts: (Court & LatLng)[]
   /** One pin per branch (venue coords) — shown alongside the court price-pills. */
@@ -103,16 +101,9 @@ function CourtMapImpl({
 
   if (!TOKEN) {
     return (
-      <div
-        className={cn(
-          "grid h-full place-items-center px-6 text-center text-sm",
-          forceDark
-            ? "bg-surface-navy text-ink-faint"
-            : "bg-card text-muted-foreground"
-        )}
-      >
-        Set <code className="mx-1 font-mono">NEXT_PUBLIC_BOXMAP_TOKEN</code> to
-        enable the map.
+      <div className="grid h-full place-items-center bg-card px-6 text-center text-sm text-muted-foreground">
+        Set <code className="mx-1 font-mono">VITE_MAPBOX_TOKEN</code> to enable
+        the map.
       </div>
     )
   }
@@ -123,13 +114,7 @@ function CourtMapImpl({
       reuseMaps
       mapboxAccessToken={TOKEN}
       initialViewState={HCMC}
-      // Light-only product; `forceDark` is for the few designs that
-      // intentionally ask for the dark basemap regardless of theme.
-      mapStyle={
-        forceDark
-          ? "mapbox://styles/mapbox/dark-v11"
-          : "mapbox://styles/mapbox/light-v11"
-      }
+      mapStyle="mapbox://styles/mapbox/light-v11"
       style={{ width: "100%", height: "100%" }}
     >
       <NavigationControl position="top-right" showCompass={false} />

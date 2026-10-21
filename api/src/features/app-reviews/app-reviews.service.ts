@@ -10,7 +10,7 @@ import {
   type MyAppReview,
 } from "../../shared/index.js"
 import { ProfileService } from "../players/profile.service.js"
-import { ClerkDirectoryService } from "../stream/clerk-directory.service.js"
+import { ClerkDirectoryService } from "../directory/clerk-directory.service.js"
 import { AppReview, type AppReviewDocument } from "./app-review.schema.js"
 
 /** Stars a review needs before the landing will quote it. */
