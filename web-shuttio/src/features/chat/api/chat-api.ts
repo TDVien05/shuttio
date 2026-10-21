@@ -52,6 +52,12 @@ export async function markChannelRead(channelId: string): Promise<void> {
   })
 }
 
+export async function markChannelDelivered(channelId: string): Promise<void> {
+  await api(`/api/chat/channels/${encodeURIComponent(channelId)}/delivered`, {
+    method: "POST",
+  })
+}
+
 /** Signed params for a direct, private browser → Cloudinary picture upload. */
 export async function signChatImageUpload(
   channelId: string

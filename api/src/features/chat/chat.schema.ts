@@ -40,6 +40,8 @@ export class ChatMember {
   @Prop({ type: String, required: true }) userId: string
   /** Messages at or before this are read. Starts at join time. */
   @Prop({ type: Date, required: true }) lastReadAt: Date
+  /** Messages at or before this are delivered to this member's device. */
+  @Prop({ type: Date }) lastDeliveredAt?: Date
   /** "Delete for me": history before this is hidden from this member. */
   @Prop({ type: Date }) clearedAt?: Date
   /** Removed from this member's list until the next message arrives. */

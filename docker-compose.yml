@@ -71,31 +71,6 @@ services:
         - { action: rebuild, path: ./api/package.json }
         - { action: rebuild, path: ./api/pnpm-lock.yaml }
 
-  # Legacy Next.js app — kept until the TanStack migration replaces it.
-  # web:
-  #   build: ./web
-  #   # Wait for the api's readiness probe: the dashboard layout fetches it on
-  #   # the server and would hit ECONNREFUSED during api watch compilation.
-  #   command: >-
-  #     sh -c "find .next -mindepth 1 -maxdepth 1 -exec rm -rf {} +;
-  #     until node -e \"fetch('http://api:6969/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))\"; do sleep 1; done;
-  #     pnpm dev"
-  #   env_file:
-  #     - { path: ./web/.env.local, required: false }
-  #     - { path: ./web/.local.env, required: false }
-  #   environment:
-  #     CI: "true"
-  #     API_URL: http://api:6969
-  #     NEXT_PUBLIC_API_URL: http://localhost:6969
-  #   ports: ["3000:3000"]
-  #   depends_on:
-  #     api: { condition: service_healthy }
-  #   develop:
-  #     watch:
-  #       - { action: sync, path: ./web, target: /app, ignore: [node_modules/, .next/] }
-  #       - { action: rebuild, path: ./web/package.json }
-  #       - { action: rebuild, path: ./web/pnpm-lock.yaml }
-
   web-shuttio:
     build: { context: ./web-shuttio, target: dev }
     env_file: ./web-shuttio/.env.local

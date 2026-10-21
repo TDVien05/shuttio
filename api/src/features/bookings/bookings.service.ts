@@ -1394,7 +1394,13 @@ export class BookingsService {
         },
       })
       .select("bookingId status userId")
-      .lean<Array<{ bookingId: string; status: BookingRecordStatus; userId?: string }>>()
+      .lean<
+        Array<{
+          bookingId: string
+          status: BookingRecordStatus
+          userId?: string
+        }>
+      >()
 
     const affected: Array<{ bookingId: string; userId?: string }> = []
     for (const b of live) {

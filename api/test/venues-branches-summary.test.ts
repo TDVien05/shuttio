@@ -63,7 +63,10 @@ function makeService(venueModel: ReturnType<typeof makeVenueModel>) {
   const profilesMock = { getProfile: () => Promise.resolve({}) }
   const notificationsMock = { create: () => Promise.resolve() }
   const chatMock = {}
-  const brandsMock = { myBrand: () => Promise.resolve(null), ensureBrand: () => Promise.resolve(null) }
+  const brandsMock = {
+    myBrand: () => Promise.resolve(null),
+    ensureBrand: () => Promise.resolve(null),
+  }
 
   return new VenuesService(
     ...([
@@ -82,7 +85,12 @@ void test("branchesSummary tallies non-archived courts by state per branch, excl
     {
       venueId: "v1",
       ownerId: "u1",
-      info: { id: "v1", name: "Chi nhánh Quận 7", ward: "Phường Tân Thuận", province: "TP. Hồ Chí Minh" },
+      info: {
+        id: "v1",
+        name: "Chi nhánh Quận 7",
+        ward: "Phường Tân Thuận",
+        province: "TP. Hồ Chí Minh",
+      },
       ops: {
         courts: [
           makeCourt({ id: "vc1", state: "available" }),
@@ -96,7 +104,12 @@ void test("branchesSummary tallies non-archived courts by state per branch, excl
     {
       venueId: "v2",
       ownerId: "u1",
-      info: { id: "v2", name: "Chi nhánh Quận 1", ward: "Phường Bến Nghé", province: "TP. Hồ Chí Minh" },
+      info: {
+        id: "v2",
+        name: "Chi nhánh Quận 1",
+        ward: "Phường Bến Nghé",
+        province: "TP. Hồ Chí Minh",
+      },
       ops: { courts: [] },
       approval: "pending",
       createdAt: new Date(1),
@@ -104,7 +117,12 @@ void test("branchesSummary tallies non-archived courts by state per branch, excl
     {
       venueId: "v3",
       ownerId: "u2",
-      info: { id: "v3", name: "Chi nhánh của người khác", ward: "Phường X", province: "TP. Hồ Chí Minh" },
+      info: {
+        id: "v3",
+        name: "Chi nhánh của người khác",
+        ward: "Phường X",
+        province: "TP. Hồ Chí Minh",
+      },
       ops: { courts: [makeCourt({ id: "vc4", state: "available" })] },
       approval: "approved",
       createdAt: new Date(2),

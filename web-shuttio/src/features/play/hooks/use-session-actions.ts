@@ -260,17 +260,20 @@ export function useSessionActions() {
 
   const leaveRoom = React.useCallback(
     (sessionId: string) => {
-      if (sessions.some((s) => s.id === sessionId)) {
+      const session = sessions.find((s) => s.id === sessionId)
+      // Approved group members receive the host's room in `/api/sessions` too
+      // (as a `groupSession`). Only the host disbands it; a member leaves.
+      if (session?.host.initials === userInitials) {
         void disbandOwnRoom(sessionId)
         return
       }
-      const remote = otherRooms.find((s) => s.id === sessionId)
-      if (!remote) return
+      const room = otherRooms.find((s) => s.id === sessionId) ?? session
+      if (!room) return
       void leave
         .mutateAsync(sessionId)
         .then((result) => {
           if (result.status === "left") ui.dropJoined(sessionId)
-          toast(m.match_maker_toast_left(), { description: remote.title })
+          toast(m.match_maker_toast_left(), { description: room.title })
         })
         .catch((error: unknown) => {
           toast.error(m.session_toast_leave_failed(), {
@@ -278,7 +281,7 @@ export function useSessionActions() {
           })
         })
     },
-    [disbandOwnRoom, leave, otherRooms, sessions, ui]
+    [disbandOwnRoom, leave, otherRooms, sessions, ui, userInitials]
   )
 
   /** Convert a freshly-built MatchRoom (Create Room dialog) into a session. */

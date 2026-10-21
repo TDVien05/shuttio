@@ -284,9 +284,7 @@ export class AdminService {
    * The deletion proceeds even when bookings exist — the admin accepted the
    * consequences from the UI confirmation dialog.
    */
-  async deleteVenue(
-    venueId: string
-  ): Promise<{ cancelledBookings: number }> {
+  async deleteVenue(venueId: string): Promise<{ cancelledBookings: number }> {
     const affected = await this.bookings.bulkCancelLiveForVenue(
       venueId,
       "Địa điểm này đã bị quản trị viên xóa vĩnh viễn"

@@ -9,6 +9,7 @@ import { getModelToken } from "@nestjs/mongoose"
 import { CentrifugoService } from "../src/features/realtime/centrifugo.service.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
 import { Notification } from "../src/features/notifications/notification.schema.js"
+import { NotificationEmailEvent } from "../src/features/notifications/email-outbox.schema.js"
 
 /**
  * Service-level tests for the Phase 7 transactional notification feed
@@ -35,6 +36,10 @@ async function makeService(
         useValue: { publish: () => Promise.resolve() },
       },
       { provide: getModelToken(Notification.name), useValue: modelMock },
+      {
+        provide: getModelToken(NotificationEmailEvent.name),
+        useValue: { create: () => Promise.resolve({}) },
+      },
     ],
   }).compile()
   return moduleRef.get(NotificationsService)
@@ -189,4 +194,69 @@ void test("markAllRead flips every unread notification for the caller", async ()
 
   assert.deepEqual(filter, { userId: "user-1", read: false })
   assert.deepEqual(update, { $set: { read: true } })
+})
+
+// ── recordChatMessage ────────────────────────────────────────────────────────
+
+void test("recordChatMessage upserts one bell row per sender and queues an email event per message", async () => {
+  const upserts: { filter: unknown; update: unknown }[] = []
+  const emailed: unknown[] = []
+  const moduleRef = await Test.createTestingModule({
+    providers: [
+      NotificationsService,
+      {
+        provide: CentrifugoService,
+        useValue: { publish: () => Promise.resolve() },
+      },
+      {
+        provide: getModelToken(Notification.name),
+        useValue: {
+          updateOne: (filter: unknown, update: unknown) => {
+            upserts.push({ filter, update })
+            return Promise.resolve({})
+          },
+        },
+      },
+      {
+        provide: getModelToken(NotificationEmailEvent.name),
+        useValue: {
+          create: (doc: unknown) => {
+            emailed.push(doc)
+            return Promise.resolve(doc)
+          },
+        },
+      },
+    ],
+  }).compile()
+  const service = moduleRef.get(NotificationsService)
+
+  const input = {
+    channelId: "dm-1",
+    senderId: "user-2",
+    senderName: "Nguyễn A",
+    href: "/app/chat",
+  }
+  await service.recordChatMessage("user-1", input)
+  await service.recordChatMessage("user-1", input)
+
+  assert.equal(upserts.length, 2)
+  const first = upserts[0]
+  assert.equal((first.filter as { userId: string }).userId, "user-1")
+  assert.match(
+    (first.filter as { notifId: string }).notifId,
+    /^chat:user-1:dm-1:user-2:\d+$/
+  )
+  assert.deepEqual((first.update as { $set: unknown }).$set, {
+    kind: "chat",
+    text: "Nguyễn A đã gửi tin nhắn mới",
+    href: "/app/chat",
+    read: false,
+  })
+  assert.equal(emailed.length, 2)
+  assert.deepEqual(emailed[0], {
+    userId: "user-1",
+    kind: "chat",
+    actorName: "Nguyễn A",
+    text: "Nguyễn A đã gửi tin nhắn mới",
+  })
 })

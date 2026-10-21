@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { workspaceForPath } from "@/features/dashboard/lib/workspace"
 import type { AccountType } from "@/lib/shared"
@@ -53,7 +54,12 @@ export function PlayerAssessmentGate({
   const lockedOut = venueOnly && !exempt && pathname.startsWith("/app")
   const needsAssessment = !exempt && !venueOnly
 
-  const { data: assessment, isPending } = useQuery({
+  const {
+    data: assessment,
+    isPending,
+    isError,
+    refetch,
+  } = useQuery({
     ...assessmentQueries.assessment(),
     enabled: needsAssessment,
   })
@@ -61,6 +67,9 @@ export function PlayerAssessmentGate({
   if (lockedOut) return <Navigate to="/app/venue" replace />
   if (!needsAssessment) return <>{children}</>
   if (isPending) return <AssessmentLoading />
+  // A failed read is not "no assessment" — redirecting would send a player who
+  // already took it back through the wizard.
+  if (isError) return <AssessmentLoadError onRetry={() => void refetch()} />
   if (!assessment) return <Navigate to={PLAYER_ASSESSMENT_PATH} replace />
 
   return <>{children}</>
@@ -78,6 +87,24 @@ function AssessmentLoading() {
         </CardHeader>
         <CardContent>
           <Progress value={55} aria-label={m.assessment_loading_title()} />
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function AssessmentLoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="grid min-h-dvh place-items-center bg-stage-glow-tl p-6">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>{m.assessment_load_error_title()}</CardTitle>
+          <CardDescription>
+            {m.assessment_load_error_description()}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={onRetry}>{m.assessment_load_error_retry()}</Button>
         </CardContent>
       </Card>
     </div>

@@ -1,5 +1,44 @@
-import type { ChatChannel, ChatUser } from "@/lib/shared"
+import type {
+  ChatChannel,
+  ChatMessage,
+  ChatUser,
+  MessageStatus,
+} from "@/lib/shared"
 import { m } from "@/paraglide/messages"
+
+/**
+ * Derives the delivery/read status of a message sent by `currentUserId`:
+ * - "sending": still in-flight optimistically on the client
+ * - "seen": at least one other member has read past this message's timestamp
+ * - "delivered": at least one other member's device has received this message
+ * - "sent": stored on the server but not yet received by recipients
+ */
+export function getMessageStatus(
+  message: ChatMessage,
+  channel: ChatChannel,
+  currentUserId: string
+): MessageStatus {
+  if (message.status === "sending") return "sending"
+  if (message.senderId !== currentUserId) return "seen"
+
+  const msgTime = new Date(message.createdAt).getTime()
+  const otherMembers = channel.members.filter((m) => m.id !== currentUserId)
+  if (!otherMembers.length) return "seen"
+
+  const isSeen = otherMembers.some((m) => {
+    const readAt = channel.memberReadAt?.[m.id]
+    return readAt ? new Date(readAt).getTime() >= msgTime : false
+  })
+  if (isSeen) return "seen"
+
+  const isDelivered = otherMembers.some((m) => {
+    const deliveredAt = channel.memberDeliveredAt?.[m.id]
+    return deliveredAt ? new Date(deliveredAt).getTime() >= msgTime : false
+  })
+  if (isDelivered) return "delivered"
+
+  return "sent"
+}
 
 /** The other person in a 1:1 conversation (a DM or a venue thread). */
 export function otherMember(

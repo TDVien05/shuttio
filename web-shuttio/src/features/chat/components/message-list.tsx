@@ -1,9 +1,11 @@
 import * as React from "react"
+import { Check, CheckCheck, Clock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { UserAvatar } from "@/features/chat/components/user-avatar"
+import { getMessageStatus } from "@/features/chat/lib/chat-utils"
 import { cn } from "@/lib/utils"
 import type { ChatChannel, ChatMessage } from "@/lib/shared"
 import { getLocale } from "@/paraglide/runtime"
@@ -96,6 +98,13 @@ export function MessageList({
           i > 0 ? messages[i - 1] : undefined
         const newDay = !previous || !sameDay(new Date(previous.createdAt), at)
         const mine = message.senderId === userId
+        const status = mine
+          ? getMessageStatus(message, channel, userId)
+          : undefined
+        const isLastMineMessage =
+          mine &&
+          (i === messages.length - 1 ||
+            messages.slice(i + 1).every((m) => m.senderId !== userId))
         const sender = byId.get(message.senderId)
         const startsRun =
           newDay || previous.senderId !== message.senderId || previous.system
@@ -159,9 +168,59 @@ export function MessageList({
                   )}
                   {message.text && <span>{message.text}</span>}
                 </div>
-                <span className="px-1 text-mini text-muted-foreground">
-                  {timeFormat().format(at)}
-                </span>
+                <div
+                  className={cn(
+                    "flex items-center gap-1 px-1 text-mini text-muted-foreground",
+                    mine && "justify-end"
+                  )}
+                >
+                  <span>{timeFormat().format(at)}</span>
+                  {mine && (
+                    <span
+                      className="inline-flex items-center"
+                      title={
+                        status === "seen"
+                          ? m.chat_status_seen()
+                          : status === "delivered"
+                            ? m.chat_status_delivered()
+                            : status === "sending"
+                              ? m.chat_status_sending()
+                              : m.chat_status_sent()
+                      }
+                    >
+                      {status === "sending" && (
+                        <Clock className="size-3 animate-pulse text-muted-foreground/60" />
+                      )}
+                      {status === "sent" && (
+                        <Check className="size-3 text-muted-foreground/70" />
+                      )}
+                      {status === "delivered" && (
+                        <CheckCheck className="size-3 text-muted-foreground/80" />
+                      )}
+                      {status === "seen" && (
+                        <CheckCheck className="size-3.5 text-brand" />
+                      )}
+                    </span>
+                  )}
+                </div>
+                {mine && isLastMineMessage && (
+                  <span
+                    className={cn(
+                      "px-1 text-micro transition-colors",
+                      status === "seen"
+                        ? "font-medium text-brand"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {status === "seen"
+                      ? m.chat_status_seen()
+                      : status === "delivered"
+                        ? m.chat_status_delivered()
+                        : status === "sending"
+                          ? m.chat_status_sending()
+                          : m.chat_status_sent()}
+                  </span>
+                )}
               </div>
             </div>
           </React.Fragment>

@@ -13,6 +13,7 @@ import {
   deriveRemoteJoinedIds,
   deriveRequestedIds,
   deriveRooms,
+  deriveSessionMemberIds,
   hostedRoomCount,
   isRoomSuitable,
   wellFormedRooms,
@@ -109,6 +110,33 @@ describe("room derivations", () => {
     expect([...requested]).toEqual(["remote-requested"])
     expect([...joined].sort()).toEqual(["hosted", "local", "remote-going"])
     expect(hostedRoomCount([mine], "Q")).toBe(1)
+  })
+
+  it("counts an approved seat in a group session that round-tripped into my docs", () => {
+    const group = session({
+      id: "group",
+      host: { name: "Host", initials: "H" },
+      roster: [
+        { name: "Host", initials: "H", rsvp: "host" },
+        { name: "Quân", initials: "Q", rsvp: "going", userId: "u1" },
+        { name: "Khách", initials: "K", rsvp: "requested", userId: "u2" },
+      ],
+    })
+    const member = deriveSessionMemberIds([group], "u1")
+    const joined = deriveJoinedIds(new Set(), new Set(), new Set(), member)
+    const joinedSessions = deriveJoinedSessions(
+      [group],
+      [],
+      new Set(),
+      new Set(),
+      new Set(),
+      member
+    )
+
+    expect([...member]).toEqual(["group"])
+    expect([...joined]).toEqual(["group"])
+    expect(joinedSessions.map((item) => item.id)).toEqual(["group"])
+    expect(deriveSessionMemberIds([group], "u2").size).toBe(0)
   })
 
   it("projects joined sessions and picks the active one", () => {

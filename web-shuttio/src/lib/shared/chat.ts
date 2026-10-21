@@ -20,6 +20,8 @@ export interface ChatImage {
   height?: number
 }
 
+export type MessageStatus = "sending" | "sent" | "delivered" | "seen"
+
 export interface ChatMessage {
   id: string
   channelId: string
@@ -30,6 +32,7 @@ export interface ChatMessage {
   system?: boolean
   /** ISO datetime. */
   createdAt: string
+  status?: MessageStatus
 }
 
 export interface ChatChannel {
@@ -53,6 +56,10 @@ export interface ChatChannel {
   }
   /** ISO datetime of the last activity — the list's sort key. */
   updatedAt: string
+  /** Map of member userId -> ISO datetime of their last read message. */
+  memberReadAt?: Record<string, string>
+  /** Map of member userId -> ISO datetime of their last received message. */
+  memberDeliveredAt?: Record<string, string>
 }
 
 /** A picture already uploaded to Cloudinary, attached to a message being sent. */
@@ -81,3 +88,10 @@ export type ChatEvent =
   | { type: "message"; channelId: string; message: ChatMessage }
   /** The channel list changed (created, renamed, membership, frozen, read, deleted). */
   | { type: "channel"; channelId: string }
+  | { type: "read"; channelId: string; userId: string; lastReadAt: string }
+  | {
+      type: "delivered"
+      channelId: string
+      userId: string
+      lastDeliveredAt: string
+    }

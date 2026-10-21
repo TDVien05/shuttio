@@ -36,4 +36,34 @@ export class ChatEventsService {
   channelChanged(userIds: string[], channelId: string): void {
     this.publish(userIds, { type: "channel", channelId })
   }
+
+  /** A member read the channel up to this timestamp. */
+  read(
+    memberIds: string[],
+    channelId: string,
+    userId: string,
+    lastReadAt: string
+  ): void {
+    this.publish(memberIds, {
+      type: "read",
+      channelId,
+      userId,
+      lastReadAt,
+    })
+  }
+
+  /** A member's client received messages up to this timestamp. */
+  delivered(
+    memberIds: string[],
+    channelId: string,
+    userId: string,
+    lastDeliveredAt: string
+  ): void {
+    this.publish(memberIds, {
+      type: "delivered",
+      channelId,
+      userId,
+      lastDeliveredAt,
+    })
+  }
 }

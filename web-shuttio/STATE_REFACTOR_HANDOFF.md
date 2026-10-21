@@ -85,7 +85,7 @@ in this working tree and is ready to land together with this document.
   invalidates so the server-derived view wins.
 - `createHold` is idempotent on the slot in the API; the reload/retry test is
   `api/test/bookings-service.test.ts` (`createHold returns the same unpaid hold
-  on a retry`).
+on a retry`).
 - Expiry is now a derived read view (`deriveExpiries` / `applyExpiryView` /
   `deriveExpiredEvents` in `matchmaking-derive.ts`) plus the player-only
   `SessionExpiryWatcher`. The client no longer runs a cache-mutating sweep. The
@@ -153,19 +153,19 @@ in this working tree and is ready to land together with this document.
 
 ## Acceptance criteria
 
-| Criterion | Status | Evidence |
-| --- | --- | --- |
-| No context value contains sessions/crossRooms/reservations/customers/blocks/notifications arrays | Pass (static) | Context inspection; only derived helpers in `DataProvider`. |
-| No provider calls `fetch`, `listRooms`, `listPlayerSessions`, `fetchVenueReservations` | Pass (static) | Providers are UI-only; reads are query hooks. |
-| No `useState(seed.*)` for server records | Pass (static) | No matches. |
-| No `invalidateQueries()` without a key | Pass (static) | No matches. |
-| One query per resource | Pass by design | All reads use the centralized keys; venue bundle/reservations share one key. Not re-measured in React Query devtools. |
-| One request per polling loop | Not measured | Query keys are shared and the venue poll is layout-level; browser network panel check remains for QA. |
-| Every Centrifugo subscription through `useChannelInvalidation`; no data window events | Pass (static) | No direct `subscribeToChannel` outside `src/lib/realtime.ts`; no `ROOMS_CHANGED_EVENT` / assessment event. |
-| Venue block/walk-in/customer appears immediately; second tab after poll | Code path verified | Bundle mutation/invalidation and 10 s layout poll. Manual two-tab QA not run. |
-| Join/approve/decline/cancel including rollback | Code + unit tests | Pure optimistic transforms covered; mutation wiring typechecks. Manual QA not run. |
-| Vietnamese copy and flows unchanged | Pass (static) | No `messages/vi.json` changes; copy and route structure preserved. Browser QA not run. |
-| `pnpm typecheck`, `pnpm lint`, `pnpm test` pass | Pass | Results below. |
+| Criterion                                                                                        | Status             | Evidence                                                                                                              |
+| ------------------------------------------------------------------------------------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| No context value contains sessions/crossRooms/reservations/customers/blocks/notifications arrays | Pass (static)      | Context inspection; only derived helpers in `DataProvider`.                                                           |
+| No provider calls `fetch`, `listRooms`, `listPlayerSessions`, `fetchVenueReservations`           | Pass (static)      | Providers are UI-only; reads are query hooks.                                                                         |
+| No `useState(seed.*)` for server records                                                         | Pass (static)      | No matches.                                                                                                           |
+| No `invalidateQueries()` without a key                                                           | Pass (static)      | No matches.                                                                                                           |
+| One query per resource                                                                           | Pass by design     | All reads use the centralized keys; venue bundle/reservations share one key. Not re-measured in React Query devtools. |
+| One request per polling loop                                                                     | Not measured       | Query keys are shared and the venue poll is layout-level; browser network panel check remains for QA.                 |
+| Every Centrifugo subscription through `useChannelInvalidation`; no data window events            | Pass (static)      | No direct `subscribeToChannel` outside `src/lib/realtime.ts`; no `ROOMS_CHANGED_EVENT` / assessment event.            |
+| Venue block/walk-in/customer appears immediately; second tab after poll                          | Code path verified | Bundle mutation/invalidation and 10 s layout poll. Manual two-tab QA not run.                                         |
+| Join/approve/decline/cancel including rollback                                                   | Code + unit tests  | Pure optimistic transforms covered; mutation wiring typechecks. Manual QA not run.                                    |
+| Vietnamese copy and flows unchanged                                                              | Pass (static)      | No `messages/vi.json` changes; copy and route structure preserved. Browser QA not run.                                |
+| `pnpm typecheck`, `pnpm lint`, `pnpm test` pass                                                  | Pass               | Results below.                                                                                                        |
 
 ## Verification results
 
@@ -212,16 +212,16 @@ environment has no signed-in browser session or browser-automation surface.
 They must be run against `docker compose up --build --watch` with the dev
 player and venue accounts before release:
 
-| Scenario | Status |
-| --- | --- |
-| Venue approve/decline; add walk-in/customer/block; second tab after poll | Not run |
-| Book → payment screen; reload and pay again → same hold; cancel before proof | Not run (API idempotency test passes) |
-| Two-tab rooms: create → request → approve; member updates without reload; leave | Not run |
-| Expiry: request past TTL disappears, stays gone after reload, host cannot approve | Not run (API/derive tests pass) |
-| Notification approval appears in bell; read survives navigation | Not run |
-| Fresh player assessment gate; save reaches dashboard | Not run |
-| Stop API: error screen shows "Thử lại"; restart and recover | Not implemented; no route error boundary yet |
-| Vietnamese copy/toasts and duplicate polling/network checks | Not run |
+| Scenario                                                                          | Status                                       |
+| --------------------------------------------------------------------------------- | -------------------------------------------- |
+| Venue approve/decline; add walk-in/customer/block; second tab after poll          | Not run                                      |
+| Book → payment screen; reload and pay again → same hold; cancel before proof      | Not run (API idempotency test passes)        |
+| Two-tab rooms: create → request → approve; member updates without reload; leave   | Not run                                      |
+| Expiry: request past TTL disappears, stays gone after reload, host cannot approve | Not run (API/derive tests pass)              |
+| Notification approval appears in bell; read survives navigation                   | Not run                                      |
+| Fresh player assessment gate; save reaches dashboard                              | Not run                                      |
+| Stop API: error screen shows "Thử lại"; restart and recover                       | Not implemented; no route error boundary yet |
+| Vietnamese copy/toasts and duplicate polling/network checks                       | Not run                                      |
 
 ## Deviations and known gaps
 

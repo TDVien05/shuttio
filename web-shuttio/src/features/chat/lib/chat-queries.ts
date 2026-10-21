@@ -52,6 +52,52 @@ export function appendMessage(
   }
 }
 
+/** Replace a temporary client message by its tempId or append the message. */
+export function replaceOrAppendMessage(
+  data: MessagePages | undefined,
+  message: ChatMessage,
+  tempId?: string
+): MessagePages | undefined {
+  if (!data?.pages.length) return data
+  const [latest, ...older] = data.pages
+  if (latest.messages.some((m) => m.id === message.id)) return data
+
+  const replaceIndex = tempId
+    ? latest.messages.findIndex((m) => m.id === tempId)
+    : -1
+
+  const messages =
+    replaceIndex >= 0
+      ? latest.messages.map((m, idx) => (idx === replaceIndex ? message : m))
+      : [...latest.messages, message]
+
+  return {
+    ...data,
+    pages: [
+      {
+        ...latest,
+        messages,
+      },
+      ...older,
+    ],
+  }
+}
+
+/** Remove a message from the cache (e.g. failed optimistic message). */
+export function removeMessage(
+  data: MessagePages | undefined,
+  messageId: string
+): MessagePages | undefined {
+  if (!data?.pages.length) return data
+  return {
+    ...data,
+    pages: data.pages.map((p) => ({
+      ...p,
+      messages: p.messages.filter((m) => m.id !== messageId),
+    })),
+  }
+}
+
 /** Total unread across a channel list. */
 export const totalUnread = (channels: ChatChannel[] | undefined) =>
   channels?.reduce((sum, c) => sum + c.unread, 0) ?? 0

@@ -702,7 +702,8 @@ export interface VenueStats {
 
 // ── Venue: schedule grid ─────────────────────────────────────────────────────
 
-export type SlotKind = "free" | "booked" | "blocked" | "walk-in" | "held" | "awaiting"
+export type SlotKind =
+  "free" | "booked" | "blocked" | "walk-in" | "held" | "awaiting"
 
 export interface ScheduleSlot {
   courtId: string
@@ -1302,11 +1303,7 @@ export interface AdminAppReviewRow extends AppReview {
 
 /** Why a wallet balance moved. */
 export type WalletTxKind =
-  | "topup"
-  | "payment"
-  | "refund"
-  | "share"
-  | "withdrawal"
+  "topup" | "payment" | "refund" | "share" | "withdrawal"
 
 /** One line of a player's wallet history (newest first when listed). */
 export interface WalletTransaction {

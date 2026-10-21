@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
+import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { sendMessage, signChatImageUpload } from "@/features/chat/api/chat-api"
 import {
   IMAGE_ACCEPT,
@@ -15,14 +16,24 @@ import {
 import type { ChatMessage } from "@/lib/shared"
 import { m } from "@/paraglide/messages"
 
+interface SendVariables {
+  text: string
+  file: File | null
+}
+
 /** Text box + picture picker. Pictures upload privately, then ride the message. */
 export function Composer({
   channelId,
   onSent,
+  onOptimistic,
+  onFailed,
 }: {
   channelId: string
-  onSent: (message: ChatMessage) => void
+  onSent: (message: ChatMessage, tempId?: string) => void
+  onOptimistic?: (message: ChatMessage) => void
+  onFailed?: (tempId: string) => void
 }) {
+  const { id: userId } = useAuthUser()
   const [text, setText] = React.useState("")
   const [file, setFile] = React.useState<File | null>(null)
   const picker = React.useRef<HTMLInputElement>(null)
@@ -39,25 +50,49 @@ export function Composer({
     [previewUrl]
   )
 
-  const send = useMutation({
-    mutationFn: async () => {
-      const image = file
+  const send = useMutation<
+    ChatMessage,
+    Error,
+    SendVariables,
+    { tempId: string }
+  >({
+    onMutate: ({ text: content }) => {
+      const tempId = `temp-${Date.now()}`
+      onOptimistic?.({
+        id: tempId,
+        channelId,
+        senderId: userId,
+        text: content,
+        createdAt: new Date().toISOString(),
+        status: "sending",
+      })
+      setText("")
+      setFile(null)
+      return { tempId }
+    },
+    mutationFn: async ({ text: content, file: currentFile }) => {
+      const image = currentFile
         ? await uploadPrivateToCloudinary(
-            file,
+            currentFile,
             await signChatImageUpload(channelId)
           )
         : undefined
-      return sendMessage(channelId, { text: text.trim(), image })
+      return sendMessage(channelId, { text: content, image })
     },
-    onSuccess: (message) => {
-      setText("")
-      setFile(null)
-      onSent(message)
+    onSuccess: (message, _vars, context) => {
+      onSent(message, context.tempId)
     },
-    onError: () => toast.error(m.chat_send_failed()),
+    onError: (_err, _vars, context) => {
+      if (context) onFailed?.(context.tempId)
+      toast.error(m.chat_send_failed())
+    },
   })
 
   const canSend = (text.trim().length > 0 || file !== null) && !send.isPending
+
+  const submit = () => {
+    if (canSend) send.mutate({ text: text.trim(), file })
+  }
 
   const pick = (chosen: File | undefined) => {
     if (!chosen) return
@@ -76,7 +111,7 @@ export function Composer({
       className="flex flex-col gap-2 border-t p-3"
       onSubmit={(e) => {
         e.preventDefault()
-        if (canSend) send.mutate()
+        submit()
       }}
     >
       {previewUrl && (
@@ -130,7 +165,7 @@ export function Composer({
               !e.nativeEvent.isComposing
             ) {
               e.preventDefault()
-              if (canSend) send.mutate()
+              submit()
             }
           }}
           placeholder={m.chat_composer_placeholder()}

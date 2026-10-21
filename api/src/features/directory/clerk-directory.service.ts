@@ -95,6 +95,27 @@ export class ClerkDirectoryService {
     }
   }
 
+  /**
+   * The account's primary email address, for the notification digest. Null
+   * when the account has none or Clerk can't be reached (the digest then skips
+   * that user and keeps their events for the next tick).
+   */
+  async primaryEmail(id: string): Promise<string | null> {
+    try {
+      const user = await this.clerk.users.getUser(id)
+      return (
+        user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)
+          ?.emailAddress ?? null
+      )
+    } catch (err) {
+      this.logger.error(
+        `Clerk primaryEmail lookup failed for ${id}`,
+        err instanceof Error ? err.stack : String(err)
+      )
+      return null
+    }
+  }
+
   /** Look up a single user by id, or null if missing/unreachable. */
   async getOne(id: string): Promise<DirectoryUser | null> {
     try {

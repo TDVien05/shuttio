@@ -600,12 +600,15 @@ export class RoomsService {
   ): Promise<void> {
     const doc = await this.findRoomDoc(roomId)
     if (doc.userId !== hostUserId) {
-      throw new ForbiddenException("Chỉ chủ phòng mới có quyền xác nhận thanh toán")
+      throw new ForbiddenException(
+        "Chỉ chủ phòng mới có quyền xác nhận thanh toán"
+      )
     }
     const member = doc.data.roster.find(
       (p) => p.userId === memberUserId && p.rsvp !== "host"
     )
-    if (!member) throw new NotFoundException("Thành viên không tồn tại trong phòng")
+    if (!member)
+      throw new NotFoundException("Thành viên không tồn tại trong phòng")
     await this.sessionModel.updateOne(
       { _id: doc._id, "data.roster": { $elemMatch: { userId: memberUserId } } },
       { $set: { "data.roster.$.paid": true } }
@@ -637,7 +640,8 @@ export class RoomsService {
     const member = doc.data.roster.find(
       (p) => p.userId === memberUserId && p.rsvp !== "host"
     )
-    if (!member) throw new NotFoundException("Thành viên không tồn tại trong phòng")
+    if (!member)
+      throw new NotFoundException("Thành viên không tồn tại trong phòng")
     const court = await this.courtShareOf(doc.data)
     const amountPart = court ? ` ${court.amount.toLocaleString("vi-VN")}đ` : ""
     const hostProfile = await this.profiles.getProfile(hostUserId)
@@ -716,11 +720,7 @@ export class RoomsService {
     memberId: string
   ): Promise<void> {
     try {
-      await this.chat.addRoomMember(
-        hostUserId,
-        roomChannelId(roomId),
-        memberId
-      )
+      await this.chat.addRoomMember(hostUserId, roomChannelId(roomId), memberId)
     } catch (err) {
       this.logChatFailure("approve", roomId, err)
     }

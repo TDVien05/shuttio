@@ -186,7 +186,10 @@ async function makeService(bookings: FakeBooking[]) {
       },
       { provide: RoomEventsService, useValue: { emit: () => {} } },
       { provide: SessionEventsService, useValue: { emit: () => {} } },
-      { provide: BookingChatService, useValue: { post: () => Promise.resolve() } },
+      {
+        provide: BookingChatService,
+        useValue: { post: () => Promise.resolve() },
+      },
     ],
   }).compile()
 

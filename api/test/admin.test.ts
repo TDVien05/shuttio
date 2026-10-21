@@ -359,7 +359,10 @@ async function makeBookingsService(venueDoc: ReturnType<typeof makeVenueDoc>) {
       },
       { provide: RoomEventsService, useValue: { emit: () => {} } },
       { provide: SessionEventsService, useValue: { emit: () => {} } },
-      { provide: BookingChatService, useValue: { post: () => Promise.resolve() } },
+      {
+        provide: BookingChatService,
+        useValue: { post: () => Promise.resolve() },
+      },
     ],
   }).compile()
 

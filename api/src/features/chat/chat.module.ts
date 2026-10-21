@@ -4,6 +4,7 @@ import { MongooseModule } from "@nestjs/mongoose"
 import { Booking, BookingSchema } from "../bookings/booking.schema.js"
 import { Brand, BrandSchema } from "../brands/brand.schema.js"
 import { DirectoryModule } from "../directory/directory.module.js"
+import { NotificationsModule } from "../notifications/notifications.module.js"
 import { Venue, VenueSchema } from "../venues/venue.schema.js"
 import { ChatEventsService } from "./chat-events.service.js"
 import { ChatImagesService } from "./chat-images.service.js"
@@ -27,6 +28,7 @@ import { ChatService } from "./chat.service.js"
 @Module({
   imports: [
     DirectoryModule,
+    NotificationsModule,
     MongooseModule.forFeature([
       { name: ChatChannel.name, schema: ChatChannelSchema },
       { name: ChatMember.name, schema: ChatMemberSchema },

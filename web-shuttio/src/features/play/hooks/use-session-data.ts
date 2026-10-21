@@ -21,6 +21,7 @@ import {
   deriveRemoteJoinedIds,
   deriveRequestedIds,
   deriveRooms,
+  deriveSessionMemberIds,
   hostedRoomCount,
   isRoomSuitable,
   overlappingCommitment,
@@ -70,9 +71,19 @@ export function useSessionData() {
     () => deriveRemoteJoinedIds(otherRooms, authUser.id),
     [otherRooms, authUser.id]
   )
+  const sessionMemberIds = React.useMemo(
+    () => deriveSessionMemberIds(sessions, authUser.id),
+    [sessions, authUser.id]
+  )
   const joinedIds = React.useMemo(
-    () => deriveJoinedIds(localJoinedIds, hostedIds, remoteJoinedIds),
-    [localJoinedIds, hostedIds, remoteJoinedIds]
+    () =>
+      deriveJoinedIds(
+        localJoinedIds,
+        hostedIds,
+        remoteJoinedIds,
+        sessionMemberIds
+      ),
+    [localJoinedIds, hostedIds, remoteJoinedIds, sessionMemberIds]
   )
   const requestedIds = React.useMemo(
     () => deriveRequestedIds(otherRooms, authUser.id),
@@ -89,9 +100,17 @@ export function useSessionData() {
         otherRooms,
         localJoinedIds,
         hostedIds,
-        remoteJoinedIds
+        remoteJoinedIds,
+        sessionMemberIds
       ),
-    [sessions, otherRooms, localJoinedIds, hostedIds, remoteJoinedIds]
+    [
+      sessions,
+      otherRooms,
+      localJoinedIds,
+      hostedIds,
+      remoteJoinedIds,
+      sessionMemberIds,
+    ]
   )
   const joinedRooms = React.useMemo(
     () => joinedSessions.map((s) => roomForViewer(s, courts)),

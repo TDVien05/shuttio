@@ -1621,8 +1621,7 @@ export function isRsvpExpired(
 ): boolean {
   if (player.rsvp !== "requested" && player.rsvp !== "pending") return false
   if (player.rsvpAt == null) return false
-  const ttl =
-    player.rsvp === "requested" ? REQUEST_EXPIRY_MS : INVITE_EXPIRY_MS
+  const ttl = player.rsvp === "requested" ? REQUEST_EXPIRY_MS : INVITE_EXPIRY_MS
   return now - player.rsvpAt > ttl
 }
 

@@ -59,6 +59,24 @@ export function deriveRemoteJoinedIds(
   )
 }
 
+/**
+ * Confirmed seats in group sessions that round-tripped into my own session
+ * docs. Once a host approves a request, `/api/sessions` returns that room as a
+ * `groupSession`; unlike the browse-only pool it is not in `otherRooms`.
+ */
+export function deriveSessionMemberIds(
+  sessions: PlaySession[],
+  userId: string
+): Set<string> {
+  return new Set(
+    sessions
+      .filter((room) =>
+        room.roster.some((p) => p.userId === userId && p.rsvp === "going")
+      )
+      .map((room) => room.id)
+  )
+}
+
 /** Listed, still-active rooms I host, derived from my own session docs. */
 export function deriveHostedIds(
   sessions: PlaySession[],
@@ -78,13 +96,22 @@ export function deriveHostedIds(
   )
 }
 
-/** The unified "joined" set: my local bookkeeping, hosted rooms and remote seats. */
+/**
+ * The unified "joined" set: my local bookkeeping, hosted rooms, seats in my
+ * own session docs (approved group members) and remote cross-user seats.
+ */
 export function deriveJoinedIds(
   localJoinedIds: ReadonlySet<string>,
   hostedIds: ReadonlySet<string>,
-  remoteJoinedIds: ReadonlySet<string>
+  remoteJoinedIds: ReadonlySet<string>,
+  sessionMemberIds: ReadonlySet<string> = new Set()
 ): Set<string> {
-  return new Set([...localJoinedIds, ...hostedIds, ...remoteJoinedIds])
+  return new Set([
+    ...localJoinedIds,
+    ...hostedIds,
+    ...remoteJoinedIds,
+    ...sessionMemberIds,
+  ])
 }
 
 /** Rooms I asked to join and am still awaiting a host decision on. */
@@ -155,12 +182,15 @@ export function deriveJoinedSessions(
   otherRooms: PlaySession[],
   localJoinedIds: ReadonlySet<string>,
   hostedIds: ReadonlySet<string>,
-  remoteJoinedIds: ReadonlySet<string>
+  remoteJoinedIds: ReadonlySet<string>,
+  sessionMemberIds: ReadonlySet<string> = new Set()
 ): PlaySession[] {
   return [
     ...sessions.filter(
       (s) =>
-        (localJoinedIds.has(s.id) || hostedIds.has(s.id)) &&
+        (localJoinedIds.has(s.id) ||
+          hostedIds.has(s.id) ||
+          sessionMemberIds.has(s.id)) &&
         s.status !== "cancelled" &&
         s.status !== "completed"
     ),

@@ -87,15 +87,15 @@ docker run --rm -p 3001:3000 web-shuttio
 
 Create an **Application** with build type **Dockerfile**:
 
-| Setting | Value |
-| --- | --- |
-| Provider → Build Path | `/web-shuttio` |
-| Provider → Watch Paths | `web-shuttio/**` (auto-deploy only on frontend changes) |
-| Build Type → Dockerfile Path | `Dockerfile` |
-| Build Type → Docker Context Path | `.` |
-| Build Type → Docker Build Stage | empty (the final, production stage) |
-| Environment → Build Time Arguments | the four `VITE_*` above, production values |
-| Domains | your host, container port **3000**, HTTPS (Let's Encrypt) |
+| Setting                            | Value                                                     |
+| ---------------------------------- | --------------------------------------------------------- |
+| Provider → Build Path              | `/web-shuttio`                                            |
+| Provider → Watch Paths             | `web-shuttio/**` (auto-deploy only on frontend changes)   |
+| Build Type → Dockerfile Path       | `Dockerfile`                                              |
+| Build Type → Docker Context Path   | `.`                                                       |
+| Build Type → Docker Build Stage    | empty (the final, production stage)                       |
+| Environment → Build Time Arguments | the four `VITE_*` above, production values                |
+| Domains                            | your host, container port **3000**, HTTPS (Let's Encrypt) |
 
 `VITE_*` are public values, but they only take effect at build time: change
 one and redeploy (a rebuild), not just restart. Also add the frontend domain

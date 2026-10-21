@@ -1,5 +1,6 @@
 import { Suspense, lazy } from "react"
 import type { QueryClient } from "@tanstack/react-query"
+import type { ErrorComponentProps } from "@tanstack/react-router"
 import {
   HeadContent,
   Outlet,
@@ -15,6 +16,14 @@ import { RouterProvider } from "react-aria-components"
 import TanStackQueryDevtools from "../components/devtools"
 import { ThemeProvider } from "@/components/theme-provider"
 import { RouteLoading } from "@/components/layouts/route-loading"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { m } from "@/paraglide/messages"
 import appCss from "../styles/globals.css?url"
 
@@ -23,9 +32,6 @@ interface RouterContext {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  // Server-render only the landing page. Children inherit this decision, so
-  // `/app`, auth and every other URL are served the client-only SPA shell.
-  // (SSR is inherited: a child cannot re-enable it under a client-only parent.)
   ssr: ({ location }) => location.pathname === "/",
   head: () => ({
     meta: [
@@ -41,8 +47,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: m.meta_twitter_title() },
       { name: "twitter:description", content: m.meta_twitter_description() },
-      // Light-only product: keep the browser chrome light even when the OS
-      // prefers a dark color scheme.
       { name: "theme-color", content: "#ffffff" },
     ],
     links: [
@@ -53,6 +57,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   }),
   shellComponent: RootDocument,
   component: RootComponent,
+  errorComponent: RootErrorComponent,
 })
 
 const ClerkProvider = lazy(() => import("@/components/clerk-provider"))
@@ -77,6 +82,41 @@ function RootComponent() {
         </Suspense>
       )}
     </RouterProvider>
+  )
+}
+
+function RootErrorComponent({ error, reset }: ErrorComponentProps) {
+  const router = useRouter()
+  const handleRetry = () => {
+    // Clear query cache errors so fresh requests are fired on retry
+    router.options.context.queryClient.clear()
+    void router.invalidate().finally(() => reset())
+  }
+
+  return (
+    <div className="grid min-h-dvh place-items-center bg-stage-glow-tl p-6">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>{m.root_error_title()}</CardTitle>
+          <CardDescription>
+            {error instanceof Error
+              ? error.message
+              : m.root_error_description()}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <Button onClick={handleRetry}>{m.root_error_retry()}</Button>
+            <Button
+              variant="outline"
+              onClick={() => void router.navigate({ href: "/" })}
+            >
+              {m.root_error_home()}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 

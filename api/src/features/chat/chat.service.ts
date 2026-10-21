@@ -69,6 +69,7 @@ interface LeanMember {
   channelId: string
   userId: string
   lastReadAt: Date
+  lastDeliveredAt?: Date
   clearedAt?: Date
   hidden?: boolean
 }
@@ -167,14 +168,31 @@ export class ChatService {
     const shownIds = channels.map((c) => c.channelId)
     const everyMember = await this.members
       .find({ channelId: { $in: shownIds } })
-      .select("channelId userId")
-      .lean<Pick<LeanMember, "channelId" | "userId">[]>()
+      .select("channelId userId lastReadAt lastDeliveredAt")
+      .lean<
+        Pick<
+          LeanMember,
+          "channelId" | "userId" | "lastReadAt" | "lastDeliveredAt"
+        >[]
+      >()
     const byChannel = new Map<string, string[]>()
+    const readByChannel = new Map<string, Record<string, string>>()
+    const deliveredByChannel = new Map<string, Record<string, string>>()
     for (const m of everyMember) {
       byChannel.set(m.channelId, [
         ...(byChannel.get(m.channelId) ?? []),
         m.userId,
       ])
+      if (m.lastReadAt) {
+        const map = readByChannel.get(m.channelId) ?? {}
+        map[m.userId] = m.lastReadAt.toISOString()
+        readByChannel.set(m.channelId, map)
+      }
+      if (m.lastDeliveredAt) {
+        const map = deliveredByChannel.get(m.channelId) ?? {}
+        map[m.userId] = m.lastDeliveredAt.toISOString()
+        deliveredByChannel.set(m.channelId, map)
+      }
     }
     const users = await this.resolveUsers(everyMember.map((m) => m.userId))
     const myState = new Map(mine.map((m) => [m.channelId, m]))
@@ -219,6 +237,8 @@ export class ChatService {
               }
             : {}),
           updatedAt: (c.lastMessageAt ?? c.createdAt).toISOString(),
+          memberReadAt: readByChannel.get(c.channelId) ?? {},
+          memberDeliveredAt: deliveredByChannel.get(c.channelId) ?? {},
         }
       })
     )

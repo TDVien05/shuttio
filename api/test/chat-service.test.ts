@@ -39,6 +39,7 @@ import {
 } from "../src/features/chat/chat.schema.js"
 import { ChatService } from "../src/features/chat/chat.service.js"
 import { ClerkDirectoryService } from "../src/features/directory/clerk-directory.service.js"
+import { NotificationsService } from "../src/features/notifications/notifications.service.js"
 import { Venue, VenueSchema } from "../src/features/venues/venue.schema.js"
 
 // ── Pure helpers (always run) ───────────────────────────────────────────────
@@ -143,7 +144,13 @@ function getHarness(): Promise<Harness> {
               ),
             findExisting: (id: string) =>
               Promise.resolve(directoryUsers.get(id) ?? null),
+            getOne: (id: string) =>
+              Promise.resolve(directoryUsers.get(id) ?? null),
           },
+        },
+        {
+          provide: NotificationsService,
+          useValue: { recordChatMessage: () => Promise.resolve() },
         },
       ],
     }).compile()

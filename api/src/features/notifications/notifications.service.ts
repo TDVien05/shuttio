@@ -11,9 +11,16 @@ import { isDuplicateKeyError } from "../../common/mongo-util.js"
 import { CentrifugoService } from "../realtime/centrifugo.service.js"
 import { userNotificationsChannel } from "../realtime/channels.js"
 import {
+  NotificationEmailEvent,
+  type NotificationEmailEventDocument,
+} from "./email-outbox.schema.js"
+import {
   Notification,
   type NotificationDocument,
 } from "./notification.schema.js"
+
+/** Length of the chat digest window: one bell row per sender per window. */
+export const CHAT_WINDOW_MS = 15 * 60 * 1000
 
 /**
  * What a producer needs to deliver a notification — deliberately shaped like
@@ -60,6 +67,8 @@ export class NotificationsService {
   constructor(
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
+    @InjectModel(NotificationEmailEvent.name)
+    private readonly emailModel: Model<NotificationEmailEventDocument>,
     @Inject(CentrifugoService) private readonly centrifugo: CentrifugoService
   ) {}
 
@@ -84,7 +93,51 @@ export class NotificationsService {
       if (!isDuplicateKeyError(err)) throw err
       return
     }
+    await this.emailModel.create({
+      userId,
+      kind: input.kind,
+      text: input.text,
+    })
     void this.centrifugo.publish(userNotificationsChannel(userId), {})
+  }
+
+  /**
+   * One chat message to one recipient. The bell gets a single row per sender
+   * per 15-minute window (upserted, so a burst of messages doesn't flood it);
+   * the email outbox gets one event per message, so the digest can say how
+   * many messages each sender sent.
+   */
+  async recordChatMessage(
+    recipientId: string,
+    input: {
+      channelId: string
+      senderId: string
+      senderName: string
+      href: string
+    }
+  ): Promise<void> {
+    const text = `${input.senderName} đã gửi tin nhắn mới`
+    const bucket = Math.floor(Date.now() / CHAT_WINDOW_MS)
+    const notifId = `chat:${recipientId}:${input.channelId}:${input.senderId}:${bucket}`
+    try {
+      await this.notificationModel.updateOne(
+        { userId: recipientId, notifId },
+        {
+          $set: { kind: "chat", text, href: input.href, read: false },
+        },
+        { upsert: true }
+      )
+    } catch (err) {
+      // Two concurrent messages can race the same upsert; the row exists either way.
+      if (!isDuplicateKeyError(err)) throw err
+    }
+    await this.emailModel.create({
+      userId: recipientId,
+      kind: "chat",
+      actorName: input.senderName,
+      text,
+    })
+    void this.centrifugo.publish(userNotificationsChannel(recipientId), {})
   }
 
   /** The signed-in user's notifications, newest first. */

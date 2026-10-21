@@ -53,7 +53,8 @@ export function GroupInfoDialog({
   const canDelete =
     (isGroup && (isCreator || onlyMember)) || (!isGroup && onlyMember)
 
-  const done = () => void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all() })
+  const done = () =>
+    void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all() })
   const failed = () => toast.error(m.chat_group_update_failed())
   const rename = useMutation({
     mutationFn: () => renameGroup(channel.id, name.trim()),

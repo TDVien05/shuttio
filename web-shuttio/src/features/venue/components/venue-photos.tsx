@@ -5,7 +5,10 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { useVenueData, useSaveVenuePhotos } from "@/features/venue/api/venue.queries"
+import {
+  useVenueData,
+  useSaveVenuePhotos,
+} from "@/features/venue/api/venue.queries"
 import { VenuePanel } from "@/features/venue/components/shared"
 import { signVenuePhotoUpload } from "@/features/venue/api/venue-api"
 import { m } from "@/paraglide/messages"

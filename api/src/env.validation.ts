@@ -29,6 +29,14 @@ const envSchema = z.object({
   // missing key crashes at boot instead of 500ing the first chat request.
   OPENROUTER_API_KEY: z.string().min(1, "OPENROUTER_API_KEY is required"),
   OPENROUTER_MODEL: z.string().min(1).default("xiaomi/mimo-v2.5"),
+  // SMTP for the 15-minute notification digest email. Any SMTP-capable
+  // provider works. Optional: without SMTP_HOST + MAIL_FROM the digest job
+  // keeps events buffered and sends nothing.
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASSWORD: z.string().min(1).optional(),
+  MAIL_FROM: z.string().min(1).optional(),
   // Cloudinary — venue photo uploads (signed direct uploads from the browser).
   // Optional so the API still boots without them; only the photo-upload
   // routes then fail with a clear 503 (VenuePhotosService).

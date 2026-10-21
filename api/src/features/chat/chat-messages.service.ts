@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
@@ -13,6 +14,8 @@ import type {
   ChatImageUploadSignature,
   ChatMessage as ChatMessageDto,
 } from "../../shared/index.js"
+import { ClerkDirectoryService } from "../directory/clerk-directory.service.js"
+import { NotificationsService } from "../notifications/notifications.service.js"
 import { ChatEventsService } from "./chat-events.service.js"
 import { ChatImagesService } from "./chat-images.service.js"
 import {
@@ -42,6 +45,8 @@ interface LeanMessage {
 /** Sending and reading messages. Channel/membership rules live in `ChatService`. */
 @Injectable()
 export class ChatMessagesService {
+  private readonly logger = new Logger(ChatMessagesService.name)
+
   constructor(
     @InjectModel(ChatChannel.name)
     private readonly channels: Model<ChatChannelDocument>,
@@ -50,8 +55,43 @@ export class ChatMessagesService {
     @InjectModel(ChatMessage.name)
     private readonly messages: Model<ChatMessageDocument>,
     @Inject(ChatEventsService) private readonly events: ChatEventsService,
-    @Inject(ChatImagesService) private readonly images: ChatImagesService
+    @Inject(ChatImagesService) private readonly images: ChatImagesService,
+    @Inject(ClerkDirectoryService)
+    private readonly directory: ClerkDirectoryService,
+    @Inject(NotificationsService)
+    private readonly notifications: NotificationsService
   ) {}
+
+  /**
+   * Tell every other member about a player message: the bell (one row per
+   * sender per window) and the digest email outbox. Best-effort, so a failure
+   * here never fails the message itself.
+   */
+  private async notifyRecipients(
+    channelId: string,
+    senderId: string
+  ): Promise<void> {
+    try {
+      const recipients = (await this.memberIds(channelId)).filter(
+        (id) => id !== senderId
+      )
+      if (!recipients.length) return
+      const senderName =
+        (await this.directory.getOne(senderId))?.name ?? "Người chơi"
+      for (const recipientId of recipients) {
+        await this.notifications.recordChatMessage(recipientId, {
+          channelId,
+          senderId,
+          senderName,
+          href: "/app/chat",
+        })
+      }
+    } catch (err) {
+      this.logger.error(
+        `Chat notification failed for ${channelId}: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
 
   private toDto(doc: LeanMessage): ChatMessageDto {
     const image = this.images.deliver(doc.image)
@@ -164,11 +204,11 @@ export class ChatMessagesService {
       }
     )
     // A new message brings a "deleted for me" conversation back, and the
-    // sender has by definition read up to their own message.
+    // sender has by definition read and received up to their own message.
     await this.members.updateMany({ channelId }, { $set: { hidden: false } })
     await this.members.updateOne(
       { channelId, userId: senderId },
-      { $set: { lastReadAt: createdAt } }
+      { $set: { lastReadAt: createdAt, lastDeliveredAt: createdAt } }
     )
     const dto = this.toDto({
       _id: doc._id,
@@ -180,6 +220,7 @@ export class ChatMessagesService {
       createdAt,
     })
     this.events.message(await this.memberIds(channelId), dto)
+    if (!system) void this.notifyRecipients(channelId, senderId)
     return dto
   }
 
@@ -219,11 +260,26 @@ export class ChatMessagesService {
   /** Mark everything in the conversation read for the caller. */
   async markRead(userId: string, channelId: string): Promise<void> {
     await this.assertMember(userId, channelId)
+    const now = new Date()
     await this.members.updateOne(
       { channelId, userId },
-      { $set: { lastReadAt: new Date() } }
+      { $set: { lastReadAt: now, lastDeliveredAt: now } }
     )
+    const memberIds = await this.memberIds(channelId)
+    this.events.read(memberIds, channelId, userId, now.toISOString())
     // The caller's other tabs/devices refresh their unread badges.
     this.events.channelChanged([userId], channelId)
+  }
+
+  /** Mark messages in the conversation delivered to the caller's client. */
+  async markDelivered(userId: string, channelId: string): Promise<void> {
+    await this.assertMember(userId, channelId)
+    const now = new Date()
+    await this.members.updateOne(
+      { channelId, userId },
+      { $set: { lastDeliveredAt: now } }
+    )
+    const memberIds = await this.memberIds(channelId)
+    this.events.delivered(memberIds, channelId, userId, now.toISOString())
   }
 }

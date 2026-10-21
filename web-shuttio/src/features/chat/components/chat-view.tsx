@@ -6,7 +6,14 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
-import { ArrowLeft, Info, MessageSquarePlus, Trash2 } from "lucide-react"
+import {
+  ArrowLeft,
+  Check,
+  CheckCheck,
+  Info,
+  MessageSquarePlus,
+  Trash2,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -36,6 +43,8 @@ import {
   appendMessage,
   chatQueries,
   flattenMessages,
+  removeMessage,
+  replaceOrAppendMessage,
 } from "@/features/chat/lib/chat-queries"
 import type { MessagePages } from "@/features/chat/lib/chat-queries"
 import {
@@ -151,8 +160,14 @@ export function ChatView({
                       </span>
                     </span>
                     <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-xs font-normal text-muted-foreground">
-                        {previewText(c, userId)}
+                      <span className="flex items-center gap-1 truncate text-xs font-normal text-muted-foreground">
+                        <LastMessageStatusIcon
+                          channel={c}
+                          currentUserId={userId}
+                        />
+                        <span className="truncate">
+                          {previewText(c, userId)}
+                        </span>
                       </span>
                       {c.unread > 0 && (
                         <span
@@ -205,6 +220,39 @@ export function ChatView({
   )
 }
 
+function LastMessageStatusIcon({
+  channel,
+  currentUserId,
+}: {
+  channel: ChatChannel
+  currentUserId: string
+}) {
+  if (!channel.lastMessage || channel.lastMessage.senderId !== currentUserId) {
+    return null
+  }
+  const lastTime = new Date(channel.lastMessage.createdAt).getTime()
+  const otherMembers = channel.members.filter((m) => m.id !== currentUserId)
+  if (!otherMembers.length) return null
+
+  const isSeen = otherMembers.some((m) => {
+    const readAt = channel.memberReadAt?.[m.id]
+    return readAt ? new Date(readAt).getTime() >= lastTime : false
+  })
+  if (isSeen) {
+    return <CheckCheck className="size-3 shrink-0 text-brand" />
+  }
+
+  const isDelivered = otherMembers.some((m) => {
+    const deliveredAt = channel.memberDeliveredAt?.[m.id]
+    return deliveredAt ? new Date(deliveredAt).getTime() >= lastTime : false
+  })
+  if (isDelivered) {
+    return <CheckCheck className="size-3 shrink-0 text-muted-foreground/70" />
+  }
+
+  return <Check className="size-3 shrink-0 text-muted-foreground/70" />
+}
+
 function Conversation({
   channel,
   userId,
@@ -227,12 +275,28 @@ function Conversation({
     }
   }, [channel.id, channel.unread, lastId])
 
-  const afterSend = (message: ChatMessage) => {
+  const afterSend = (message: ChatMessage, tempId?: string) => {
+    queryClient.setQueryData<MessagePages>(
+      chatQueries.messages(channel.id).queryKey,
+      (prev) => replaceOrAppendMessage(prev, message, tempId)
+    )
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.chat.channelsAll(),
+    })
+  }
+
+  const onOptimistic = (message: ChatMessage) => {
     queryClient.setQueryData<MessagePages>(
       chatQueries.messages(channel.id).queryKey,
       (prev) => appendMessage(prev, message)
     )
-    void queryClient.invalidateQueries({ queryKey: queryKeys.chat.channelsAll() })
+  }
+
+  const onFailed = (tempId: string) => {
+    queryClient.setQueryData<MessagePages>(
+      chatQueries.messages(channel.id).queryKey,
+      (prev) => removeMessage(prev, tempId)
+    )
   }
 
   // DMs and venue threads: "delete" only removes it for the caller.
@@ -335,7 +399,12 @@ function Conversation({
           {m.chat_frozen_notice()}
         </p>
       ) : (
-        <Composer channelId={channel.id} onSent={afterSend} />
+        <Composer
+          channelId={channel.id}
+          onSent={afterSend}
+          onOptimistic={onOptimistic}
+          onFailed={onFailed}
+        />
       )}
 
       {isGroupLike && (

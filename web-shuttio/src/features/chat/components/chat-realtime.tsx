@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query"
 
-import type { ChatEvent } from "@/lib/shared"
+import type { ChatChannel, ChatEvent } from "@/lib/shared"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
+import { markChannelDelivered } from "@/features/chat/api/chat-api"
 import { appendMessage, chatQueries } from "@/features/chat/lib/chat-queries"
 import type { MessagePages } from "@/features/chat/lib/chat-queries"
 import { useChannelInvalidation, userChatChannel } from "@/lib/realtime"
@@ -27,6 +28,41 @@ export function ChatRealtime() {
           queryClient.setQueryData<MessagePages>(
             chatQueries.messages(event.channelId).queryKey,
             (prev) => appendMessage(prev, event.message)
+          )
+          if (event.message.senderId !== userId) {
+            void markChannelDelivered(event.channelId)
+          }
+        } else if (event.type === "read") {
+          queryClient.setQueriesData<ChatChannel[]>(
+            { queryKey: queryKeys.chat.channelsAll() },
+            (prev) =>
+              prev?.map((c) =>
+                c.id === event.channelId
+                  ? {
+                      ...c,
+                      memberReadAt: {
+                        ...c.memberReadAt,
+                        [event.userId]: event.lastReadAt,
+                      },
+                    }
+                  : c
+              )
+          )
+        } else if (event.type === "delivered") {
+          queryClient.setQueriesData<ChatChannel[]>(
+            { queryKey: queryKeys.chat.channelsAll() },
+            (prev) =>
+              prev?.map((c) =>
+                c.id === event.channelId
+                  ? {
+                      ...c,
+                      memberDeliveredAt: {
+                        ...c.memberDeliveredAt,
+                        [event.userId]: event.lastDeliveredAt,
+                      },
+                    }
+                  : c
+              )
           )
         }
       },

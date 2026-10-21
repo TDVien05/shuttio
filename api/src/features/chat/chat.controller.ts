@@ -80,6 +80,13 @@ export class ChatController {
     return { ok: true }
   }
 
+  /** Mark the conversation delivered for the caller. */
+  @Post("channels/:channelId/delivered")
+  async delivered(@UserId() userId: string, @Param() param: ChannelParamDto) {
+    await this.messages.markDelivered(userId, param.channelId)
+    return { ok: true }
+  }
+
   /** Signed params for a direct browser → Cloudinary (private) picture upload. */
   @UserThrottle({ limit: 30, ttl: 60_000 })
   @Post("channels/:channelId/image-signature")
