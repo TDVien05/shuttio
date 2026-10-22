@@ -3,7 +3,7 @@
 # Stages: `dev` (docker compose, `nest start --watch`) and the default final
 # stage (production: compiled `dist/` + prod deps, non-root).
 
-FROM node:26-slim AS base
+FROM node:26.12.1-slim AS base
 RUN npm install -g pnpm@12.14.0
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -25,7 +25,7 @@ FROM base AS prod-deps
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --store-dir /pnpm/store
 
-FROM node:26-slim AS production
+FROM node:26.12.1-slim AS production
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json ./

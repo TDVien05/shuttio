@@ -3,7 +3,7 @@
 # Stages: `dev` (docker compose, Vite dev server) and the default final stage
 # (production: Nitro node server, ~only `.output/`).
 
-FROM node:26-slim AS base
+FROM node:26.12.1-slim AS base
 RUN npm install -g pnpm@12.14.0
 WORKDIR /app
 
@@ -28,7 +28,7 @@ ARG VITE_CLOUDINARY_CLOUD_NAME
 COPY . .
 RUN pnpm build
 
-FROM node:26-alpine AS production
+FROM node:26.12.1-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000
 COPY --from=build /app/.output ./.output
