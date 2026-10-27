@@ -2,15 +2,9 @@ import { Inject, Injectable } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
 import type { Model } from "mongoose"
 
-import {
-  initialsOf,
-  type Player as PlayerType,
-  type PlayerAssessment as PlayerAssessmentData,
-} from "../../shared/index.js"
-import {
-  PlayerAssessment,
-  type PlayerAssessmentDocument,
-} from "../assessment/assessment.schema.js"
+import { initialsOf, type Player as PlayerType } from "../../shared/index.js"
+import { EloRating, type EloRatingDocument } from "../elo/elo-rating.schema.js"
+import { levelForElo } from "../elo/initial-assessment.scoring.js"
 import { ClerkDirectoryService } from "../directory/clerk-directory.service.js"
 
 import { Player, toPlayer, type PlayerDocument } from "./player.schema.js"
@@ -26,8 +20,8 @@ export class PlayerService {
   constructor(
     @InjectModel(Player.name)
     private readonly playerModel: Model<PlayerDocument>,
-    @InjectModel(PlayerAssessment.name)
-    private readonly assessmentModel: Model<PlayerAssessmentDocument>,
+    @InjectModel(EloRating.name)
+    private readonly eloModel: Model<EloRatingDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
     @Inject(ClerkDirectoryService)
@@ -36,18 +30,22 @@ export class PlayerService {
 
   /**
    * Real people the player can be matched with: accounts that finished the
-   * skills assessment (that is what gives them a level) and still exist in
-   * Clerk, excluding the caller. Name and photo come from Clerk so a deleted
-   * account never shows up as a ghost.
+   * got an Elo rating (assessment or skip — that is what gives them a level)
+   * and still exist in Clerk, excluding the caller. Name and photo come from
+   * Clerk so a deleted account never shows up as a ghost.
    */
   async listRealPlayers(excludeUserId?: string): Promise<PlayerType[]> {
-    const assessed = await this.assessmentModel
-      .find(excludeUserId ? { userId: { $ne: excludeUserId } } : {})
-      .lean<{ userId: string; data?: PlayerAssessmentData }[]>()
-    const withLevel = assessed.flatMap((row) => {
-      const level = row.data?.results?.badminton?.bucket
-      return level ? [{ userId: row.userId, level }] : []
-    })
+    const rated = await this.eloModel
+      .find({
+        discipline: "DOUBLES",
+        ...(excludeUserId ? { userId: { $ne: excludeUserId } } : {}),
+      })
+      .lean<{ userId: string; currentElo?: number }[]>()
+    const withLevel = rated.flatMap((row) =>
+      typeof row.currentElo === "number"
+        ? [{ userId: row.userId, level: levelForElo(row.currentElo) }]
+        : []
+    )
     if (!withLevel.length) return []
 
     const ids = withLevel.map((row) => row.userId)

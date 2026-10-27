@@ -14,11 +14,11 @@ import { AccountModule } from "./features/account/account.module.js"
 import { AdminModule } from "./features/admin/admin.module.js"
 import { AiModule } from "./features/ai/ai.module.js"
 import { AppReviewsModule } from "./features/app-reviews/app-reviews.module.js"
-import { AssessmentModule } from "./features/assessment/assessment.module.js"
 import { BanksModule } from "./features/banks/banks.module.js"
 import { BookingsModule } from "./features/bookings/bookings.module.js"
 import { ChatModule } from "./features/chat/chat.module.js"
 import { CourtsModule } from "./features/courts/courts.module.js"
+import { EloModule } from "./features/elo/elo.module.js"
 import { DiscountsModule } from "./features/discounts/discounts.module.js"
 import { HealthController } from "./features/health/health.controller.js"
 import { NotificationsModule } from "./features/notifications/notifications.module.js"
@@ -68,7 +68,7 @@ import { VenuesModule } from "./features/venues/venues.module.js"
     SessionsModule,
     RoomsModule,
     RatingsModule,
-    AssessmentModule,
+    EloModule,
     VenuesModule,
     VenueWorkspaceModule,
     AccountModule,

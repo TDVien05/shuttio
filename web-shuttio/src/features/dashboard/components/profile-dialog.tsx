@@ -16,13 +16,11 @@ import {
 } from "@/components/ui/dialog"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { useData } from "@/features/dashboard/components/data-provider"
-import { assessmentQueries } from "@/features/assessment/api/assessment.queries"
+import { eloQueries } from "@/features/elo/api/elo.queries"
+import { profileQueries } from "@/features/dashboard/api/profile.queries"
 import { usePlayerIdentity } from "@/features/play/hooks/use-player-identity"
 import { LevelChip, SportDot } from "@/features/dashboard/components/shared"
-import {
-  rangeLabel,
-  PLAYER_ASSESSMENT_PATH,
-} from "@/features/assessment/lib/player-assessment"
+import { ELO_ASSESSMENT_PATH } from "@/features/elo/lib/elo"
 import { m } from "@/paraglide/messages"
 
 const sportsMessages = {
@@ -38,12 +36,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
   const sUser = useAuthUser()
   const router = useRouter()
   const { userName } = usePlayerIdentity()
-  const { user: USER } = useData()
-
-  const { data: assessment = null } = useQuery({
-    ...assessmentQueries.assessment(),
-    enabled: open,
-  })
+  const { user: USER, elo } = useData()
 
   const accountName = sUser.name || userName
   const accountSubtitle = sUser.email || USER.handle
@@ -55,8 +48,6 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     : `@${accountSubtitle}`
 
   const bio = m.profile_bio()
-
-  const badminton = assessment?.results.badminton
 
   return (
     <Dialog
@@ -116,32 +107,31 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                 </div>
                 <div className="z-10 mt-1">
                   <p className="font-heading text-base leading-tight font-bold text-foreground">
-                    {badminton
-                      ? rangeLabel("badminton", badminton.score)
-                      : m.profile_not_assessed()}
+                    {elo ? elo.label.name : m.profile_not_assessed()}
                   </p>
                   <p className="mt-0.5 text-micro text-muted-foreground tabular-nums">
-                    {m.profile_points({
-                      score: badminton ? badminton.score : 0,
-                    })}
+                    {m.profile_elo({ elo: elo?.elo ?? 0 })}
                   </p>
                 </div>
               </div>
             </div>
 
-            <Button
-              shape="pill"
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onPress={() => {
-                onOpenChange(false)
-                void router.navigate({ href: PLAYER_ASSESSMENT_PATH })
-              }}
-            >
-              <RotateCcw className="size-4" />
-              {m.profile_redo_skills()}
-            </Button>
+            {/* Elo khởi tạo chỉ làm bảng hỏi được một lần, để thay Elo mặc định. */}
+            {elo?.canTakeAssessment ? (
+              <Button
+                shape="pill"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onPress={() => {
+                  onOpenChange(false)
+                  void router.navigate({ href: ELO_ASSESSMENT_PATH })
+                }}
+              >
+                <RotateCcw className="size-4" />
+                {m.profile_redo_skills()}
+              </Button>
+            ) : null}
           </div>
 
           <PlayerReviews userId={sUser.id} open={open} />
@@ -292,7 +282,7 @@ export function PlayerProfileDialog({
 
 /**
  * A real player's assessed level per sport
- * (`/api/assessment/users/:id/levels`) — loaded when the profile opens, so a
+ * (`/api/elo/users/:id/level`) — loaded when the profile opens, so a
  * browsing player can judge the line-up before asking to join a room.
  */
 function PlayerSkillLevels({
@@ -307,7 +297,7 @@ function PlayerSkillLevels({
     isPending: loading,
     isError,
   } = useQuery({
-    ...assessmentQueries.playerLevels(userId),
+    ...eloQueries.playerLevel(userId),
     enabled: open && Boolean(userId),
   })
 
@@ -332,7 +322,7 @@ function PlayerSkillLevels({
               <LevelChip level={l.level} />
             </div>
             <span className="ml-auto font-mono text-sm font-bold text-brand tabular-nums">
-              {m.profile_points({ score: l.score })}
+              {m.profile_elo({ elo: l.elo })}
             </span>
           </div>
         ))
@@ -356,7 +346,7 @@ function PlayerReviews({ userId, open }: { userId: string; open: boolean }) {
     isPending: loading,
     isError,
   } = useQuery({
-    ...assessmentQueries.playerReviews(userId),
+    ...profileQueries.playerReviews(userId),
     enabled: open && Boolean(userId),
   })
   const average = summary?.average ?? 0

@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 
-import { AssessmentModule } from "../assessment/assessment.module.js"
+import { EloModule } from "../elo/elo.module.js"
 import { CourtsModule } from "../courts/courts.module.js"
 import { PlayersModule } from "../players/players.module.js"
 import { SessionsModule } from "../sessions/sessions.module.js"
@@ -16,7 +16,7 @@ import { SeedService } from "./seed.service.js"
     PlayersModule,
     SessionsModule,
     VenuesModule,
-    AssessmentModule,
+    EloModule,
   ],
   controllers: [SeedController],
   providers: [SeedService],

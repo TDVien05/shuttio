@@ -1151,42 +1151,42 @@ export interface VenueInsight {
 export const ACCOUNT_TYPES = ["player", "venue", "both"] as const
 export type AccountType = (typeof ACCOUNT_TYPES)[number]
 
-// ── Player skills assessment ─────────────────────────────────────────────────
+// ── Player Elo (initial doubles rating) ──────────────────────────────────────
 
-/** The sports a player can self-assess (the app's racquet sports). */
-export type AssessmentSport = Extract<SportKey, "badminton">
-
-/** A player's computed result for one sport. */
-export interface SportAssessmentResult {
-  sport: AssessmentSport
-  score: number
-  levelLabel: string
-  bucket: Level
-  /** questionId → chosen answer key, so the wizard can restore prior answers. */
-  answers: Record<string, string>
+/** Reference label for an Elo (no professional certification implied). */
+export interface EloLabel {
+  code: "BEGINNER" | "BASIC" | "INTERMEDIATE" | "ADVANCED" | "HIGH"
+  name: string
 }
 
 /**
- * The public slice of another player's assessment, shown on their profile —
- * the level they landed on per sport, never their individual answers.
+ * A player's Elo rating as the dashboard sees it. Initial Elo is a PROVISIONAL
+ * self-assessment estimate (or the default 1000 when the questionnaire was
+ * skipped) — never a match-verified rating. `level` is the coarse
+ * beginner/intermediate/advanced bucket derived from the Elo, used by
+ * matchmaking and room filters.
+ */
+export interface PlayerElo {
+  elo: number
+  label: EloLabel
+  level: Level
+  status: "PROVISIONAL"
+  source: "ASSESSMENT" | "DEFAULT"
+  /** UTC ISO; null while the player is still on the skipped default. */
+  completedAt: string | null
+  /** The one-time questionnaire can still replace a skipped default Elo. */
+  canTakeAssessment: boolean
+}
+
+/**
+ * The public slice of another player's Elo, shown on their profile — their
+ * level and rating, never the individual answers.
  */
 export interface PlayerSkillLevel {
-  sport: AssessmentSport
+  sport: SportKey
   level: Level
-  score: number
-}
-
-/**
- * A player's completed skills self-assessment. Persisted per Clerk user (Mongo,
- * layered into the seed) with `localStorage` as a client cache — the many
- * synchronous readers (matchmaking, profile, gate) read the cache, which the
- * dashboard hydrates from the server value on load.
- */
-export interface PlayerAssessment {
-  version: 1
-  completedAt: string
-  selectedSports: AssessmentSport[]
-  results: Record<AssessmentSport, SportAssessmentResult | undefined>
+  elo: number
+  label: EloLabel
 }
 
 // ── The seed payload (what the API serves & the web hydrates) ─────────────────
@@ -1248,8 +1248,8 @@ export interface Seed {
   activeVenueId: string
   /** The active venue's full operator bundle (stats, courts, reservations, …). */
   venue: VenueSeed
-  /** The signed-in player's persisted skills assessment (null until they take it). */
-  assessment: PlayerAssessment | null
+  /** The signed-in player's Elo (null until they take the assessment or skip). */
+  elo: PlayerElo | null
   /** Effective account type (stored choice ∪ inferred facts); null until chosen. */
   accountType: AccountType | null
   /** The signed-in player's saved contact phone number (null until they set one). */

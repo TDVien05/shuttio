@@ -116,7 +116,7 @@ export class OwnerRemovalService {
     const profile = await col<{ accountType?: string }>("profiles").findOne({
       userId: ownerId,
     })
-    const assessed = await col("playerassessments").findOne({
+    const assessed = await col("elo_ratings").findOne({
       userId: ownerId,
     })
     const alsoPlayer =
