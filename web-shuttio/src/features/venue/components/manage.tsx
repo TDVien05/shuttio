@@ -2,6 +2,11 @@ import {
   BLEED_TABLE_CLASS,
   TableSection,
 } from "@/components/layouts/table-section"
+import {
+  DesktopOnly,
+  MobileCard,
+  MobileCardList,
+} from "@/components/layouts/mobile-cards"
 import { useRouter } from "@tanstack/react-router"
 import * as React from "react"
 import { toast } from "sonner"
@@ -130,6 +135,44 @@ export function VenueManageView({
     })
   }
 
+  const branchStates = (b: BranchSummary) => (
+    <>
+    {b.courtCount === 0 ? (
+      <Badge variant="outline" className="text-muted-foreground">
+        {m.venue_manage_overview_empty()}
+      </Badge>
+    ) : (
+      <div className="flex flex-wrap gap-1">
+        {COURT_STATES.filter(
+          (state) => b.stateCounts[state] > 0
+        ).map((state) => (
+          <span
+            key={state}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-mini font-medium",
+              courtStateAccent[state]
+            )}
+          >
+            {b.stateCounts[state]} {stateLabel[state]}
+          </span>
+        ))}
+      </div>
+    )}
+    </>
+  )
+
+  const branchManage = (b: BranchSummary) => (
+    <LinkButton
+      shape="pill"
+      size="sm"
+      variant="outline"
+
+      href={`${venueBase(b.venueId)}/courts`}
+    >
+      {m.venue_manage_overview_manage()}
+    </LinkButton>
+  )
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -149,9 +192,10 @@ export function VenueManageView({
         <p className="px-4 py-3 text-sm text-muted-foreground sm:px-6">
           {m.venue_manage_overview_subtitle()}
         </p>
-        <Table className={BLEED_TABLE_CLASS}>
+        <DesktopOnly>
+<Table className={BLEED_TABLE_CLASS}>
           <TableHeader>
-            <TableHead>{m.venue_manage_overview_col_branch()}</TableHead>
+            <TableHead isRowHeader>{m.venue_manage_overview_col_branch()}</TableHead>
             <TableHead>{m.venue_manage_overview_col_area()}</TableHead>
             <TableHead align="right">
               {m.venue_manage_overview_col_courts()}
@@ -185,27 +229,7 @@ export function VenueManageView({
                   {b.courtCount}
                 </TableCell>
                 <TableCell>
-                  {b.courtCount === 0 ? (
-                    <Badge variant="outline" className="text-muted-foreground">
-                      {m.venue_manage_overview_empty()}
-                    </Badge>
-                  ) : (
-                    <div className="flex flex-wrap gap-1">
-                      {COURT_STATES.filter(
-                        (state) => b.stateCounts[state] > 0
-                      ).map((state) => (
-                        <span
-                          key={state}
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-mini font-medium",
-                            courtStateAccent[state]
-                          )}
-                        >
-                          {b.stateCounts[state]} {stateLabel[state]}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {branchStates(b)}
                 </TableCell>
                 <TableCell>
                   <Badge variant={APPROVAL_VARIANT[b.approval ?? "approved"]}>
@@ -213,20 +237,29 @@ export function VenueManageView({
                   </Badge>
                 </TableCell>
                 <TableCell align="right">
-                  <LinkButton
-                    shape="pill"
-                    size="sm"
-                    variant="outline"
-
-                    href={`${venueBase(b.venueId)}/courts`}
-                  >
-                    {m.venue_manage_overview_manage()}
-                  </LinkButton>
+                  {branchManage(b)}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+</DesktopOnly>
+<MobileCardList>
+{branches.map((b) => (
+<MobileCard
+ key={b.venueId}
+ className={cn(b.venueId === venueId && "bg-brand/5")}
+ title={<span className="flex flex-wrap items-center gap-2">{b.name}{b.venueId === venueId ? (<Badge variant="secondary">{m.venue_manage_overview_current()}</Badge>) : null}</span>}
+ badge={<Badge variant={APPROVAL_VARIANT[b.approval ?? "approved"]}>{overviewApprovalMessages[b.approval ?? "approved"]()}</Badge>}
+ fields={[
+{ label: m.venue_manage_overview_col_area(), value: <span className="text-muted-foreground">{b.ward} · {b.province}</span> },
+{ label: m.venue_manage_overview_col_courts(), value: b.courtCount },
+{ label: m.venue_manage_overview_col_states(), value: <div className="flex justify-end">{branchStates(b)}</div> },
+]}
+ actions={branchManage(b)}
+/>
+))}
+</MobileCardList>
       </TableSection>
 
       {VENUE.archived ? (

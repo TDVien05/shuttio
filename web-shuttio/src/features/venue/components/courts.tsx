@@ -2,6 +2,11 @@ import {
   BLEED_TABLE_CLASS,
   TableSection,
 } from "@/components/layouts/table-section"
+import {
+  DesktopOnly,
+  MobileCard,
+  MobileCardList,
+} from "@/components/layouts/mobile-cards"
 import { z } from "zod"
 import { formatVndText } from "@/lib/money"
 import * as React from "react"
@@ -192,6 +197,48 @@ export function VenueCourtsView({
     })
   }, [archiveTarget, deleteCourt])
 
+  const courtStateBadge = (court: VenueCourt) => (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-mini font-medium",
+          courtStateAccent[court.state]
+        )}
+      >
+        {court.state === "maintenance" ? (
+          <Wrench className="size-3" />
+        ) : null}
+        {stateLabel[court.state]}
+      </span>
+  )
+
+  const courtActions = (court: VenueCourt) => (
+      <DropdownMenuTrigger>
+        <Button
+          shape="pill"
+          size="icon-sm"
+          variant="ghost"
+          className="text-muted-foreground"
+          aria-label={m.venue_courts_row_actions()}
+        >
+          <MoreVertical className="size-4" />
+        </Button>
+        <DropdownMenu placement="bottom end">
+          <DropdownMenuItem
+            onAction={() => openEditDialog(court)}
+          >
+            <Pencil />
+            {m.venue_courts_edit()}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            onAction={() => setArchiveTarget(court)}
+          >
+            {m.venue_courts_archive()}
+          </DropdownMenuItem>
+        </DropdownMenu>
+      </DropdownMenuTrigger>
+  )
+
   return (
     <div className="flex flex-col gap-5">
       {!embedded ? (
@@ -219,9 +266,11 @@ export function VenueCourtsView({
         }
       >
         {courts.length ? (
-          <Table className={BLEED_TABLE_CLASS}>
+          <>
+          <DesktopOnly>
+<Table className={BLEED_TABLE_CLASS}>
             <TableHeader className="bg-muted/30">
-              <TableHead density="compact">
+              <TableHead density="compact" isRowHeader>
                 {m.venue_courts_col_name()}
               </TableHead>
               <TableHead density="compact">
@@ -264,49 +313,32 @@ export function VenueCourtsView({
                     {formatVndText(court.pricePerHour)}
                   </TableCell>
                   <TableCell density="roomy">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-mini font-medium",
-                        courtStateAccent[court.state]
-                      )}
-                    >
-                      {court.state === "maintenance" ? (
-                        <Wrench className="size-3" />
-                      ) : null}
-                      {stateLabel[court.state]}
-                    </span>
+                    {courtStateBadge(court)}
                   </TableCell>
                   <TableCell density="roomy" align="right">
-                    <DropdownMenuTrigger>
-                      <Button
-                        shape="pill"
-                        size="icon-sm"
-                        variant="ghost"
-                        className="text-muted-foreground"
-                        aria-label={m.venue_courts_row_actions()}
-                      >
-                        <MoreVertical className="size-4" />
-                      </Button>
-                      <DropdownMenu placement="bottom end">
-                        <DropdownMenuItem
-                          onAction={() => openEditDialog(court)}
-                        >
-                          <Pencil />
-                          {m.venue_courts_edit()}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onAction={() => setArchiveTarget(court)}
-                        >
-                          {m.venue_courts_archive()}
-                        </DropdownMenuItem>
-                      </DropdownMenu>
-                    </DropdownMenuTrigger>
+                    {courtActions(court)}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+</DesktopOnly>
+<MobileCardList>
+{courts.map((court) => (
+<MobileCard
+ key={court.id}
+ title={court.name}
+ badge={courtStateBadge(court)}
+ fields={[
+{ label: m.venue_courts_col_sport(), value: <SportTag sport={court.sport} /> },
+{ label: m.venue_courts_col_surface(), value: court.surface || "—" },
+{ label: m.venue_courts_col_price(), value: <span className="font-heading font-semibold">{formatVndText(court.pricePerHour)}</span> },
+]}
+ actions={courtActions(court)}
+/>
+))}
+</MobileCardList>
+          </>
         ) : (
           <VenueEmpty text={m.venue_courts_empty()} />
         )}

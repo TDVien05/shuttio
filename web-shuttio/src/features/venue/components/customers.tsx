@@ -2,6 +2,7 @@ import {
   BLEED_TABLE_CLASS,
   TableSection,
 } from "@/components/layouts/table-section"
+import { DesktopOnly, RowCards } from "@/components/layouts/mobile-cards"
 import { formatVndText } from "@/lib/money"
 import * as React from "react"
 import { getLocale } from "@/paraglide/runtime"
@@ -325,7 +326,7 @@ export function VenueCustomersView({
         title={m.venue_customers_list_title()}
         icon={Users}
         action={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Tabs
               selectedKey={segment}
               onSelectionChange={(v) => setSegment(v as Segment)}
@@ -349,11 +350,17 @@ export function VenueCustomersView({
         }
       >
         {rows.length ? (
-          <Table className={BLEED_TABLE_CLASS}>
+          <>
+          <DesktopOnly>
+<Table className={BLEED_TABLE_CLASS}>
             <TableHeader className="bg-muted/30">
               {table.getHeaderGroups().flatMap((headerGroup) =>
                 headerGroup.headers.map((header) => (
-                  <TableHead density="compact" key={header.id}>
+                  <TableHead
+                  density="compact"
+                  key={header.id}
+                  isRowHeader={header.index === 0}
+                >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -387,6 +394,12 @@ export function VenueCustomersView({
               ))}
             </TableBody>
           </Table>
+</DesktopOnly>
+<RowCards
+ rows={table.getRowModel().rows}
+ labels={["", m.venue_customers_col_phone(), m.venue_customers_col_sport(), m.venue_customers_col_visits(), m.venue_customers_col_last_visit(), m.venue_customers_col_ltv(), m.venue_customers_col_no_show()]}
+/>
+          </>
         ) : (
           <VenueEmpty text={m.venue_customers_empty()} />
         )}

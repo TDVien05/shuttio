@@ -80,7 +80,7 @@ export function AdminComplaintsView({
                         {item.createdAt.slice(0, 4)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <p className="font-mono text-sm font-semibold tabular-nums">
                         {formatVndText(item.amount)}
                       </p>

@@ -1,4 +1,8 @@
 import { BLEED_TABLE_CLASS } from "@/components/layouts/table-section"
+import {
+  DesktopOnly,
+  RowCards,
+} from "@/components/layouts/mobile-cards"
 import * as React from "react"
 import { flexRender, useTable } from "@tanstack/react-table"
 import type { Column, ColumnDef, SortingState } from "@tanstack/react-table"
@@ -310,13 +314,14 @@ export function AdminDiscountsView({
         <VenueEmpty text={m.admin_discounts_empty()} />
       ) : (
         <div className="-mx-4 border-t sm:-mx-6">
-          <Table className={BLEED_TABLE_CLASS}>
+          <DesktopOnly>
+<Table className={BLEED_TABLE_CLASS}>
             <TableHeader>
               {table
                 .getHeaderGroups()
                 .flatMap((headerGroup) =>
                   headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} isRowHeader={header.index === 0}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -342,6 +347,11 @@ export function AdminDiscountsView({
               ))}
             </TableBody>
           </Table>
+</DesktopOnly>
+<RowCards
+ rows={visibleRows}
+ labels={["", m.admin_discounts_table_description(), m.admin_discounts_table_value(), m.admin_discounts_table_conditions(), m.admin_discounts_table_validity(), m.admin_discounts_table_usage(), m.admin_discounts_table_status(), ""]}
+/>
         </div>
       )}
 

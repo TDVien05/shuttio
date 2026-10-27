@@ -2,6 +2,7 @@ import {
   BLEED_TABLE_CLASS,
   TableSection,
 } from "@/components/layouts/table-section"
+import { DesktopOnly, RowCards } from "@/components/layouts/mobile-cards"
 import { cva } from "class-variance-authority"
 import { formatVndText } from "@/lib/money"
 import * as React from "react"
@@ -498,7 +499,8 @@ export function VenueReservationsView({
           </Tabs>
         }
       >
-        <Table className={BLEED_TABLE_CLASS}>
+        <DesktopOnly>
+<Table className={BLEED_TABLE_CLASS}>
           <TableHeader>
             {table.getHeaderGroups().flatMap((hg) =>
               hg.headers.map((header) => {
@@ -506,6 +508,7 @@ export function VenueReservationsView({
                 return (
                   <TableHead
                     key={header.id}
+                    isRowHeader={header.index === 0}
                     aria-sort={
                       !header.column.getCanSort()
                         ? undefined
@@ -573,6 +576,17 @@ export function VenueReservationsView({
             )}
           </TableBody>
         </Table>
+</DesktopOnly>
+{pageRows.length ? (
+<RowCards
+ rows={pageRows}
+ labels={["", m.venue_reservations_col_when(), m.venue_reservations_col_party(), m.venue_reservations_col_channel(), m.venue_reservations_col_status(), m.venue_reservations_col_price(), ""]}
+/>
+) : (
+<div className="md:hidden">
+<VenueEmpty text={m.venue_reservations_empty()} />
+</div>
+)}
         <div className="border-t px-4 py-3 sm:px-6">
           <ReservationPagination pagination={pagination} />
         </div>

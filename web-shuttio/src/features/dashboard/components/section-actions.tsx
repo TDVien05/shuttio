@@ -82,15 +82,34 @@ function VenueNewBookingAction() {
   const pathname = useLocation({ select: (l) => l.pathname })
   const venueId = venueIdFromPath(pathname)
   if (!venueId) return null
+  const schedulePath = `${venueBase(venueId)}/schedule`
+  const label = (
+    <>
+      <Plus />
+      <span className="hidden sm:inline">{m.venue_nav_new_booking()}</span>
+    </>
+  )
+  // Already on the schedule: ask it to open the walk-in dialog in place.
+  if (pathname === schedulePath) {
+    return (
+      <Button
+        shape="pill"
+        size="sm"
+        onPress={() =>
+          window.dispatchEvent(new CustomEvent("venue-new-booking"))
+        }
+      >
+        {label}
+      </Button>
+    )
+  }
   return (
     <LinkButton
       shape="pill"
       size="sm"
-
-      href={`${venueBase(venueId)}/schedule`}
+      href={`${schedulePath}?tab=calendar&new=true`}
     >
-      <Plus />
-      <span className="hidden sm:inline">{m.venue_nav_new_booking()}</span>
+      {label}
     </LinkButton>
   )
 }

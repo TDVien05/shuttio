@@ -46,7 +46,7 @@ export function AdminPagination({
       className={cn(
         "flex flex-wrap items-center justify-between gap-3",
         bleed &&
-          "sticky -bottom-4 -mx-4 mt-auto h-12 shrink-0 flex-nowrap border-t bg-background px-4 sm:-bottom-6 sm:-mx-6 sm:px-6"
+          "sticky -bottom-4 -mx-4 mt-auto shrink-0 border-t bg-background px-4 py-2 sm:-bottom-6 sm:-mx-6 sm:min-h-12 sm:flex-nowrap sm:px-6 sm:py-0"
       )}
     >
       <p className="text-sm text-muted-foreground" aria-live="polite">
@@ -56,7 +56,7 @@ export function AdminPagination({
           total,
         })}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-2 text-sm">
           {m.admin_pagination_page_size()}
           <select

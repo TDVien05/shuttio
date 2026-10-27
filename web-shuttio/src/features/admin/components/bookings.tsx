@@ -1,4 +1,8 @@
 import { BLEED_TABLE_CLASS } from "@/components/layouts/table-section"
+import {
+  DesktopOnly,
+  RowCards,
+} from "@/components/layouts/mobile-cards"
 import * as React from "react"
 import { flexRender, useTable } from "@tanstack/react-table"
 import type { Column, ColumnDef, SortingState } from "@tanstack/react-table"
@@ -255,13 +259,14 @@ export function AdminBookingsView({
         <VenueEmpty text={m.admin_bookings_empty()} />
       ) : (
         <div className="-mx-4 sm:-mx-6">
-          <Table className={BLEED_TABLE_CLASS}>
+          <DesktopOnly>
+<Table className={BLEED_TABLE_CLASS}>
             <TableHeader>
               {table
                 .getHeaderGroups()
                 .flatMap((headerGroup) =>
                   headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} isRowHeader={header.index === 0}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -287,6 +292,11 @@ export function AdminBookingsView({
               ))}
             </TableBody>
           </Table>
+</DesktopOnly>
+<RowCards
+ rows={visibleRows}
+ labels={["", m.admin_bookings_table_venue(), m.admin_bookings_table_court(), m.admin_bookings_table_when(), m.admin_bookings_table_price(), m.admin_bookings_table_status(), m.admin_bookings_table_payment(), ""]}
+/>
         </div>
       )}
 

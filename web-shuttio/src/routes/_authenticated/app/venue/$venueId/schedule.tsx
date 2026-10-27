@@ -10,6 +10,7 @@ export const Route = createFileRoute(
   validateSearch: z.object({
     tab: z.enum(["calendar", "reservations"]).optional(),
     day: z.string().optional(),
+    new: z.boolean().optional(),
   }),
   head: () =>
     pageTitle(
@@ -20,6 +21,12 @@ export const Route = createFileRoute(
 })
 
 function SchedulePage() {
-  const { tab, day } = Route.useSearch()
-  return <VenueScheduleWorkspace initialTab={tab} initialDay={day} />
+  const { tab, day, new: openNew } = Route.useSearch()
+  return (
+    <VenueScheduleWorkspace
+      initialTab={tab}
+      initialDay={day}
+      initialNew={openNew}
+    />
+  )
 }

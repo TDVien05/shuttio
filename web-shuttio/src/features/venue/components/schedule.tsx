@@ -135,8 +135,11 @@ const WALK_IN_OVERLAP_MESSAGE = "Selected time overlaps an existing reservation"
 export function VenueScheduleView({
   embedded = false,
   initialDay,
+  newBookingNonce = 0,
 }: {
   embedded?: boolean
+  /** Bumped by the topbar "Đặt sân mới" action to open the walk-in dialog. */
+  newBookingNonce?: number
   /** Land the day view on this ISO date instead of today (e.g. a deep link
    * from the Insights cold-slot panel to a specific weekday). */
   initialDay?: string
@@ -186,13 +189,30 @@ export function VenueScheduleView({
   const [weekCourtId, setWeekCourtId] = React.useState<string>(
     VENUE_COURTS[0]?.id ?? ""
   )
-  const [walkInDialog, setWalkInDialog] = React.useState<{
-    courtId: string
-    courtName: string
-    dayKey: string
-    start: string
-    durationMin: number
-  } | null>(null)
+  const [walkInDialog, setWalkInDialog] = React.useState<SlotTarget | null>(
+    null
+  )
+  const bookableCourts = VENUE_COURTS.filter((c) => c.state !== "maintenance")
+  // Open a walk-in dialog where the operator picks court, day and time
+  // (no calendar slot was clicked). Adjusted during render per the repo's
+  // no-sync-setState-in-effects rule.
+  const openNewWalkIn = (dayKey: string) => {
+    const court = bookableCourts.at(0) ?? VENUE_COURTS.at(0)
+    if (!court) return
+    setWalkInDialog({
+      courtId: court.id,
+      courtName: court.name,
+      dayKey,
+      start: VENUE.openFrom,
+      durationMin: 60,
+      pickSlot: true,
+    })
+  }
+  const [prevNonce, setPrevNonce] = React.useState(0)
+  if (newBookingNonce !== prevNonce) {
+    setPrevNonce(newBookingNonce)
+    if (newBookingNonce > 0) openNewWalkIn(cursor)
+  }
   const [blockDialog, setBlockDialog] = React.useState<{
     courtId: string
     courtName: string
@@ -707,6 +727,7 @@ export function VenueScheduleView({
 
       <WalkInDialog
         venueId={venueId}
+        courts={bookableCourts}
         reservation={walkInDialog}
         onClose={() => setWalkInDialog(null)}
       />
@@ -960,6 +981,8 @@ interface SlotTarget {
   dayKey: string
   start: string
   durationMin: number
+  /** Let the operator choose the court and day in the walk-in form. */
+  pickSlot?: boolean
 }
 
 const timeField = z.string().regex(/^\d{2}:\d{2}$/)
@@ -998,6 +1021,8 @@ function FormSubmit({ label }: { label: string }) {
 }
 
 const walkInSchema = z.object({
+  courtId: z.string().min(1),
+  dayKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   name: z.string().trim().min(1),
   phone: z.string().trim().min(1),
   start: timeField,
@@ -1006,10 +1031,12 @@ const walkInSchema = z.object({
 
 function WalkInDialog({
   venueId,
+  courts,
   reservation,
   onClose,
 }: {
   venueId: string
+  courts: { id: string; name: string }[]
   reservation: SlotTarget | null
   onClose: () => void
 }) {
@@ -1029,6 +1056,7 @@ function WalkInDialog({
         <WalkInForm
           key={`${reservation.courtId}-${reservation.dayKey}-${reservation.start}`}
           venueId={venueId}
+          courts={courts}
           target={reservation}
           onClose={onClose}
         />
@@ -1039,16 +1067,20 @@ function WalkInDialog({
 
 function WalkInForm({
   venueId,
+  courts,
   target,
   onClose,
 }: {
   venueId: string
+  courts: { id: string; name: string }[]
   target: SlotTarget
   onClose: () => void
 }) {
   const addWalkIn = useAddWalkInReservation(venueId)
   const form = useAppForm({
     defaultValues: {
+      courtId: target.courtId,
+      dayKey: target.dayKey,
       name: "",
       phone: "",
       start: target.start,
@@ -1057,16 +1089,18 @@ function WalkInForm({
     validators: { onChange: walkInSchema },
     onSubmit: async ({ value }) => {
       try {
+        const courtName =
+          courts.find((c) => c.id === value.courtId)?.name ?? target.courtName
         const created = await addWalkIn.mutateAsync({
-          courtId: target.courtId,
-          dayKey: target.dayKey,
+          courtId: value.courtId,
+          dayKey: value.dayKey,
           start: value.start,
           durationMin: value.durationMin,
           customerName: value.name,
           customerPhone: value.phone,
         })
         toast.success(m.venue_schedule_toast_walk_in_title(), {
-          description: `${target.courtName} · ${created.time}`,
+          description: `${courtName} · ${created.time}`,
         })
         onClose()
       } catch (error) {
@@ -1093,13 +1127,45 @@ function WalkInForm({
         void form.handleSubmit()
       }}
     >
-      <form.Subscribe selector={(state) => state.values.start}>
-        {(start) => (
-          <div className="rounded-2xl bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-            {target.courtName} · {start}
-          </div>
-        )}
-      </form.Subscribe>
+      {target.pickSlot ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <form.Field name="courtId">
+            {(field) => (
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
+                {m.venue_courts_col_name()}
+                <select
+                  className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                >
+                  {courts.map((court) => (
+                    <option key={court.id} value={court.id}>
+                      {court.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </form.Field>
+          <form.AppField name="dayKey">
+            {(field) => (
+              <field.TextField
+                label={m.venue_schedule_form_day()}
+                type="date"
+              />
+            )}
+          </form.AppField>
+        </div>
+      ) : (
+        <form.Subscribe selector={(state) => state.values.start}>
+          {(start) => (
+            <div className="rounded-2xl bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              {target.courtName} · {start}
+            </div>
+          )}
+        </form.Subscribe>
+      )}
       <form.AppField name="name">
         {(field) => <field.TextField label={m.venue_schedule_walk_in_name()} />}
       </form.AppField>

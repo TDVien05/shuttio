@@ -267,15 +267,18 @@ export class BookingsService {
    * slot (`createWalkIn`, `reschedule`, `createHold`): the venue must not be
    * suspended, the court must exist, not be archived or under maintenance,
    * the slot must fall within opening hours, and it must not overlap an
-   * operator court block. Returns the resolved court so callers that need it
-   * (pricing, name/sport for the booking record) don't look it up twice.
+   * operator court block. A past slot is rejected unless `allowPast` (the
+   * operator back-filling a walk-in that already happened). Returns the
+   * resolved court so callers that need it (pricing, name/sport for the
+   * booking record) don't look it up twice.
    */
   private assertSlotBookable(
     venueDoc: VenueDocument,
     courtId: string,
     dayKey: string,
     start: string,
-    durationMin: number
+    durationMin: number,
+    { allowPast = false }: { allowPast?: boolean } = {}
   ): VenueCourt {
     // Admin suspend gate — mirrors the venue-discovery filter in
     // `catalogCourts` (venues.service.ts): a suspended venue keeps its
@@ -290,7 +293,7 @@ export class BookingsService {
     if (court.state === "maintenance") {
       throw new BadRequestException("Court is under maintenance")
     }
-    assertNotPast(dayKey, start)
+    if (!allowPast) assertNotPast(dayKey, start)
     assertWithinHours(venueDoc.info, start, durationMin)
     assertNoCourtBlock(
       venueDoc.ops.blocks ?? [],
@@ -532,7 +535,8 @@ export class BookingsService {
       input.courtId,
       input.dayKey,
       input.start,
-      input.durationMin
+      input.durationMin,
+      { allowPast: true }
     )
 
     const created = await this.writeWithOverlapGuard(
