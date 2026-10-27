@@ -281,8 +281,12 @@ function QuestionCard({
   missing: boolean
   onSelect: (optionId: EloOptionId) => void
 }) {
+  const titleId = `${question.id}-title`
+  // Không dùng fieldset/legend: legend bị trình duyệt vẽ đè lên viền khung.
   return (
-    <fieldset
+    <div
+      role="radiogroup"
+      aria-labelledby={titleId}
       className={cn(
         "rounded-3xl border p-4 transition-colors sm:p-5",
         missing
@@ -290,10 +294,13 @@ function QuestionCard({
           : "border-border bg-card/70"
       )}
     >
-      <legend className="flex items-baseline gap-2 px-1 font-heading font-semibold">
+      <p
+        id={titleId}
+        className="flex items-baseline gap-2 px-1 font-heading font-semibold"
+      >
         <span className="text-brand tabular-nums">{index + 1}.</span>
         <span>{question.text}</span>
-      </legend>
+      </p>
       {question.description ? (
         <p className="mt-1 px-1 text-xs text-muted-foreground">
           {question.description}
@@ -342,7 +349,7 @@ function QuestionCard({
           {m.assessment_validation_missing_answer()}
         </p>
       ) : null}
-    </fieldset>
+    </div>
   )
 }
 

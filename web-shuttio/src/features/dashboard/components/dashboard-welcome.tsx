@@ -101,9 +101,9 @@ export function DashboardWelcome({
           cldImg={art.courtLines}
           alt=""
           aria-hidden
-          className="absolute inset-0 size-full object-fill opacity-85"
+          className="absolute top-0 left-1/2 h-[90%] w-150 max-w-none -translate-x-1/2 object-fill opacity-85 sm:inset-0 sm:left-0 sm:h-full sm:w-full sm:translate-x-0"
         />
-        <div className="relative mx-auto flex max-w-6xl flex-col items-center px-5 pt-14 sm:pt-20">
+        <div className="relative mx-auto flex max-w-6xl flex-col items-center px-5 pt-12 sm:pt-20">
           <AdvancedImage
             cldImg={art.left}
             alt=""
