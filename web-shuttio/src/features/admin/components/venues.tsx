@@ -2,6 +2,11 @@ import {
   BLEED_TABLE_CLASS,
   TableSection,
 } from "@/components/layouts/table-section"
+import {
+  DesktopOnly,
+  MobileCard,
+  MobileCardList,
+} from "@/components/layouts/mobile-cards"
 import * as React from "react"
 import { toast } from "sonner"
 
@@ -130,6 +135,62 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
       : []
   })
 
+  const approvalBadge = (venue: AdminVenueRow) => (
+    <Badge
+      variant={APPROVAL_VARIANT[venue.approval ?? "approved"]}
+    >
+      {approvalMessages[venue.approval ?? "approved"]()}
+    </Badge>
+  )
+
+  const statusBadge = (venue: AdminVenueRow) => (
+    <Badge variant={venue.archived ? "outline" : "secondary"}>
+      {venue.archived
+        ? m.admin_venues_status_archived()
+        : m.admin_venues_status_active()}
+    </Badge>
+  )
+
+  const venueActions = (venue: AdminVenueRow) => (
+    <div className="flex items-center justify-end gap-2">
+      {venue.archived ? (
+        <Button
+          shape="pill"
+          size="sm"
+          variant="outline"
+
+          isDisabled={pending === venue.id}
+          onPress={() => handleRestore(venue)}
+        >
+          {m.admin_venues_restore()}
+        </Button>
+      ) : (
+        <Button
+          shape="pill"
+          size="sm"
+          variant="destructive"
+
+          isDisabled={pending === venue.id}
+          onPress={() => handleSuspend(venue)}
+        >
+          {m.admin_venues_suspend()}
+        </Button>
+      )}
+      <Button
+        shape="pill"
+        size="sm"
+        variant="ghost"
+        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+        isDisabled={pending === `delete-${venue.id}`}
+        onPress={() =>
+          setDeletingVenue({ id: venue.id, name: venue.name })
+        }
+      >
+        {m.admin_venues_delete_venue_button()}
+      </Button>
+    </div>
+  )
+
   return (
     <div className="flex flex-col gap-5">
       {totalVenues === 0 ? (
@@ -141,7 +202,7 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
             title={group.brand?.name ?? m.admin_venues_no_brand()}
             action={
               group.brand ? (
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <ContactPhone
                     phone={group.brand.contactPhone}
                     emptyLabel={m.admin_venues_no_phone()}
@@ -165,9 +226,10 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
               ) : null
             }
           >
-            <Table className={BLEED_TABLE_CLASS}>
+            <DesktopOnly>
+<Table className={BLEED_TABLE_CLASS}>
               <TableHeader>
-                <TableHead>{m.admin_venues_table_venue()}</TableHead>
+                <TableHead isRowHeader>{m.admin_venues_table_venue()}</TableHead>
                 <TableHead>{m.admin_venues_table_ward()}</TableHead>
                 <TableHead>{m.admin_venues_table_approval()}</TableHead>
                 <TableHead>{m.admin_venues_table_status()}</TableHead>
@@ -187,18 +249,10 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
                     <TableCell weight="medium">{venue.name}</TableCell>
                     <TableCell>{venue.ward}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant={APPROVAL_VARIANT[venue.approval ?? "approved"]}
-                      >
-                        {approvalMessages[venue.approval ?? "approved"]()}
-                      </Badge>
+                      {approvalBadge(venue)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={venue.archived ? "outline" : "secondary"}>
-                        {venue.archived
-                          ? m.admin_venues_status_archived()
-                          : m.admin_venues_status_active()}
-                      </Badge>
+                      {statusBadge(venue)}
                     </TableCell>
                     <TableCell align="right" numeric="yes">
                       {venue.bookings}
@@ -211,48 +265,29 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
                       {formatVndText(venue.revenue)}
                     </TableCell>
                     <TableCell align="right">
-                      <div className="flex items-center justify-end gap-2">
-                        {venue.archived ? (
-                          <Button
-                            shape="pill"
-                            size="sm"
-                            variant="outline"
-
-                            isDisabled={pending === venue.id}
-                            onPress={() => handleRestore(venue)}
-                          >
-                            {m.admin_venues_restore()}
-                          </Button>
-                        ) : (
-                          <Button
-                            shape="pill"
-                            size="sm"
-                            variant="destructive"
-
-                            isDisabled={pending === venue.id}
-                            onPress={() => handleSuspend(venue)}
-                          >
-                            {m.admin_venues_suspend()}
-                          </Button>
-                        )}
-                        <Button
-                          shape="pill"
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          isDisabled={pending === `delete-${venue.id}`}
-                          onPress={() =>
-                            setDeletingVenue({ id: venue.id, name: venue.name })
-                          }
-                        >
-                          {m.admin_venues_delete_venue_button()}
-                        </Button>
-                      </div>
+                      {venueActions(venue)}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+</DesktopOnly>
+<MobileCardList>
+{group.venues.map((venue) => (
+<MobileCard
+ key={venue.id}
+ title={venue.name}
+ badge={statusBadge(venue)}
+ fields={[
+{ label: m.admin_venues_table_ward(), value: venue.ward },
+{ label: m.admin_venues_table_approval(), value: approvalBadge(venue) },
+{ label: m.admin_venues_table_bookings(), value: venue.bookings },
+{ label: m.admin_venues_table_revenue(), value: <span className="font-mono">{formatVndText(venue.revenue)}</span> },
+]}
+ actions={venueActions(venue)}
+/>
+))}
+</MobileCardList>
           </TableSection>
         ))
       )}

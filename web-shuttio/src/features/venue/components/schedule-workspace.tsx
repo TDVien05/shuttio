@@ -20,13 +20,28 @@ export type ScheduleTab = "calendar" | "reservations"
 export function VenueScheduleWorkspace({
   initialTab = "calendar",
   initialDay,
+  initialNew = false,
 }: {
+  initialNew?: boolean
   initialTab?: ScheduleTab
   /** Land the calendar tab's day view on this ISO date (deep link from Insights). */
   initialDay?: string
 }) {
   const { reservations: RESERVATIONS } = useVenueData()
-  const [tab, setTab] = React.useState<ScheduleTab>(initialTab)
+  const [tab, setTab] = React.useState<ScheduleTab>(initialNew ? "calendar" : initialTab)
+  // Bumped to open the calendar's walk-in dialog; reset when the tab changes
+  // so returning to the calendar later doesn't re-open it.
+  const [newBookingNonce, setNewBookingNonce] = React.useState(initialNew ? 1 : 0)
+
+  // The topbar "Đặt sân mới" action fires this when already on the schedule.
+  React.useEffect(() => {
+    const open = () => {
+      setTab("calendar")
+      setNewBookingNonce((n) => n + 1)
+    }
+    window.addEventListener("venue-new-booking", open)
+    return () => window.removeEventListener("venue-new-booking", open)
+  }, [])
 
   // Rows waiting on the operator: approvals plus players' cancellation requests.
   const pendingCount = RESERVATIONS.filter(
@@ -46,7 +61,10 @@ export function VenueScheduleWorkspace({
         </div>
         <Tabs
           selectedKey={tab}
-          onSelectionChange={(v) => setTab(v as ScheduleTab)}
+          onSelectionChange={(v) => {
+            setTab(v as ScheduleTab)
+            setNewBookingNonce(0)
+          }}
         >
           <TabsList>
             <TabsTrigger id="calendar">
@@ -67,7 +85,11 @@ export function VenueScheduleWorkspace({
       </div>
 
       {tab === "calendar" ? (
-        <VenueScheduleView embedded initialDay={initialDay} />
+        <VenueScheduleView
+          embedded
+          initialDay={initialDay}
+          newBookingNonce={newBookingNonce}
+        />
       ) : (
         <VenueReservationsView embedded />
       )}

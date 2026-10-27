@@ -79,19 +79,26 @@ export function PayoutFields({
     value.accountNo.trim() !== "" &&
     !/^\d{6,20}$/.test(normalizeAccountNo(value.accountNo))
 
-  const [lookupState, setLookupState] = React.useState<LookupState>("idle")
+  // Result of the last account lookup, tagged with the pair it answered. The
+  // idle/loading states are derived from the current pair, so the effect only
+  // sets state from async callbacks.
+  const [lookup, setLookup] = React.useState<{
+    key: string
+    state: LookupState
+  } | null>(null)
 
   const normNo = normalizeAccountNo(value.accountNo)
   const validPair =
     /^\d{6}$/.test(value.bankBin) && /^\d{6,20}$/.test(normNo)
   const pairKey = validPair ? `${value.bankBin}:${normNo}` : ""
+  const lookupState: LookupState = !pairKey
+    ? "idle"
+    : lookup?.key === pairKey
+      ? lookup.state
+      : "loading"
 
   React.useEffect(() => {
-    if (!pairKey) {
-      setLookupState("idle")
-      return
-    }
-    setLookupState("loading")
+    if (!pairKey) return
     const bin = value.bankBin
     const no = normNo
     const id = setTimeout(() => {
@@ -99,12 +106,12 @@ export function PayoutFields({
         .then((name) => {
           if (name) {
             onChange({ ...value, accountName: toBankAccountName(name) })
-            setLookupState("verified")
+            setLookup({ key: pairKey, state: "verified" })
           } else {
-            setLookupState("failed")
+            setLookup({ key: pairKey, state: "failed" })
           }
         })
-        .catch(() => setLookupState("failed"))
+        .catch(() => setLookup({ key: pairKey, state: "failed" }))
     }, 600)
     return () => clearTimeout(id)
     // Only re-run when the bank/account pair changes, not on every value change.
@@ -168,7 +175,8 @@ export function PayoutFields({
             }
             className={lookupState === "loading" ? "pr-9 opacity-60" : "pr-9"}
             onChange={(e) => {
-              if (lookupState === "verified") setLookupState("idle")
+              if (lookupState === "verified")
+                setLookup({ key: pairKey, state: "idle" })
               onChange({ ...value, accountName: e.target.value })
             }}
           />
