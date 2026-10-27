@@ -27,7 +27,7 @@ import type {
   Localized,
   Player,
   PlaySession,
-  PlayerAssessment,
+  PlayerElo,
   RosterEntry,
   User,
   Venue,
@@ -61,8 +61,8 @@ interface DataContextValue {
   courts: Court[]
   /** Every discoverable branch as one map pin (venue coords) for the Find Courts map. */
   venuePins: VenuePin[]
-  /** The player's persisted skills assessment (null until taken). */
-  assessment: PlayerAssessment | null
+  /** The player's Elo (null until they take the assessment or skip). */
+  elo: PlayerElo | null
   /** The operator's brand (thương hiệu), or null when unprovisioned / player-only. */
   brand: Brand | null
   /** Every branch (chi nhánh) the operator manages (profiles), for the switcher/manager. */
@@ -133,7 +133,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       players: seed.players,
       courts,
       venuePins: seed.venuePins,
-      assessment: seed.assessment,
+      elo: seed.elo,
       // Operator's brand + branch profiles (account-level)
       brand: seed.brand,
       venues: seed.venues,

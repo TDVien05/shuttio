@@ -3,7 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 
 import { RouteLoading } from "@/components/layouts/route-loading"
 import { Toaster } from "@/components/ui/sonner"
-import { PlayerAssessmentGate } from "@/features/assessment/components/player-assessment-gate"
+import { PlayerEloGate } from "@/features/elo/components/player-elo-gate"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { DashboardFrame } from "@/components/layouts/dashboard-frame"
 import { DataProvider } from "@/features/dashboard/components/data-provider"
@@ -51,14 +51,11 @@ function DashboardLayout() {
             {isPlayerWorkspace ? <SessionExpiryWatcher /> : null}
             <SessionRealtime playerWorkspace={isPlayerWorkspace} />
             <NotificationsToaster />
-            <PlayerAssessmentGate
-              accountType={seed.accountType}
-              isAdmin={isAdmin}
-            >
+            <PlayerEloGate accountType={seed.accountType} isAdmin={isAdmin}>
               <DashboardFrame />
               <PlayerChrome />
               <ChatRealtime />
-            </PlayerAssessmentGate>
+            </PlayerEloGate>
             <Toaster />
           </SessionUiProvider>
         </BookingDraftProvider>

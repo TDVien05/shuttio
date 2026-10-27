@@ -5,7 +5,7 @@ import "reflect-metadata"
 
 import { Test } from "@nestjs/testing"
 
-import { AssessmentService } from "../src/features/assessment/assessment.service.js"
+import { EloService } from "../src/features/elo/elo.service.js"
 import { CourtsService } from "../src/features/courts/courts.service.js"
 import { PlayerService } from "../src/features/players/player.service.js"
 import {
@@ -108,7 +108,7 @@ function makeService(deps: Deps = {}) {
     defaultProfile: () => makeProfile(),
   }
   const sessionsMock = { listUserSessions: () => Promise.resolve([]) }
-  const assessmentMock = { getUserAssessment: () => Promise.resolve(null) }
+  const eloMock = { getPlayerElo: () => Promise.resolve(null) }
 
   return Test.createTestingModule({
     providers: [
@@ -118,7 +118,7 @@ function makeService(deps: Deps = {}) {
       { provide: ProfileService, useValue: profilesMock },
       { provide: SessionsService, useValue: sessionsMock },
       { provide: VenuesService, useValue: venuesMock },
-      { provide: AssessmentService, useValue: assessmentMock },
+      { provide: EloService, useValue: eloMock },
     ],
   })
     .compile()

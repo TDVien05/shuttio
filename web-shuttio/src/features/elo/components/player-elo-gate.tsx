@@ -13,11 +13,11 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { workspaceForPath } from "@/features/dashboard/lib/workspace"
 import type { AccountType } from "@/lib/shared"
-import { assessmentQueries } from "@/features/assessment/api/assessment.queries"
-import { PLAYER_ASSESSMENT_PATH } from "@/features/assessment/lib/player-assessment"
+import { eloQueries } from "@/features/elo/api/elo.queries"
+import { ELO_ASSESSMENT_PATH } from "@/features/elo/lib/elo"
 import { m } from "@/paraglide/messages"
 
-interface PlayerAssessmentGateProps {
+interface PlayerEloGateProps {
   children: React.ReactNode
   /** Effective account type (from the dashboard seed); drives the venue-only lock. */
   accountType?: AccountType | null
@@ -31,19 +31,19 @@ interface PlayerAssessmentGateProps {
 }
 
 /**
- * Redirects players who haven't completed the skill assessment to the dedicated
- * wizard page ({@link PLAYER_ASSESSMENT_PATH}). The assessment query is the
+ * Redirects players who haven't initialised their Elo (assessment or skip) to
+ * the dedicated wizard page ({@link ELO_ASSESSMENT_PATH}). The assessment query is the
  * single source of truth; there is no local-cache readiness state. The venue
  * workspace is never gated, and an admin account is never gated regardless of
  * which workspace it's currently viewing (an admin may have no accountType at
  * all). A venue-only account is locked out of the player workspace entirely
  * (redirected to their venue instead) and never asked to assess.
  */
-export function PlayerAssessmentGate({
+export function PlayerEloGate({
   children,
   accountType = null,
   isAdmin = false,
-}: PlayerAssessmentGateProps) {
+}: PlayerEloGateProps) {
   const pathname = useLocation({ select: (l) => l.pathname })
   const workspace = workspaceForPath(pathname)
   const venueOnly = accountType === "venue"
@@ -52,25 +52,26 @@ export function PlayerAssessmentGate({
   // this gate stays mounted for a render while navigating to it — a venue-only
   // account heading there to become a player must not be bounced back.
   const lockedOut = venueOnly && !exempt && pathname.startsWith("/app")
-  const needsAssessment = !exempt && !venueOnly
+  const needsElo = !exempt && !venueOnly
 
   const {
-    data: assessment,
+    data: elo,
     isPending,
     isError,
     refetch,
   } = useQuery({
-    ...assessmentQueries.assessment(),
-    enabled: needsAssessment,
+    ...eloQueries.result(),
+    enabled: needsElo,
   })
 
   if (lockedOut) return <Navigate to="/app/venue" replace />
-  if (!needsAssessment) return <>{children}</>
+  if (!needsElo) return <>{children}</>
   if (isPending) return <AssessmentLoading />
   // A failed read is not "no assessment" — redirecting would send a player who
   // already took it back through the wizard.
   if (isError) return <AssessmentLoadError onRetry={() => void refetch()} />
-  if (!assessment) return <Navigate to={PLAYER_ASSESSMENT_PATH} replace />
+  // "Bỏ qua" cũng tạo rating (Elo mặc định) nên được coi là đã khởi tạo.
+  if (!elo.initialized) return <Navigate to={ELO_ASSESSMENT_PATH} replace />
 
   return <>{children}</>
 }

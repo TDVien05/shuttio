@@ -13,7 +13,7 @@ void test("stored choice alone is respected", () => {
   assert.equal(resolveAccountType("both", false, false), "both")
 })
 
-void test("a completed assessment infers the player role", () => {
+void test("an Elo rating infers the player role", () => {
   assert.equal(resolveAccountType(null, true, false), "player")
 })
 
@@ -29,7 +29,7 @@ void test("a player-only account that provisions a venue becomes both", () => {
   assert.equal(resolveAccountType("player", false, true), "both")
 })
 
-void test("a venue-only account that completes the assessment becomes both", () => {
+void test("a venue-only account that gets an Elo rating becomes both", () => {
   assert.equal(resolveAccountType("venue", true, false), "both")
 })
 

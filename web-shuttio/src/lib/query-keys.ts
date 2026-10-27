@@ -10,9 +10,11 @@ export const queryKeys = {
   rooms: () => ["rooms"] as const,
   notifications: () => ["notifications"] as const,
 
-  assessment: () => ["assessment"] as const,
-  assessmentLevels: (userId: string) =>
-    ["assessment", "levels", userId] as const,
+  elo: {
+    questionnaire: () => ["elo", "questionnaire"] as const,
+    result: () => ["elo", "result"] as const,
+    level: (userId: string) => ["elo", "level", userId] as const,
+  },
   ratings: (userId: string) => ["ratings", userId] as const,
 
   venue: {

@@ -75,7 +75,7 @@ import type {
   PlayerMatchIntent,
   PlayerMatchResult,
 } from "@/features/play/lib/player-matching"
-import { PLAYER_ASSESSMENT_PATH } from "@/features/assessment/lib/player-assessment"
+import { ELO_ASSESSMENT_PATH } from "@/features/elo/lib/elo"
 import {
   Trace,
   TraceLine,
@@ -1436,7 +1436,7 @@ function RequestAssessmentChatResult({ sport }: { sport: SportKey }) {
         <Button
           variant="lime"
           shape="pill"
-          onPress={() => void navigate({ to: PLAYER_ASSESSMENT_PATH })}
+          onPress={() => void navigate({ to: ELO_ASSESSMENT_PATH })}
           className="h-10 px-5 text-sm font-bold"
         >
           {m.ai_dashboard_complete_assessment()}

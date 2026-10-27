@@ -3,7 +3,7 @@ import { Inject, Injectable } from "@nestjs/common"
 import { vnNowIso, type Seed } from "../../shared/index.js"
 
 import { resolveAccountType } from "../account/account.service.js"
-import { AssessmentService } from "../assessment/assessment.service.js"
+import { EloService } from "../elo/elo.service.js"
 import { CourtsService } from "../courts/courts.service.js"
 import { PlayerService } from "../players/player.service.js"
 import { ProfileService } from "../players/profile.service.js"
@@ -26,7 +26,7 @@ export class SeedService {
     @Inject(ProfileService) private readonly profiles: ProfileService,
     @Inject(SessionsService) private readonly sessions: SessionsService,
     @Inject(VenuesService) private readonly venues: VenuesService,
-    @Inject(AssessmentService) private readonly assessment: AssessmentService
+    @Inject(EloService) private readonly eloService: EloService
   ) {}
 
   /**
@@ -38,31 +38,22 @@ export class SeedService {
    */
   async buildSeed(userId?: string): Promise<Seed> {
     const serverNow = vnNowIso()
-    const [
-      courts,
-      venuePins,
-      players,
-      profile,
-      userSessions,
-      assessment,
-      workspace,
-    ] = await Promise.all([
-      this.courts.listCourts(),
-      this.venues.catalogVenues(),
-      this.players.listRealPlayers(userId),
-      userId
-        ? this.profiles.getProfile(userId)
-        : Promise.resolve(this.profiles.defaultProfile()),
-      userId ? this.sessions.listUserSessions(userId) : Promise.resolve([]),
-      userId
-        ? this.assessment.getUserAssessment(userId)
-        : Promise.resolve(null),
-      // `myWorkspace` depends only on `userId`, so it joins this batch too —
-      // only the venue bundle below stays dependent (it needs `venues[0]`).
-      userId
-        ? this.venues.myWorkspace(userId)
-        : Promise.resolve({ brand: null, venues: [] }),
-    ])
+    const [courts, venuePins, players, profile, userSessions, elo, workspace] =
+      await Promise.all([
+        this.courts.listCourts(),
+        this.venues.catalogVenues(),
+        this.players.listRealPlayers(userId),
+        userId
+          ? this.profiles.getProfile(userId)
+          : Promise.resolve(this.profiles.defaultProfile()),
+        userId ? this.sessions.listUserSessions(userId) : Promise.resolve([]),
+        userId ? this.eloService.getPlayerElo(userId) : Promise.resolve(null),
+        // `myWorkspace` depends only on `userId`, so it joins this batch too —
+        // only the venue bundle below stays dependent (it needs `venues[0]`).
+        userId
+          ? this.venues.myWorkspace(userId)
+          : Promise.resolve({ brand: null, venues: [] }),
+      ])
 
     // Only the user's own persisted sessions — no demo sessions are derived any
     // more.
@@ -82,7 +73,7 @@ export class SeedService {
 
     const accountType = resolveAccountType(
       profile.accountType,
-      assessment !== null,
+      elo !== null,
       venues.length > 0
     )
 
@@ -107,7 +98,7 @@ export class SeedService {
       venues,
       activeVenueId: activeVenueId ?? "",
       venue,
-      assessment,
+      elo,
       accountType,
       phone: profile.phone,
     }

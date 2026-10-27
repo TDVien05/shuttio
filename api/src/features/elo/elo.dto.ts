@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString, Length } from "class-validator"
 
-export class AssessmentUserIdParamDto {
+export class EloUserIdParamDto {
   @IsString()
   @IsNotEmpty()
   @Length(1, 128)

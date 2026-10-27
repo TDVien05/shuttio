@@ -12,7 +12,7 @@ function chain<T>(rows: T[]) {
 }
 
 function makeService(opts: {
-  assessments: { userId: string; data?: unknown }[]
+  assessments: { userId: string; currentElo?: number }[]
   profiles?: { userId: string; user?: { trust?: number } }[]
   clerkUsers: { id: string; name: string }[]
 }) {
@@ -34,22 +34,21 @@ function makeService(opts: {
   return { service, filters }
 }
 
-const assessed = (bucket: string) => ({
-  results: { badminton: { bucket } },
-})
-
-void test("listRealPlayers returns assessed accounts that still exist in Clerk", async () => {
+void test("listRealPlayers returns rated accounts that still exist in Clerk", async () => {
   const { service, filters } = makeService({
     assessments: [
-      { userId: "u1", data: assessed("intermediate") },
-      { userId: "ghost", data: assessed("beginner") },
-      { userId: "no-level", data: {} },
+      { userId: "u1", currentElo: 1000 },
+      { userId: "ghost", currentElo: 800 },
+      { userId: "no-level" },
     ],
     profiles: [{ userId: "u1", user: { trust: 90 } }],
     clerkUsers: [{ id: "u1", name: "Nguyen Van An" }],
   })
   const players = await service.listRealPlayers("me")
-  assert.deepEqual(filters[0], { userId: { $ne: "me" } })
+  assert.deepEqual(filters[0], {
+    discipline: "DOUBLES",
+    userId: { $ne: "me" },
+  })
   assert.equal(players.length, 1)
   assert.deepEqual(
     {
@@ -69,7 +68,7 @@ void test("listRealPlayers returns assessed accounts that still exist in Clerk",
   )
 })
 
-void test("listRealPlayers is empty when nobody has taken the assessment", async () => {
+void test("listRealPlayers is empty when nobody has got an Elo rating", async () => {
   const { service } = makeService({ assessments: [], clerkUsers: [] })
   assert.deepEqual(await service.listRealPlayers(), [])
 })
