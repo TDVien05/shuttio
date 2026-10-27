@@ -52,9 +52,9 @@ export function AccountMenu() {
           variant="ghost"
           size="icon"
           aria-label={m.sidebar_profile()}
-          className="size-11 p-0 hover:bg-transparent focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-volt"
+          className="size-9 p-0 md:size-11 hover:bg-transparent focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-volt"
         >
-          <Avatar className="size-11 ring-2 ring-white">
+          <Avatar className="size-9 ring-2 ring-white md:size-11">
             {image ? <AvatarImage src={image} alt={name} /> : null}
             <AvatarFallback tone="light" weight="bold" className="text-sm">
               {initials}

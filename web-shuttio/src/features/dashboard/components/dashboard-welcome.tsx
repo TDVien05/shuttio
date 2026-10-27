@@ -109,14 +109,14 @@ export function DashboardWelcome({
             alt=""
             width={240}
             height={90}
-            className="absolute top-12 left-1 w-36 -rotate-6 sm:left-5 sm:w-48"
+            className="absolute top-7 left-1 w-36 sm:top-12 -rotate-6 sm:left-5 sm:w-48"
           />
           <AdvancedImage
             cldImg={art.tag}
             alt=""
             width={190}
             height={82}
-            className="absolute top-44 right-0 w-28 rotate-6 sm:right-4 sm:w-40"
+            className="absolute top-52 right-0 w-28 rotate-6 sm:top-44 sm:right-4 sm:w-40"
           />
           <AdvancedImage
             cldImg={art.hand}
@@ -137,7 +137,7 @@ export function DashboardWelcome({
             alt=""
             width={210}
             height={205}
-            className="absolute top-hero-offset -right-2 z-10 w-28 sm:top-hero-offset-sm sm:w-40"
+            className="absolute top-80 -right-2 z-10 w-28 sm:top-hero-offset-sm sm:w-40"
           />
           <div className="z-10 mt-7 w-full max-w-stage rounded-full bg-volt p-1.5 text-electric-mid shadow-pink-hard-lg sm:mt-10">
             <div className="flex items-center gap-3 pl-3 sm:pl-7">

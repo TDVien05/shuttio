@@ -73,7 +73,7 @@ function MobilePlayerNav({ activeKey }: { activeKey: string | undefined }) {
 
 /** Header icon buttons — same 44px circle as the avatar so the three line up. */
 const HEADER_ICON_BUTTON =
-  "size-11 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white aria-expanded:bg-white/20 aria-expanded:text-white dark:hover:bg-white/20 [&_svg:not([class*='size-'])]:size-5 [&>span]:bg-volt [&>span]:text-electric-ink"
+  "size-9 rounded-full bg-white/10 md:size-11 text-white hover:bg-white/20 hover:text-white aria-expanded:bg-white/20 aria-expanded:text-white dark:hover:bg-white/20 [&_svg:not([class*='size-'])]:size-5 [&>span]:bg-volt [&>span]:text-electric-ink"
 
 /** Sticky dashboard header — its title and actions track the active workspace. */
 export function DashboardTopbar() {
@@ -104,13 +104,13 @@ export function DashboardTopbar() {
               ? "dashboard"
               : undefined
     return (
-      <header className="z-20 grid h-22 shrink-0 grid-cols-trio items-center bg-electric px-5 text-white md:px-10 xl:px-pct-7p5">
+      <header className="z-20 grid h-16 shrink-0 grid-cols-trio items-center bg-electric px-4 text-white md:h-22 md:px-10 xl:px-pct-7p5">
         <Link
           to="/app"
           className="shrink-0 justify-self-start"
           aria-label="Shuttio home"
         >
-          <Logo className="text-white" markClassName="size-12 !text-volt" />
+          <Logo className="text-white" markClassName="size-9 !text-volt md:size-12" />
         </Link>
         <MobilePlayerNav activeKey={activeKey} />
         <nav className="hidden items-center gap-9 text-sm md:flex">
@@ -130,7 +130,7 @@ export function DashboardTopbar() {
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-3 justify-self-end">
+        <div className="col-start-3 flex items-center gap-2 justify-self-end md:gap-3">
           <NotificationsButton
             className={HEADER_ICON_BUTTON}
             popupClassName="player-play-overlay"

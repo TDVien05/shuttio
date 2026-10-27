@@ -736,8 +736,8 @@ export function AiNativeDashboardView() {
       data-flip-id="ai-composer"
       className="rounded-sheet bg-white p-2 shadow-float ring-1 ring-line-strong transition-shadow focus-within:ring-2 focus-within:ring-electric/40"
     >
-      <div className="flex items-end gap-2">
-        <Sparkles className="mb-4 ml-3 size-5 shrink-0 text-electric" />
+      <div className="flex items-center gap-2">
+        <Sparkles className="ml-3 size-5 shrink-0 text-electric" />
         <Textarea
           ref={inputRef}
           value={input}
@@ -757,7 +757,7 @@ export function AiNativeDashboardView() {
           disabled={isLoading}
           className="max-h-32 min-h-12 flex-1 border-0 bg-transparent py-3.5 pr-0 pl-1 text-base shadow-none focus-visible:ring-0 sm:text-lg"
         />
-        <kbd className="mb-3.5 hidden shrink-0 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-mini text-muted-foreground sm:block">
+        <kbd className="hidden shrink-0 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-mini text-muted-foreground sm:block">
           ⌘K
         </kbd>
         <Button
@@ -765,7 +765,6 @@ export function AiNativeDashboardView() {
           shape="pill"
           type="button"
           size="icon"
-          className="mb-1"
           aria-label={m.ai_dashboard_send()}
           onPress={() => void submit(input)}
           isDisabled={isLoading || !input.trim()}
