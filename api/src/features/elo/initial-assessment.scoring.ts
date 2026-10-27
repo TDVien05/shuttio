@@ -21,9 +21,6 @@ import {
 export const ELO_FLOOR = 800
 /** Biên độ cộng thêm: Elo tối đa = 800 + 400 = 1200 (toàn đáp án D). */
 export const ELO_SPAN = 400
-/** Elo mặc định khi người dùng chọn "Bỏ qua" (không có điểm câu hỏi). */
-export const DEFAULT_ELO = 1000
-
 /** Điểm tối đa của một đáp án (D). */
 const MAX_OPTION_POINTS = 3
 

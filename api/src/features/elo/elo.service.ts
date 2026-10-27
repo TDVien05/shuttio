@@ -17,7 +17,6 @@ import {
   type PublicQuestion,
 } from "./initial-assessment.questions.js"
 import {
-  DEFAULT_ELO,
   INCONSISTENCY_WARNING_MESSAGE,
   PROVISIONAL_NOTICE,
   classifyElo,
@@ -182,38 +181,6 @@ export class EloService {
 
     throw new ConflictException(
       "Không thể thay thế Elo hiện tại bằng bảng hỏi này."
-    )
-  }
-
-  /**
-   * "Bỏ qua": cấp Elo mặc định 1000, nhãn Trung bình, PROVISIONAL, nguồn
-   * DEFAULT; không tạo điểm hay câu trả lời giả. Lặp lại khi đang DEFAULT là
-   * idempotent; sau khi đã hoàn tất bảng hỏi → 409.
-   */
-  async skipAssessment(userId: string): Promise<EloResult> {
-    const now = new Date()
-    const label = classifyElo(DEFAULT_ELO)
-    const created = await this.insertIfAbsent(userId, {
-      currentElo: DEFAULT_ELO,
-      initialElo: DEFAULT_ELO,
-      status: "PROVISIONAL",
-      source: "DEFAULT",
-      labelCode: label.code,
-      assessmentScore: null,
-      assessmentVersion: null,
-      answers: null,
-      questionSnapshot: null,
-      inconsistencyWarning: false,
-      ratingUpdateCount: 0,
-      completedAt: null,
-      initializedAt: now,
-    })
-    if (created) return this.getResult(userId)
-
-    const existing = await this.findExisting(userId)
-    if (existing.source === "DEFAULT") return toResult(existing)
-    throw new ConflictException(
-      "Bạn đã hoàn tất đánh giá, không thể bỏ qua hoặc đặt lại Elo."
     )
   }
 

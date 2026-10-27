@@ -1686,7 +1686,7 @@
   "elo_warning_fallback": "Bạn vừa chọn mức kỹ năng khá cao so với thời gian chơi. Hãy kiểm tra lại để được ghép trận phù hợp.",
   "elo_warning_hint": "Bạn có thể đổi đáp án, hoặc bấm “Vẫn gửi đánh giá” để tiếp tục.",
   "elo_default_notice": "Hiện bạn đang dùng Elo mặc định {elo}. Bạn được làm bảng hỏi một lần để thay thế; sau khi hoàn thành sẽ không thể làm lại.",
-  "elo_default_result_hint": "Đây là Elo mặc định do bạn bỏ qua bảng hỏi.",
+  "elo_default_result_hint": "Đây là Elo mặc định từ trước khi bảng hỏi trở thành bắt buộc.",
   "elo_result_label": "Elo khởi tạo (đánh đôi)",
   "elo_provisional_badge": "Tạm thời",
   "elo_error_generic": "Không thể gửi đánh giá. Vui lòng thử lại.",

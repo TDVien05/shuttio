@@ -31,7 +31,7 @@ interface PlayerEloGateProps {
 }
 
 /**
- * Redirects players who haven't initialised their Elo (assessment or skip) to
+ * Redirects players who haven't initialised their Elo (assessment; legacy default counts too) to
  * the dedicated wizard page ({@link ELO_ASSESSMENT_PATH}). The assessment query is the
  * single source of truth; there is no local-cache readiness state. The venue
  * workspace is never gated, and an admin account is never gated regardless of
@@ -70,7 +70,7 @@ export function PlayerEloGate({
   // A failed read is not "no assessment" — redirecting would send a player who
   // already took it back through the wizard.
   if (isError) return <AssessmentLoadError onRetry={() => void refetch()} />
-  // "Bỏ qua" cũng tạo rating (Elo mặc định) nên được coi là đã khởi tạo.
+  // Elo mặc định cũ (tài khoản từng bỏ qua) cũng được coi là đã khởi tạo.
   if (!elo.initialized) return <Navigate to={ELO_ASSESSMENT_PATH} replace />
 
   return <>{children}</>

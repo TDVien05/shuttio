@@ -11,7 +11,8 @@ export type EloStatus = "PROVISIONAL"
 /**
  * Nguồn của Elo hiện tại:
  *  - ASSESSMENT: tính từ bảng hỏi (đã hoàn tất, KHÔNG làm lại được).
- *  - DEFAULT: mặc định 1000 do người dùng chọn "Bỏ qua" (được làm bảng hỏi
+ *  - DEFAULT: mặc định 1000 của người dùng cũ từng chọn "Bỏ qua" (nay không còn
+ *    cách tạo mới: làm bảng hỏi là bắt buộc; họ được làm bảng hỏi
  *    thay thế đúng một lần nếu chưa có cập nhật rating nào).
  */
 export type EloSource = "ASSESSMENT" | "DEFAULT"
@@ -66,7 +67,7 @@ export class EloRating {
    * nhật nào" để thay Elo mặc định dựa vào nó.
    */
   @Prop({ type: Number, required: true, default: 0 }) ratingUpdateCount: number
-  /** Thời điểm hoàn tất bảng hỏi (UTC); null khi chỉ mới "Bỏ qua". */
+  /** Thời điểm hoàn tất bảng hỏi (UTC); null khi vẫn đang ở Elo mặc định cũ. */
   @Prop({ type: Date, default: null }) completedAt: Date | null
   /** Thời điểm tạo rating lần đầu (UTC). */
   @Prop({ type: Date, required: true }) initializedAt: Date

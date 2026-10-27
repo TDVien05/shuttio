@@ -46,13 +46,6 @@ export class EloController {
     return this.elo.submitAssessment(userId, body?.version, body?.answers)
   }
 
-  /** Bỏ qua: cấp Elo mặc định 1000 (DEFAULT). */
-  @Post("initial-assessment/skip")
-  @HttpCode(200)
-  skip(@UserId() userId: string) {
-    return this.elo.skipAssessment(userId)
-  }
-
   /** Trình độ công khai của một người chơi khác — hiện trên hồ sơ của họ. */
   @Get("users/:userId/level")
   publicLevel(@Param() param: EloUserIdParamDto) {

@@ -311,36 +311,39 @@ void test("mỗi user có rating riêng", async () => {
   assert.equal(other.initialized, false)
 })
 
-// ── Bỏ qua ─────────────────────────────────────────────────────────────
+// ── Elo mặc định cũ (người từng bỏ qua trước khi bảng hỏi trở thành bắt buộc) ──
 
-void test("bỏ qua cấp 1000 DEFAULT, score null, không câu trả lời giả", async () => {
-  const { service, model } = await makeService()
-  const res = await service.skipAssessment("u1")
-  assert.equal(res.elo, 1000)
-  assert.equal(res.label?.name, "Trung bình")
-  assert.equal(res.source, "DEFAULT")
-  assert.equal(res.status, "PROVISIONAL")
-  assert.equal(res.completedAt, null)
-  assert.equal(res.canTakeAssessment, true)
+/** Document DEFAULT như các tài khoản cũ đã có; không còn API nào tạo ra nó. */
+function legacyDefault(overrides: Doc = {}): Doc {
+  return {
+    userId: "u1",
+    discipline: "DOUBLES",
+    currentElo: 1000,
+    initialElo: 1000,
+    status: "PROVISIONAL",
+    source: "DEFAULT",
+    assessmentScore: null,
+    assessmentVersion: null,
+    answers: null,
+    inconsistencyWarning: false,
+    ratingUpdateCount: 0,
+    completedAt: null,
+    initializedAt: new Date(),
+    ...overrides,
+  }
+}
 
-  const stored = model.docs[0]
-  assert.equal(stored.assessmentScore, null)
-  assert.equal(stored.answers, null)
-  assert.equal(stored.assessmentVersion, null)
-  assert.ok(stored.initializedAt)
-})
-
-void test("bỏ qua lặp lại idempotent", async () => {
-  const { service, model } = await makeService()
-  const first = await service.skipAssessment("u1")
-  const again = await service.skipAssessment("u1")
-  assert.deepEqual(again, first)
-  assert.equal(model.docs.length, 1)
-})
-
-void test("từ DEFAULT được làm bảng hỏi một lần; sau đó không đổi được", async () => {
+void test("không còn cách bỏ qua: service không có skipAssessment", async () => {
   const { service } = await makeService()
-  await service.skipAssessment("u1")
+  assert.equal("skipAssessment" in service, false)
+})
+
+void test("DEFAULT cũ được làm bảng hỏi một lần; sau đó không đổi được", async () => {
+  const { service } = await makeService([legacyDefault()])
+  const before = await service.getResult("u1")
+  assert.equal(before.elo, 1000)
+  assert.equal(before.canTakeAssessment, true)
+
   const res = await service.submitAssessment("u1", V, payload("DDDDDDD"))
   assert.equal(res.elo, 1200)
   assert.equal(res.source, "ASSESSMENT")
@@ -350,15 +353,7 @@ void test("từ DEFAULT được làm bảng hỏi một lần; sau đó không 
     service.submitAssessment("u1", V, payload("AAAAAAA")),
     ConflictException
   )
-  await assert.rejects(service.skipAssessment("u1"), ConflictException)
   assert.equal((await service.getResult("u1")).elo, 1200)
-})
-
-void test("bỏ qua sau khi hoàn tất → 409, không đổi Elo", async () => {
-  const { service } = await makeService()
-  await service.submitAssessment("u1", V, payload("BCCBCBC"))
-  await assert.rejects(service.skipAssessment("u1"), ConflictException)
-  assert.equal((await service.getResult("u1")).elo, 1004)
 })
 
 void test("DEFAULT đã có cập nhật rating hoặc nguồn lạ → 409, không ghi đè", async () => {
@@ -466,9 +461,8 @@ void test("getPlayerElo là null khi chưa có rating, có level khi đã có", 
   ])
 })
 
-void test("bỏ qua cũng là có rating: getPlayerElo trả 1000 và còn được làm bảng hỏi", async () => {
-  const { service } = await makeService()
-  await service.skipAssessment("u1")
+void test("DEFAULT cũ vẫn là có rating: getPlayerElo trả 1000 và còn được làm bảng hỏi", async () => {
+  const { service } = await makeService([legacyDefault()])
   const p = await service.getPlayerElo("u1")
   assert.equal(p?.elo, 1000)
   assert.equal(p?.source, "DEFAULT")
