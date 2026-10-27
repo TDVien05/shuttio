@@ -13,16 +13,14 @@ import {
   eloQueries,
   previewEloWarning,
   useSubmitElo,
-} from "@/features/elo/api/elo.queries"
-import type {
-  EloAnswer,
-  EloOptionId,
-  EloQuestion,
-  EloResult,
+  type EloAnswer,
+  type EloOptionId,
+  type EloQuestion,
+  type EloResult,
 } from "@/features/elo/api/elo.queries"
 import { m } from "@/paraglide/messages"
 
-type Draft = Partial<Record<string, EloOptionId>>
+type Draft = Record<string, EloOptionId>
 
 /**
  * Đánh giá Elo ban đầu (đánh đôi) — thay cho bảng đánh giá kỹ năng cũ ở bước
@@ -46,7 +44,7 @@ export function EloAssessmentView({
     refetch,
   } = useQuery(eloQueries.questionnaire())
   const { data: existing } = useQuery(eloQueries.result())
-  const { submit } = useSubmitElo()
+  const { submit, skip } = useSubmitElo()
   const chooseAccountType = useChooseAccountType()
 
   const [draft, setDraft] = React.useState<Draft>({})
@@ -97,12 +95,8 @@ export function EloAssessmentView({
     }
   }
 
-  // Chỉ gọi khi đã trả lời đủ; câu chưa chọn bị bỏ qua thay vì ép kiểu.
   const buildAnswers = (): EloAnswer[] =>
-    questions.flatMap((q) => {
-      const optionId = draft[q.id]
-      return optionId ? [{ questionId: q.id, optionId }] : []
-    })
+    questions.map((q) => ({ questionId: q.id, optionId: draft[q.id] }))
 
   const send = () => {
     if (!questionnaire) return
@@ -230,9 +224,9 @@ export function EloAssessmentView({
               {pendingWarning ? (
                 <div
                   role="alert"
-                  className="mt-6 flex items-start gap-3 rounded-2xl border border-warn-line/40 bg-warn-line/10 p-4 text-sm"
+                  className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm"
                 >
-                  <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn-ink" />
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
                   <div className="flex flex-col gap-1">
                     <p>{pendingWarning}</p>
                     <p className="text-xs text-muted-foreground">
@@ -247,11 +241,24 @@ export function EloAssessmentView({
                 </p>
               ) : null}
 
-              {/* Bắt buộc: không có nút bỏ qua, người chơi phải hoàn thành để vào hệ thống. */}
-              <footer className="mt-8 flex items-center justify-end gap-3 border-t pt-5">
+              <footer className="mt-8 flex items-center justify-between gap-3 border-t pt-5">
+                {existing?.initialized ? (
+                  <span />
+                ) : (
+                  <Button
+                    shape="pill"
+                    variant="ghost"
+                    type="button"
+                    isDisabled={busy}
+                    onPress={() => void run(() => skip.mutateAsync())}
+                  >
+                    {m.elo_skip()}
+                  </Button>
+                )}
                 <Button
                   shape="pill"
                   type="button"
+                  className="px-6"
                   isDisabled={busy || !questionnaire}
                   onPress={() => void onComplete()}
                 >
@@ -281,12 +288,8 @@ function QuestionCard({
   missing: boolean
   onSelect: (optionId: EloOptionId) => void
 }) {
-  const titleId = `${question.id}-title`
-  // Không dùng fieldset/legend: legend bị trình duyệt vẽ đè lên viền khung.
   return (
-    <div
-      role="radiogroup"
-      aria-labelledby={titleId}
+    <fieldset
       className={cn(
         "rounded-3xl border p-4 transition-colors sm:p-5",
         missing
@@ -294,13 +297,10 @@ function QuestionCard({
           : "border-border bg-card/70"
       )}
     >
-      <p
-        id={titleId}
-        className="flex items-baseline gap-2 px-1 font-heading font-semibold"
-      >
+      <legend className="flex items-baseline gap-2 px-1 font-heading font-semibold">
         <span className="text-brand tabular-nums">{index + 1}.</span>
         <span>{question.text}</span>
-      </p>
+      </legend>
       {question.description ? (
         <p className="mt-1 px-1 text-xs text-muted-foreground">
           {question.description}
@@ -349,7 +349,7 @@ function QuestionCard({
           {m.assessment_validation_missing_answer()}
         </p>
       ) : null}
-    </div>
+    </fieldset>
   )
 }
 
@@ -386,7 +386,7 @@ function ResultScreen({
           </p>
         ) : null}
         {result.warningMessage ? (
-          <p className="mt-3 text-sm text-warn-ink">{result.warningMessage}</p>
+          <p className="mt-3 text-sm text-amber-700">{result.warningMessage}</p>
         ) : null}
       </div>
       {result.notice ? (
@@ -399,7 +399,7 @@ function ResultScreen({
         shape="pill"
         type="button"
         size="lg"
-        className="mt-10"
+        className="mt-10 px-8"
         onPress={onEnter}
       >
         {cta}
