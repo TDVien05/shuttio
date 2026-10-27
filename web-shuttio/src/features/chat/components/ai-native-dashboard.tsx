@@ -755,7 +755,7 @@ export function AiNativeDashboardView() {
           }
           aria-label={m.ai_dashboard_assistant_name()}
           disabled={isLoading}
-          className="max-h-32 min-h-12 flex-1 border-0 bg-transparent py-3.5 pr-0 pl-1 text-base shadow-none focus-visible:ring-0 sm:text-lg"
+          className="max-h-32 min-h-9 flex-1 border-0 bg-transparent py-1.5 pr-0 pl-1 text-sm leading-snug shadow-none focus-visible:ring-0 sm:min-h-12 sm:py-3.5 sm:text-lg"
         />
         <kbd className="hidden shrink-0 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-mini text-muted-foreground sm:block">
           ⌘K
