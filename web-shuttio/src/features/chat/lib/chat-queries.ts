@@ -52,7 +52,11 @@ export function appendMessage(
   }
 }
 
-/** Replace a temporary client message by its tempId or append the message. */
+/**
+ * Replace a temporary client message by its tempId or append the message.
+ * The realtime publication can beat the HTTP response (typical in production):
+ * then the real message is already cached, so just drop the temporary one.
+ */
 export function replaceOrAppendMessage(
   data: MessagePages | undefined,
   message: ChatMessage,
@@ -60,7 +64,9 @@ export function replaceOrAppendMessage(
 ): MessagePages | undefined {
   if (!data?.pages.length) return data
   const [latest, ...older] = data.pages
-  if (latest.messages.some((m) => m.id === message.id)) return data
+  if (latest.messages.some((m) => m.id === message.id)) {
+    return tempId ? removeMessage(data, tempId) : data
+  }
 
   const replaceIndex = tempId
     ? latest.messages.findIndex((m) => m.id === tempId)

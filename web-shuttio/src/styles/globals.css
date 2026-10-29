@@ -104,6 +104,7 @@
   --spacing-pct-20: 20%;
   --spacing-pct-45: 45%;
   --spacing-pct-85: 85%;
+  --spacing-pct-90: 90%;
   --spacing-page-width: calc(100% - 2rem);
   --spacing-stage: 750px;
 }
