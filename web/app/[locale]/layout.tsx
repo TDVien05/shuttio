@@ -4,7 +4,6 @@ import {
   Barlow_Condensed,
   Geist,
   Geist_Mono,
-  Montserrat,
 } from "next/font/google"
 import { notFound } from "next/navigation"
 import { ClerkProvider } from "@clerk/nextjs"
@@ -41,12 +40,6 @@ const fontMono = Geist_Mono({
 const fontGeist = Geist({
   subsets: ["latin"],
   variable: "--font-geist",
-})
-
-const fontMontserrat = Montserrat({
-  subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-montserrat",
 })
 
 export async function generateMetadata({
@@ -123,7 +116,6 @@ export default async function LocaleLayout({
         fontHeading.variable,
         fontMono.variable,
         fontGeist.variable,
-        fontMontserrat.variable,
         "font-sans"
       )}
     >
