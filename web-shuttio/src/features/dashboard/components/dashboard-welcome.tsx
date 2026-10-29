@@ -11,8 +11,20 @@ import {
   Zap,
 } from "lucide-react"
 import { AdvancedImage } from "@cloudinary/react"
+import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 
+import { Skeleton } from "@/components/ui/skeleton"
+import { UserAvatar } from "@/features/chat/components/user-avatar"
+import { chatQueries } from "@/features/chat/lib/chat-queries"
+import {
+  channelAvatarUser,
+  channelTitle,
+  previewText,
+} from "@/features/chat/lib/chat-utils"
+import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
+import { relativeTime } from "@/lib/relative-time"
+import { cn } from "@/lib/utils"
 import { useData } from "@/features/dashboard/components/data-provider"
 import { useUserLocationContext } from "@/features/dashboard/state/location"
 import { CLOUDINARY_IMAGES, cloudinaryImage } from "@/lib/cloudinary"
@@ -101,7 +113,7 @@ export function DashboardWelcome({
           cldImg={art.courtLines}
           alt=""
           aria-hidden
-          className="absolute top-0 left-1/2 h-[90%] w-150 max-w-none -translate-x-1/2 object-fill opacity-85 sm:inset-0 sm:left-0 sm:h-full sm:w-full sm:translate-x-0"
+          className="absolute top-0 left-1/2 h-pct-90 w-150 max-w-none -translate-x-1/2 object-fill opacity-85 sm:inset-0 sm:left-0 sm:h-full sm:w-full sm:translate-x-0"
         />
         <div className="relative mx-auto flex max-w-6xl flex-col items-center px-5 pt-12 sm:pt-20">
           <AdvancedImage
@@ -351,11 +363,66 @@ export function DashboardWelcome({
 }
 
 function RecentChatsList() {
+  const { id: userId } = useAuthUser()
+  const { data: channels, isError } = useQuery(chatQueries.channels())
+  const recent = channels?.slice(0, 3) ?? []
+
   return (
     <div className="flex flex-col items-center gap-4 rounded-panel border-2 border-dashed border-volt px-6 py-8 text-center">
-      <p className="max-w-md text-sm text-ink-soft">
-        {m.ai_dashboard_recent_unavailable()}
-      </p>
+      {isError ? (
+        <p className="max-w-md text-sm text-ink-soft">
+          {m.ai_dashboard_recent_unavailable()}
+        </p>
+      ) : !channels ? (
+        <Skeleton className="h-14 w-full max-w-md" />
+      ) : recent.length === 0 ? (
+        <p className="max-w-md text-sm text-ink-soft">
+          {m.ai_dashboard_recent_empty()}
+        </p>
+      ) : (
+        <ul className="flex w-full max-w-md flex-col gap-1 text-left">
+          {recent.map((c) => {
+            const title = channelTitle(c, userId)
+            const avatarUser = channelAvatarUser(c, userId)
+            return (
+              <li key={c.id}>
+                <Link
+                  to="/app/chat"
+                  search={{ channel: c.id }}
+                  className="flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-black/5"
+                >
+                  <UserAvatar
+                    name={avatarUser?.name ?? title}
+                    image={avatarUser?.image}
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span
+                        className={cn(
+                          "truncate text-sm",
+                          c.unread > 0 ? "font-bold" : "font-medium"
+                        )}
+                      >
+                        {title}
+                      </span>
+                      <span className="shrink-0 text-mini text-ink-soft">
+                        {c.lastMessage
+                          ? relativeTime(new Date(c.lastMessage.createdAt))
+                          : ""}
+                      </span>
+                    </span>
+                    <span className="truncate text-xs text-ink-soft">
+                      {c.lastMessage
+                        ? previewText(c, userId)
+                        : m.ai_dashboard_recent_no_messages()}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      )}
       <Link
         to="/app/chat"
         className="inline-flex items-center gap-2 rounded-full bg-electric px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-electric-deep"
