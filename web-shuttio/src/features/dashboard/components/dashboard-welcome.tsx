@@ -222,7 +222,7 @@ export function DashboardWelcome({
         <h2 className="text-center text-2xl font-black tracking-wide">
           {m.ai_dashboard_recent_chats()}
         </h2>
-        <div className="mx-auto mt-8 max-w-180">
+        <div className="mx-auto mt-8 max-w-xl">
           <RecentChatsList />
         </div>
       </section>
@@ -368,7 +368,7 @@ function RecentChatsList() {
   const recent = channels?.slice(0, 3) ?? []
 
   return (
-    <div className="flex flex-col items-center gap-4 rounded-panel border-2 border-dashed border-volt px-6 py-8 text-center">
+    <div className="flex flex-col items-center gap-4 rounded-panel border-2 border-dashed border-volt p-4 text-center sm:p-5">
       {isError ? (
         <p className="max-w-md text-sm text-ink-soft">
           {m.ai_dashboard_recent_unavailable()}
@@ -380,7 +380,7 @@ function RecentChatsList() {
           {m.ai_dashboard_recent_empty()}
         </p>
       ) : (
-        <ul className="flex w-full max-w-md flex-col gap-1 text-left">
+        <ul className="flex w-full flex-col gap-2 text-left">
           {recent.map((c) => {
             const title = channelTitle(c, userId)
             const avatarUser = channelAvatarUser(c, userId)
@@ -389,7 +389,7 @@ function RecentChatsList() {
                 <Link
                   to="/app/chat"
                   search={{ channel: c.id }}
-                  className="flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-black/5"
+                  className="flex items-center gap-4 rounded-2xl border border-line bg-white px-4 py-3 transition-colors hover:border-electric hover:bg-surface-cool"
                 >
                   <UserAvatar
                     name={avatarUser?.name ?? title}
