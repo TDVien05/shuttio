@@ -59,13 +59,10 @@ function build(opts: {
   return { svc, calls }
 }
 
-void test("generatePassword has all character classes", () => {
+void test("generatePassword is 8 digits", () => {
   const p = generatePassword()
-  assert.equal(p.length, 16)
-  assert.match(p, /[a-z]/)
-  assert.match(p, /[A-Z]/)
+  assert.match(p, /^\d{8}$/)
   assert.match(p, /\d/)
-  assert.match(p, /[!@#$%*?]/)
 })
 
 void test("creates the account, marks it venue and emails the password", async () => {
@@ -74,7 +71,7 @@ void test("creates the account, marks it venue and emails the password", async (
   assert.deepEqual(out, { userId: "user_1", email: "a@b.vn" })
   assert.deepEqual(calls.types, ["venue"])
   assert.equal(calls.sent.length, 1)
-  assert.match(calls.sent[0], /Mật khẩu tạm thời: \S{16}/)
+  assert.match(calls.sent[0], /Mật khẩu tạm thời: \d{8}/)
 })
 
 void test("refuses when SMTP is not configured or the email exists", async () => {

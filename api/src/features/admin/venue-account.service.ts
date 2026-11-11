@@ -13,25 +13,15 @@ import {
   CLERK_CLIENT,
   type ClerkBackendClient,
 } from "../directory/clerk-directory.service.js"
+import { MUST_CHANGE_PASSWORD } from "../account/change-password.service.js"
 import { MailerService } from "../notifications/mailer.service.js"
 import { ProfileService } from "../players/profile.service.js"
 
-const LOWER = "abcdefghijkmnopqrstuvwxyz"
-const UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ"
-const DIGITS = "23456789"
-const SYMBOLS = "!@#$%*?"
-
-/** Random 16-char password with every character class (no look-alikes). */
-export function generatePassword(length = 16): string {
-  const pick = (set: string) => set[randomInt(set.length)]
-  const all = LOWER + UPPER + DIGITS + SYMBOLS
-  const chars = [pick(LOWER), pick(UPPER), pick(DIGITS), pick(SYMBOLS)]
-  while (chars.length < length) chars.push(pick(all))
-  for (let i = chars.length - 1; i > 0; i--) {
-    const j = randomInt(i + 1)
-    ;[chars[i], chars[j]] = [chars[j], chars[i]]
-  }
-  return chars.join("")
+/** Random 8-digit numeric password. */
+export function generatePassword(length = 8): string {
+  let out = ""
+  for (let i = 0; i < length; i++) out += String(randomInt(10))
+  return out
 }
 
 export interface CreatedVenueAccount {
@@ -79,6 +69,10 @@ export class VenueAccountService {
       .createUser({
         emailAddress: [input.email],
         password,
+        // An 8-digit numeric password fails Clerk's strength/breach checks;
+        // it is temporary and must be changed at first login.
+        skipPasswordChecks: true,
+        publicMetadata: { [MUST_CHANGE_PASSWORD]: true },
         firstName,
         lastName: rest.join(" ") || undefined,
       })
@@ -125,7 +119,7 @@ export class VenueAccountService {
       `Mật khẩu tạm thời: ${password}`,
       "",
       url ? `Đăng nhập tại: ${url}` : "",
-      "Vì lý do bảo mật, vui lòng đổi mật khẩu ngay sau lần đăng nhập đầu tiên.",
+      "Bạn sẽ được yêu cầu đổi mật khẩu ngay trong lần đăng nhập đầu tiên.",
     ].join("\n")
   }
 }

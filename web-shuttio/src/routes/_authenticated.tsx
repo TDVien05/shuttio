@@ -1,5 +1,10 @@
-import { Navigate, Outlet, createFileRoute } from "@tanstack/react-router"
-import { useAuth } from "@clerk/react"
+import {
+  Navigate,
+  Outlet,
+  createFileRoute,
+  useLocation,
+} from "@tanstack/react-router"
+import { useAuth, useUser } from "@clerk/react"
 
 import { RouteLoading } from "@/components/layouts/route-loading"
 
@@ -10,8 +15,18 @@ export const Route = createFileRoute("/_authenticated")({
 
 function SignedInLayout() {
   const { isLoaded, isSignedIn } = useAuth()
+  const { user } = useUser()
+  const pathname = useLocation({ select: (l) => l.pathname })
 
   if (!isLoaded) return <RouteLoading />
   if (!isSignedIn) return <Navigate to="/sign-in" replace />
+  // Admin-provisioned accounts must replace the emailed temporary password
+  // before reaching anything else.
+  if (
+    user?.publicMetadata.mustChangePassword === true &&
+    pathname !== "/change-password"
+  ) {
+    return <Navigate to="/change-password" replace />
+  }
   return <Outlet />
 }
