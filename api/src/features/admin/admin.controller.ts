@@ -19,6 +19,7 @@ import {
   ComplaintIdParamDto,
   BrandIdParamDto,
   CreateDiscountDto,
+  CreateVenueAccountDto,
   DiscountCodeParamDto,
   ForceCancelBookingDto,
   ListBookingsQueryDto,
@@ -30,6 +31,7 @@ import {
 } from "./admin.dto.js"
 import { AdminService } from "./admin.service.js"
 import { OwnerRemovalService } from "./owner-removal.service.js"
+import { VenueAccountService } from "./venue-account.service.js"
 
 /**
  * The admin workspace's api surface, mounted at /api/admin — every route here
@@ -44,7 +46,8 @@ import { OwnerRemovalService } from "./owner-removal.service.js"
 export class AdminController {
   constructor(
     private readonly admin: AdminService,
-    private readonly ownerRemoval: OwnerRemovalService
+    private readonly ownerRemoval: OwnerRemovalService,
+    private readonly venueAccounts: VenueAccountService
   ) {}
 
   @Get("overview")
@@ -101,6 +104,15 @@ export class AdminController {
   async suspendVenue(@Param() param: VenueIdParamDto) {
     await this.admin.suspendVenue(param.venueId)
     return { ok: true }
+  }
+
+  /**
+   * Create a venue-operator account; the generated password is emailed to the
+   * venue (never returned in the response).
+   */
+  @Post("owners")
+  createOwner(@Body() body: CreateVenueAccountDto) {
+    return this.venueAccounts.create(body)
   }
 
   /**
