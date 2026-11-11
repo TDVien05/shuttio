@@ -23,26 +23,30 @@ function build(opts: {
   }
   const clerk = {
     users: {
-      getUserList: async () => ({ data: opts.exists ? [{ id: "x" }] : [] }),
-      createUser: async () => {
+      getUserList: () =>
+        Promise.resolve({ data: opts.exists ? [{ id: "x" }] : [] }),
+      createUser: () => {
         calls.created++
-        return { id: "user_1" }
+        return Promise.resolve({ id: "user_1" })
       },
-      deleteUser: async () => {
+      deleteUser: () => {
         calls.deleted++
+        return Promise.resolve()
       },
     },
   }
   const mailer = {
     enabled: opts.mail ?? true,
-    send: async (_to: string, _s: string, text: string) => {
-      if (opts.sendFails) throw new Error("smtp down")
+    send: (_to: string, _s: string, text: string) => {
+      if (opts.sendFails) return Promise.reject(new Error("smtp down"))
       calls.sent.push(text)
+      return Promise.resolve()
     },
   }
   const profiles = {
-    setAccountType: async (_id: string, t: string) => {
+    setAccountType: (_id: string, t: string) => {
       calls.types.push(t)
+      return Promise.resolve()
     },
   }
   const config = { get: () => "http://localhost:3000" }
