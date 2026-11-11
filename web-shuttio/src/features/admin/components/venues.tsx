@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useAdminActions } from "@/features/admin/api/admin-api"
 import type { AdminActionResult } from "@/features/admin/api/admin-api"
+import { CreateVenueAccountDialog } from "@/features/admin/components/create-venue-account-dialog"
 import { ContactPhone } from "@/features/admin/components/contact-phone"
 import type {
   AdminBrandGroup,
@@ -58,6 +59,7 @@ const approvalMessages = {
 export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
   const admin = useAdminActions()
   const [pending, setPending] = React.useState<string | null>(null)
+  const [creatingAccount, setCreatingAccount] = React.useState(false)
 
   const [removing, setRemoving] = React.useState<{
     ownerId: string
@@ -193,6 +195,15 @@ export function AdminVenuesView({ groups }: { groups: AdminBrandGroup[] }) {
 
   return (
     <div className="flex flex-col gap-5">
+      <div className="flex justify-end">
+        <Button shape="pill" size="sm" onPress={() => setCreatingAccount(true)}>
+          {m.admin_venues_create_account_button()}
+        </Button>
+      </div>
+      <CreateVenueAccountDialog
+        isOpen={creatingAccount}
+        onClose={() => setCreatingAccount(false)}
+      />
       {totalVenues === 0 ? (
         <VenueEmpty text={m.admin_venues_empty()} />
       ) : (

@@ -66,6 +66,15 @@ function createAdminActions(queryClient: QueryClient) {
         api(`/api/admin/venues/${venueId}/restore`, { method: "POST" })
       ),
 
+    /** Create a venue account; the API emails the generated password. */
+    createVenueAccount: (input: {
+      email: string
+      name?: string
+    }): Promise<AdminActionResult> =>
+      toResult(() =>
+        api("/api/admin/owners", { method: "POST", body: input })
+      ),
+
     /** Delete a venue owner's account with all their brands, venues and data. */
     removeVenueOwner: (ownerId: string): Promise<AdminActionResult> =>
       toResult(() =>
