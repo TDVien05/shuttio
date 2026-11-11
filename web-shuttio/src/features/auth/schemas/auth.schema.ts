@@ -38,3 +38,18 @@ export const resetPasswordSchema = z.object({
     .string()
     .min(8, { error: () => m.auth_validation_password_min() }),
 })
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z
+      .string()
+      .min(1, { error: () => m.auth_validation_required() }),
+    newPassword: z
+      .string()
+      .min(8, { error: () => m.auth_validation_password_min() }),
+    confirm: z.string(),
+  })
+  .refine((v) => v.newPassword === v.confirm, {
+    path: ["confirm"],
+    error: () => m.auth_change_password_mismatch(),
+  })

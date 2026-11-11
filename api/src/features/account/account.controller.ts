@@ -1,9 +1,15 @@
-import { Body, Controller, Get, Patch, Put } from "@nestjs/common"
+import { Body, Controller, Get, Patch, Post, Put } from "@nestjs/common"
 
+import { UserThrottle } from "../../common/user-throttler.guard.js"
 import { UserId } from "../../common/user-id.decorator.js"
 import { ProfileService } from "../players/profile.service.js"
 import { AccountService } from "./account.service.js"
-import { ChooseAccountTypeDto, UpdatePhoneDto } from "./account.dto.js"
+import { ChangePasswordService } from "./change-password.service.js"
+import {
+  ChangePasswordDto,
+  ChooseAccountTypeDto,
+  UpdatePhoneDto,
+} from "./account.dto.js"
 
 // The signed-in account's self-declared type (per Clerk user). A single
 // per-user resource: GET reads the effective type (null until chosen), PUT
@@ -12,7 +18,8 @@ import { ChooseAccountTypeDto, UpdatePhoneDto } from "./account.dto.js"
 export class AccountController {
   constructor(
     private readonly account: AccountService,
-    private readonly profiles: ProfileService
+    private readonly profiles: ProfileService,
+    private readonly passwords: ChangePasswordService
   ) {}
 
   @Get()
@@ -37,5 +44,16 @@ export class AccountController {
   ): Promise<object> {
     await this.profiles.setPhone(userId, dto.phone)
     return {}
+  }
+
+  /** Change the caller's password (also clears the first-login flag). */
+  @UserThrottle({ limit: 5, ttl: 60_000 })
+  @Post("password")
+  async changePassword(
+    @UserId() userId: string,
+    @Body() dto: ChangePasswordDto
+  ) {
+    await this.passwords.change(userId, dto.currentPassword, dto.newPassword)
+    return { ok: true }
   }
 }

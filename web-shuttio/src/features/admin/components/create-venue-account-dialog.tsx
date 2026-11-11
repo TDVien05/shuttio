@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Spinner } from "@/components/ui/spinner"
 import { useAdminActions } from "@/features/admin/api/admin-api"
 import { m } from "@/paraglide/messages"
 
@@ -61,6 +62,7 @@ export function CreateVenueAccountDialog({
           {m.admin_venues_create_account_email()}
           <Input
             required
+            disabled={busy}
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -71,6 +73,7 @@ export function CreateVenueAccountDialog({
           <Input
             value={name}
             maxLength={80}
+            disabled={busy}
             onChange={(event) => setName(event.target.value)}
           />
         </label>
@@ -79,7 +82,10 @@ export function CreateVenueAccountDialog({
             {m.admin_venues_create_account_cancel()}
           </Button>
           <Button type="submit" isDisabled={busy || !email.trim()}>
-            {m.admin_venues_create_account_submit()}
+            {busy ? <Spinner className="size-4 text-current" /> : null}
+            {busy
+              ? m.admin_venues_create_account_submitting()
+              : m.admin_venues_create_account_submit()}
           </Button>
         </DialogFooter>
       </form>
