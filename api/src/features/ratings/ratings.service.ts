@@ -9,9 +9,9 @@ import {
   NotFoundException,
 } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
-import type { Model } from "mongoose"
+import { Types, type Model } from "mongoose"
 
-import type { RatingSummary } from "../../shared/index.js"
+import type { PlayerReviewPage, RatingSummary } from "../../shared/index.js"
 import { NotificationsService } from "../notifications/notifications.service.js"
 import { isSessionEnded, sessionParticipantIds } from "../rooms/group-match.js"
 import {
@@ -22,6 +22,9 @@ import { Rating, type RatingDocument } from "./rating.schema.js"
 
 /** Newest reviews included in a profile summary. */
 const SUMMARY_RECENT = 5
+
+/** Reviews per page of a profile's lazily loaded list. */
+export const REVIEWS_PAGE_SIZE = 10
 
 /** Mongo duplicate-key error code (the unique rater/ratee/session index). */
 const DUPLICATE_KEY = 11000
@@ -114,6 +117,45 @@ export class RatingsService {
       .select({ rateeId: 1, stars: 1 })
       .lean()
     return docs.map((d) => ({ rateeId: d.rateeId, stars: d.stars }))
+  }
+
+  /**
+   * One page of a player's reviews, newest first. `cursor` is the previous
+   * page's `nextCursor` ("<createdAt ms>_<review id>"); the id breaks ties
+   * between reviews created in the same millisecond. Anonymous like
+   * {@link summary}: no rater field is selected or returned.
+   */
+  async reviews(userId: string, cursor?: string): Promise<PlayerReviewPage> {
+    const filter: Record<string, unknown> = { rateeId: userId }
+    if (cursor) {
+      const [ms, id] = cursor.split("_")
+      const at = new Date(Number(ms))
+      filter.$or = [
+        { createdAt: { $lt: at } },
+        { createdAt: at, _id: { $lt: new Types.ObjectId(id) } },
+      ]
+    }
+    // One extra row tells whether an older page exists.
+    const docs = await this.ratingModel
+      .find(filter)
+      .select({ stars: 1, comment: 1, createdAt: 1 })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(REVIEWS_PAGE_SIZE + 1)
+      .lean()
+    const page = docs.slice(0, REVIEWS_PAGE_SIZE)
+    const last = page.at(-1)
+    return {
+      reviews: page.map((r) => ({
+        stars: r.stars,
+        ...(r.comment ? { comment: r.comment } : {}),
+        createdAt: new Date(r.createdAt).toISOString(),
+      })),
+      ...(docs.length > REVIEWS_PAGE_SIZE && last
+        ? {
+            nextCursor: `${new Date(last.createdAt).getTime()}_${String(last._id)}`,
+          }
+        : {}),
+    }
   }
 
   /** A player's average + count and newest reviews, for their profile. */

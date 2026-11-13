@@ -28,12 +28,14 @@ import { UserAvatar } from "@/features/chat/components/user-avatar"
 import { RatePlayerDialog } from "@/features/chat/components/rate-player-dialog"
 import { UserPicker } from "@/features/chat/components/user-picker"
 import { chatQueries } from "@/features/chat/lib/chat-queries"
+import { PlayerProfileDialog } from "@/features/dashboard/components/profile-dialog"
 import type { ChatChannel, ChatUser } from "@/lib/shared"
 import { m } from "@/paraglide/messages"
 
 /**
  * Group / room details: rename, members, add people, leave or delete — and,
  * once the group's match has been played, anonymously rate fellow players.
+ * Tapping a member opens their profile (level + the reviews they received).
  */
 export function GroupInfoDialog({
   channel,
@@ -62,6 +64,8 @@ export function GroupInfoDialog({
   // ── Anonymous peer ratings, once the group's match has been played ──
   // Only people who actually played (host + confirmed roster) rate each other.
   const [rating, setRating] = React.useState<ChatUser | null>(null)
+  /** The member whose profile is open. */
+  const [profile, setProfile] = React.useState<ChatUser | null>(null)
   const { data: groupMatch } = useQuery({
     ...chatQueries.groupMatch(channel.id),
     enabled: open,
@@ -172,8 +176,15 @@ export function GroupInfoDialog({
             const given = rated[member.id]
             return (
               <li key={member.id} className="flex items-center gap-3">
-                <UserAvatar name={member.name} image={member.image} />
-                <span className="min-w-0 flex-1 truncate">{member.name}</span>
+                <button
+                  type="button"
+                  title={m.profile_view_profile()}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-full text-left outline-none hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => setProfile(member)}
+                >
+                  <UserAvatar name={member.name} image={member.image} />
+                  <span className="truncate">{member.name}</span>
+                </button>
                 {!canRate(member.id) ? null : given ? (
                   <span
                     title={m.group_info_rated_title()}
@@ -205,6 +216,18 @@ export function GroupInfoDialog({
           </p>
         ) : null}
       </section>
+
+      {/* A member's profile: skill level and the anonymous reviews they got. */}
+      <PlayerProfileDialog
+        initials={null}
+        open={profile !== null}
+        onOpenChange={(isOpen) => !isOpen && setProfile(null)}
+        member={
+          profile
+            ? { name: profile.name, userId: profile.id, image: profile.image }
+            : null
+        }
+      />
 
       {match ? (
         <RatePlayerDialog
