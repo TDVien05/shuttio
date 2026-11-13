@@ -1,5 +1,6 @@
 import { useLocation, useRouter } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import * as React from "react"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { EyeOff, RotateCcw, Star } from "lucide-react"
 import { initialsOf } from "@/lib/shared"
 import { relativeTime } from "@/lib/relative-time"
@@ -7,6 +8,7 @@ import { relativeTime } from "@/lib/relative-time"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 
 import {
   Dialog,
@@ -147,9 +149,11 @@ interface PlayerProfileDialogProps {
   onOpenChange: (open: boolean) => void
   /**
    * What the caller already knows about a real (non-seed) player, e.g. a room
-   * member — their display name, and their Clerk id for peer reviews.
+   * member — their display name, their Clerk id for peer reviews, and their
+   * picture. A caller that only knows the real account (a chat member) passes
+   * `initials={null}`, so no seed player is matched by initials.
    */
-  member?: { name: string; userId?: string } | null
+  member?: { name: string; userId?: string; image?: string } | null
 }
 
 export function PlayerProfileDialog({
@@ -175,6 +179,7 @@ export function PlayerProfileDialog({
   const distanceKm = fullPlayer?.distanceKm
   const online = fullPlayer?.online
   const blurb = fullPlayer?.blurb
+  const shownInitials = initials ?? (name ? initialsOf(name) : "")
 
   return (
     <Dialog
@@ -203,8 +208,11 @@ export function PlayerProfileDialog({
         <div className="relative flex flex-col px-6 pt-0 pb-6 sm:px-8 sm:pb-8">
           <div className="relative -mt-10 mb-3 w-fit">
             <Avatar className="size-20 border-4 border-popover bg-secondary shadow-md">
+              {member?.image ? (
+                <AvatarImage src={member.image} alt={name} />
+              ) : null}
               <AvatarFallback tone="secondary" size="lg" weight="bold">
-                {initials}
+                {shownInitials}
               </AvatarFallback>
             </Avatar>
             {online != null ? (
@@ -221,9 +229,11 @@ export function PlayerProfileDialog({
             <h3 className="font-heading text-xl leading-tight font-bold text-foreground">
               {name}
             </h3>
-            <p className="text-xs text-muted-foreground">
-              @{initials?.toLowerCase()}
-            </p>
+            {initials ? (
+              <p className="text-xs text-muted-foreground">
+                @{initials.toLowerCase()}
+              </p>
+            ) : null}
           </div>
 
           {blurb ? (
@@ -336,22 +346,46 @@ function PlayerSkillLevels({
 }
 
 /**
- * A real player's peer reviews (`/api/ratings/users/:id/summary`) — average,
- * count and newest reviews left after played matches. Reviews are anonymous:
- * the api sends no rater, so each one is labelled as such. Loaded when the profile
- * opens; shows an empty state until the player has been rated.
+ * A real player's peer reviews — the average and count
+ * (`/api/ratings/users/:id/summary`) plus the reviews themselves
+ * (`.../reviews`), which load a page at a time as the list is scrolled.
+ * Reviews are anonymous: the api sends no rater, so each one is labelled as
+ * such. Loaded when the profile opens; shows an empty state until the player
+ * has been rated.
  */
 function PlayerReviews({ userId, open }: { userId: string; open: boolean }) {
+  const enabled = open && Boolean(userId)
+  const { data: summary = null, isError: summaryFailed } = useQuery({
+    ...profileQueries.playerReviews(userId),
+    enabled,
+  })
   const {
-    data: summary = null,
+    data: pages,
     isPending: loading,
     isError,
-  } = useQuery({
-    ...profileQueries.playerReviews(userId),
-    enabled: open && Boolean(userId),
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    ...profileQueries.playerReviewPages(userId),
+    enabled,
   })
+  const reviews = pages?.pages.flatMap((page) => page.reviews) ?? []
   const average = summary?.average ?? 0
   const ago = (iso: string) => relativeTime(new Date(iso))
+
+  // Lazy loading: the next page is fetched when the "load more" row scrolls
+  // into view. The row is also a button, should the observer never fire.
+  const moreRef = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    const node = moreRef.current
+    if (!node || !hasNextPage || isFetchingNextPage) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) void fetchNextPage()
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, reviews.length])
 
   return (
     <div className="mt-5 flex flex-col gap-3">
@@ -381,13 +415,15 @@ function PlayerReviews({ userId, open }: { userId: string; open: boolean }) {
             />
           ))}
         </div>
-      ) : !summary?.count ? (
+      ) : !reviews.length ? (
         <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
-          {isError ? m.profile_reviews_unavailable() : m.profile_no_reviews()}
+          {isError || summaryFailed
+            ? m.profile_reviews_unavailable()
+            : m.profile_no_reviews()}
         </p>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {summary.recent.map((review, i) => (
+          {reviews.map((review, i) => (
             <div
               key={i}
               className="flex flex-col gap-2 rounded-2xl bg-muted/40 p-3.5 ring-1 ring-foreground/5 dark:ring-foreground/10"
@@ -415,6 +451,20 @@ function PlayerReviews({ userId, open }: { userId: string; open: boolean }) {
               ) : null}
             </div>
           ))}
+          {hasNextPage ? (
+            <div ref={moreRef} className="flex justify-center">
+              <Button
+                shape="pill"
+                variant="ghost"
+                size="sm"
+                isDisabled={isFetchingNextPage}
+                onPress={() => void fetchNextPage()}
+              >
+                {isFetchingNextPage ? <Spinner /> : null}
+                {m.profile_reviews_load_more()}
+              </Button>
+            </div>
+          ) : null}
         </div>
       )}
     </div>

@@ -16,6 +16,8 @@ export const queryKeys = {
     level: (userId: string) => ["elo", "level", userId] as const,
   },
   ratings: (userId: string) => ["ratings", userId] as const,
+  /** Nested under `ratings(userId)`, so invalidating that refreshes both. */
+  ratingReviews: (userId: string) => ["ratings", userId, "reviews"] as const,
 
   venue: {
     all: () => ["venue"] as const,

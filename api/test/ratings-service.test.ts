@@ -68,9 +68,12 @@ async function makeService(opts: {
     stars: number
     comment?: string
     raterId?: string
+    _id?: string
     createdAt: Date
   }[]
 }) {
+  /** Filters passed to `ratingModel.find`, in call order. */
+  const finds: Record<string, unknown>[] = []
   const created: unknown[] = []
   const notified: {
     userId: string
@@ -82,15 +85,19 @@ async function makeService(opts: {
       created.push(doc)
       return Promise.resolve(doc)
     },
-    find: () => ({
-      select: () => ({
-        lean: () => Promise.resolve(opts.ratings ?? []),
-        sort: () => ({
-          limit: () => ({ lean: () => Promise.resolve(opts.recent ?? []) }),
-        }),
+    find: (filter: Record<string, unknown>) => {
+      finds.push(filter)
+      return findChain
+    },
+    aggregate: () => Promise.resolve(opts.aggregate ?? []),
+  }
+  const findChain = {
+    select: () => ({
+      lean: () => Promise.resolve(opts.ratings ?? []),
+      sort: () => ({
+        limit: () => ({ lean: () => Promise.resolve(opts.recent ?? []) }),
       }),
     }),
-    aggregate: () => Promise.resolve(opts.aggregate ?? []),
   }
   const sessionModel = {
     findOne: () => ({
@@ -123,7 +130,7 @@ async function makeService(opts: {
       },
     ],
   }).compile()
-  return { service: moduleRef.get(RatingsService), created, notified }
+  return { service: moduleRef.get(RatingsService), created, notified, finds }
 }
 
 void test("rate: a participant rates another after the match, and the ratee is notified", async () => {
@@ -268,4 +275,39 @@ void test("summary: empty for an unrated player, else rounded average + newest r
     createdAt: "2026-10-01T10:00:00.000Z",
   })
   assert.equal("comment" in s.recent[1], false)
+})
+
+void test("reviews: pages newest-first, anonymous, with a cursor while older ones remain", async () => {
+  const doc = (i: number) => ({
+    _id: i.toString(16).padStart(24, "0"),
+    stars: 5,
+    raterId: "user-an",
+    createdAt: new Date(Date.UTC(2026, 9, 20) - i * 60_000),
+  })
+  // One row more than a page: an older page exists.
+  const full = await makeService({
+    recent: Array.from({ length: 11 }, (_, i) => doc(i)),
+  })
+  const first = await full.service.reviews("u")
+  assert.equal(first.reviews.length, 10)
+  assert.deepEqual(first.reviews[0], {
+    stars: 5,
+    createdAt: doc(0).createdAt.toISOString(),
+  })
+  // The cursor points at the last review RETURNED, not the extra row.
+  assert.equal(first.nextCursor, `${doc(9).createdAt.getTime()}_${doc(9)._id}`)
+  assert.deepEqual(full.finds[0], { rateeId: "u" })
+
+  // The next page reads strictly older reviews than the cursor.
+  await full.service.reviews("u", first.nextCursor)
+  const next = full.finds[1] as { rateeId: string; $or: unknown[] }
+  assert.equal(next.rateeId, "u")
+  assert.equal(next.$or.length, 2)
+  assert.deepEqual(next.$or[0], { createdAt: { $lt: doc(9).createdAt } })
+
+  // A short page is the last one.
+  const short = await makeService({ recent: [doc(0), doc(1)] })
+  const last = await short.service.reviews("u")
+  assert.equal(last.reviews.length, 2)
+  assert.equal("nextCursor" in last, false)
 })

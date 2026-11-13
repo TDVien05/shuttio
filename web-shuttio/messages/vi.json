@@ -1974,6 +1974,7 @@
   "group_info_pick_stars": "Chọn số sao",
   "group_info_rated_stars": "Bạn đã đánh giá {count} sao",
   "profile_review_anonymous": "Người chơi ẩn danh",
+  "profile_reviews_load_more": "Xem thêm đánh giá",
   "group_info_stars_label": "Số sao",
   "group_info_stars_value": "{count} sao",
   "group_info_star_words_1": "Không hài lòng",

@@ -414,6 +414,13 @@ export interface PlayerReview {
   createdAt: string
 }
 
+/** One page of a player's reviews, newest first. */
+export interface PlayerReviewPage {
+  reviews: PlayerReview[]
+  /** Pass back as `cursor` for the next (older) page; absent on the last. */
+  nextCursor?: string
+}
+
 /** A player's aggregate peer rating (for profiles). */
 export interface RatingSummary {
   average: number
