@@ -1,6 +1,6 @@
 import { useLocation, useRouter } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
-import { RotateCcw, Star } from "lucide-react"
+import { EyeOff, RotateCcw, Star } from "lucide-react"
 import { initialsOf } from "@/lib/shared"
 import { relativeTime } from "@/lib/relative-time"
 
@@ -337,7 +337,8 @@ function PlayerSkillLevels({
 
 /**
  * A real player's peer reviews (`/api/ratings/users/:id/summary`) — average,
- * count and newest reviews left after played matches. Loaded when the profile
+ * count and newest reviews left after played matches. Reviews are anonymous:
+ * the api sends no rater, so each one is labelled as such. Loaded when the profile
  * opens; shows an empty state until the player has been rated.
  */
 function PlayerReviews({ userId, open }: { userId: string; open: boolean }) {
@@ -394,12 +395,12 @@ function PlayerReviews({ userId, open }: { userId: string; open: boolean }) {
               <div className="flex items-center gap-2.5">
                 <Avatar className="size-7 shrink-0">
                   <AvatarFallback tone="secondary" size="micro" weight="bold">
-                    {initialsOf(review.raterName)}
+                    <EyeOff className="size-3.5" />
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-semibold text-foreground">
-                    {review.raterName}
+                    {m.profile_review_anonymous()}
                   </p>
                   <Stars value={review.stars} className="mt-0.5 size-2.5" />
                 </div>

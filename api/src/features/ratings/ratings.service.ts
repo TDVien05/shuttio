@@ -13,7 +13,6 @@ import type { Model } from "mongoose"
 
 import type { RatingSummary } from "../../shared/index.js"
 import { NotificationsService } from "../notifications/notifications.service.js"
-import { ProfileService } from "../players/profile.service.js"
 import { isSessionEnded, sessionParticipantIds } from "../rooms/group-match.js"
 import {
   PlaySession,
@@ -32,6 +31,9 @@ const DUPLICATE_KEY = 11000
  * they actually played with — both must be participants of the session (the
  * host or a confirmed real roster member), the match must be over, and each
  * (rater, ratee, match) is rated once. Profiles read the aggregate.
+ *
+ * Reviews are anonymous: nothing the ratee or a profile viewer receives
+ * (the notification, its id, the summary) identifies the rater.
  */
 @Injectable()
 export class RatingsService {
@@ -40,8 +42,6 @@ export class RatingsService {
     private readonly ratingModel: Model<RatingDocument>,
     @InjectModel(PlaySession.name)
     private readonly sessionModel: Model<PlaySessionDocument>,
-    @Inject(ProfileService)
-    private readonly profiles: ProfileService,
     @Inject(NotificationsService)
     private readonly notifications: NotificationsService
   ) {}
@@ -80,12 +80,10 @@ export class RatingsService {
       throw new BadRequestException("Người này không tham gia trận đấu")
     }
 
-    const rater = await this.profiles.getProfile(raterId)
     const comment = input.comment?.trim()
     try {
       await this.ratingModel.create({
         raterId,
-        raterName: rater.user.name,
         rateeId: input.rateeId,
         sessionId: input.sessionId,
         stars: input.stars,
@@ -99,9 +97,10 @@ export class RatingsService {
     }
 
     await this.notifications.create(input.rateeId, {
-      id: `rating-${input.sessionId}-${raterId}-${randomUUID()}`,
+      // No rater id in the notification id either — it is sent to the ratee.
+      id: `rating-${input.sessionId}-${randomUUID()}`,
       kind: "rating",
-      text: `${rater.user.name} đã đánh giá bạn ${input.stars}★ sau trận "${doc.data.title}".`,
+      text: `Một người chơi cùng đã đánh giá ẩn danh bạn ${input.stars}★ sau trận "${doc.data.title}".`,
     })
   }
 
@@ -131,6 +130,7 @@ export class RatingsService {
     if (!agg?.count) return { average: 0, count: 0, recent: [] }
     const recent = await this.ratingModel
       .find({ rateeId: userId })
+      .select({ stars: 1, comment: 1, createdAt: 1 })
       .sort({ createdAt: -1 })
       .limit(SUMMARY_RECENT)
       .lean()
@@ -140,7 +140,6 @@ export class RatingsService {
       recent: recent.map((r) => ({
         stars: r.stars,
         ...(r.comment ? { comment: r.comment } : {}),
-        raterName: r.raterName,
         createdAt: new Date(r.createdAt).toISOString(),
       })),
     }

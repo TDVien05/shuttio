@@ -16,13 +16,13 @@ import { RatingsService } from "../src/features/ratings/ratings.service.js"
 import { Rating } from "../src/features/ratings/rating.schema.js"
 import { PlaySession } from "../src/features/sessions/session.schema.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
-import { ProfileService } from "../src/features/players/profile.service.js"
 import type { PlaySession as PlaySessionData } from "../src/shared/index.js"
 
 /**
  * Peer ratings after a played match: only participants of a finished,
  * non-cancelled match may rate each other, once per (rater, ratee, match);
- * the ratee is notified; profiles read an average + newest reviews.
+ * the ratee is notified; profiles read an average + newest reviews. Reviews
+ * are anonymous — nothing sent to the ratee or a profile names the rater.
  */
 
 function playedSession(
@@ -67,13 +67,15 @@ async function makeService(opts: {
   recent?: {
     stars: number
     comment?: string
-    raterName: string
+    raterId?: string
     createdAt: Date
   }[]
 }) {
   const created: unknown[] = []
-  const notified: { userId: string; input: { kind: string; text: string } }[] =
-    []
+  const notified: {
+    userId: string
+    input: { id: string; kind: string; text: string }
+  }[] = []
   const ratingModel = {
     create(doc: unknown) {
       if (opts.createFails) return Promise.reject(opts.createFails)
@@ -81,9 +83,11 @@ async function makeService(opts: {
       return Promise.resolve(doc)
     },
     find: () => ({
-      select: () => ({ lean: () => Promise.resolve(opts.ratings ?? []) }),
-      sort: () => ({
-        limit: () => ({ lean: () => Promise.resolve(opts.recent ?? []) }),
+      select: () => ({
+        lean: () => Promise.resolve(opts.ratings ?? []),
+        sort: () => ({
+          limit: () => ({ lean: () => Promise.resolve(opts.recent ?? []) }),
+        }),
       }),
     }),
     aggregate: () => Promise.resolve(opts.aggregate ?? []),
@@ -106,16 +110,12 @@ async function makeService(opts: {
       { provide: getModelToken(Rating.name), useValue: ratingModel },
       { provide: getModelToken(PlaySession.name), useValue: sessionModel },
       {
-        provide: ProfileService,
-        useValue: {
-          getProfile: (id: string) =>
-            Promise.resolve({ user: { name: `Name ${id}`, initials: "XX" } }),
-        },
-      },
-      {
         provide: NotificationsService,
         useValue: {
-          create: (userId: string, input: { kind: string; text: string }) => {
+          create: (
+            userId: string,
+            input: { id: string; kind: string; text: string }
+          ) => {
             notified.push({ userId, input })
             return Promise.resolve()
           },
@@ -137,7 +137,6 @@ void test("rate: a participant rates another after the match, and the ratee is n
   assert.deepEqual(created, [
     {
       raterId: "host-1",
-      raterName: "Name host-1",
       rateeId: "user-an",
       sessionId: "s-1",
       stars: 5,
@@ -147,6 +146,9 @@ void test("rate: a participant rates another after the match, and the ratee is n
   assert.equal(notified.length, 1)
   assert.equal(notified[0].userId, "user-an")
   assert.equal(notified[0].input.kind, "rating")
+  // Anonymous: neither the notification's text nor its id names the rater.
+  assert.equal(notified[0].input.text.includes("host-1"), false)
+  assert.equal(notified[0].input.id.includes("host-1"), false)
 })
 
 void test("rate rejects self-rating, unknown/cancelled/unfinished matches and outsiders", async () => {
@@ -246,12 +248,12 @@ void test("summary: empty for an unrated player, else rounded average + newest r
       {
         stars: 5,
         comment: "Tuyệt",
-        raterName: "An",
+        raterId: "user-an",
         createdAt: new Date("2026-10-01T10:00:00Z"),
       },
       {
         stars: 4,
-        raterName: "Bình",
+        raterId: "user-binh",
         createdAt: new Date("2026-09-30T10:00:00Z"),
       },
     ],
@@ -259,10 +261,10 @@ void test("summary: empty for an unrated player, else rounded average + newest r
   const s = await rated.service.summary("u")
   assert.equal(s.average, 4.7)
   assert.equal(s.count, 3)
+  // Anonymous: a review carries no rater id or name, even if the doc has one.
   assert.deepEqual(s.recent[0], {
     stars: 5,
     comment: "Tuyệt",
-    raterName: "An",
     createdAt: "2026-10-01T10:00:00.000Z",
   })
   assert.equal("comment" in s.recent[1], false)

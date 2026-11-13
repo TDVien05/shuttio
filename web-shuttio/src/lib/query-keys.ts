@@ -52,5 +52,10 @@ export const queryKeys = {
     messages: (channelId: string) => ["chat", "messages", channelId] as const,
     messagesAll: () => ["chat", "messages"] as const,
     users: (query: string) => ["chat", "users", query] as const,
+    groupMatch: (channelId: string) =>
+      ["chat", "group-match", channelId] as const,
+    /** Who the caller already rated in a match. */
+    matchRatings: (sessionId: string) =>
+      ["chat", "match-ratings", sessionId] as const,
   },
 } as const
