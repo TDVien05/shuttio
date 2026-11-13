@@ -416,11 +416,10 @@ export interface GroupMatchResult {
 
 // ── Player ratings ───────────────────────────────────────────────────────────
 
-/** One peer review left after a played match. */
+/** One anonymous peer review left after a played match. */
 export interface PlayerReview {
   stars: number
   comment?: string
-  raterName: string
   createdAt: string
 }
 

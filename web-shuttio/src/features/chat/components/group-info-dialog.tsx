@@ -1,5 +1,6 @@
 import * as React from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Star } from "lucide-react"
 import { queryKeys } from "@/lib/query-keys"
 import { toast } from "sonner"
 
@@ -24,11 +25,16 @@ import {
   renameGroup,
 } from "@/features/chat/api/group-api"
 import { UserAvatar } from "@/features/chat/components/user-avatar"
+import { RatePlayerDialog } from "@/features/chat/components/rate-player-dialog"
 import { UserPicker } from "@/features/chat/components/user-picker"
-import type { ChatChannel } from "@/lib/shared"
+import { chatQueries } from "@/features/chat/lib/chat-queries"
+import type { ChatChannel, ChatUser } from "@/lib/shared"
 import { m } from "@/paraglide/messages"
 
-/** Group / room details: rename, members, add people, leave or delete. */
+/**
+ * Group / room details: rename, members, add people, leave or delete — and,
+ * once the group's match has been played, anonymously rate fellow players.
+ */
 export function GroupInfoDialog({
   channel,
   userId,
@@ -52,6 +58,31 @@ export function GroupInfoDialog({
   const onlyMember = channel.members.length === 1
   const canDelete =
     (isGroup && (isCreator || onlyMember)) || (!isGroup && onlyMember)
+
+  // ── Anonymous peer ratings, once the group's match has been played ──
+  // Only people who actually played (host + confirmed roster) rate each other.
+  const [rating, setRating] = React.useState<ChatUser | null>(null)
+  const { data: groupMatch } = useQuery({
+    ...chatQueries.groupMatch(channel.id),
+    enabled: open,
+  })
+  const match = groupMatch?.match ?? null
+  const iPlayed = Boolean(
+    match?.ended &&
+    match.status !== "cancelled" &&
+    match.participantIds.includes(userId)
+  )
+  const { data: rated = {} } = useQuery({
+    ...chatQueries.matchRatings(match?.sessionId ?? ""),
+    enabled: open && iPlayed,
+  })
+  const canRate = (memberId: string) =>
+    iPlayed &&
+    memberId !== userId &&
+    Boolean(match?.participantIds.includes(memberId))
+  const hasUnrated = channel.members.some(
+    (member) => canRate(member.id) && !rated[member.id]
+  )
 
   const done = () =>
     void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all() })
@@ -137,14 +168,51 @@ export function GroupInfoDialog({
           {m.chat_members({ count: channel.members.length })}
         </h3>
         <ul className="flex flex-col gap-2">
-          {channel.members.map((member) => (
-            <li key={member.id} className="flex items-center gap-3">
-              <UserAvatar name={member.name} image={member.image} />
-              <span className="truncate">{member.name}</span>
-            </li>
-          ))}
+          {channel.members.map((member) => {
+            const given = rated[member.id]
+            return (
+              <li key={member.id} className="flex items-center gap-3">
+                <UserAvatar name={member.name} image={member.image} />
+                <span className="min-w-0 flex-1 truncate">{member.name}</span>
+                {!canRate(member.id) ? null : given ? (
+                  <span
+                    title={m.group_info_rated_title()}
+                    aria-label={m.group_info_rated_stars({ count: given })}
+                    className="flex shrink-0 items-center gap-1 text-xs font-semibold text-muted-foreground tabular-nums"
+                  >
+                    <Star className="size-3.5 fill-star text-star" />
+                    {given}
+                  </span>
+                ) : (
+                  <Button
+                    shape="pill"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onPress={() => setRating(member)}
+                  >
+                    <Star />
+                    {m.group_info_rate()}
+                  </Button>
+                )}
+              </li>
+            )
+          })}
         </ul>
+        {hasUnrated ? (
+          <p className="text-xs text-muted-foreground">
+            {m.group_info_rate_hint()} {m.group_info_rate_anonymous()}
+          </p>
+        ) : null}
       </section>
+
+      {match ? (
+        <RatePlayerDialog
+          member={rating}
+          sessionId={match.sessionId}
+          onClose={() => setRating(null)}
+        />
+      ) : null}
 
       {isGroup && isCreator && (
         <section className="flex flex-col gap-3">

@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
-    "db:check": "tsx scripts/db-check.ts"
+    "db:check": "tsx scripts/db-check.ts",
+    "seed:rating-test": "tsx scripts/seed-rating-test.ts"
   },
   "dependencies": {
     "@clerk/express": "^2.1.38",

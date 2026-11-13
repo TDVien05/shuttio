@@ -3,14 +3,15 @@ import type { HydratedDocument } from "mongoose"
 
 // A peer review one player leaves another after a match they both played.
 // One per (rater, ratee, session) — enforced by the unique index below.
+// Reviews are anonymous: `raterId` exists only to enforce that uniqueness and
+// to tell the rater who they already rated. It is never sent to the ratee or
+// shown on a profile, and no rater display name is stored.
 // Explicit `type:` on every @Prop for the same reason as session.schema.ts
 // (tsx/esbuild don't emit the design:type metadata @Prop() infers from).
 @Schema({ timestamps: true })
 export class Rating {
-  /** Clerk id of the player leaving the review. */
+  /** Clerk id of the player leaving the review — never exposed to others. */
   @Prop({ required: true, type: String }) raterId: string
-  /** Display name of the rater at the time of rating (shown on the profile). */
-  @Prop({ required: true, type: String }) raterName: string
   /** Clerk id of the player being reviewed. */
   @Prop({ required: true, index: true, type: String }) rateeId: string
   /** The PlaySession (match) both played in. */
