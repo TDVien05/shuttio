@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useChat } from "@ai-sdk/react"
 import { isToolUIPart, getToolName, isTextUIPart, isReasoningUIPart } from "ai"
-import type { UIMessage } from "ai"
+import type { ChatTransport, UIMessage } from "ai"
 import { createChat } from "@shadcn/helpers/ai-sdk"
 import { useNavigate } from "@tanstack/react-router"
 import {
@@ -187,6 +187,42 @@ const useIsomorphicLayoutEffect =
 
 // ─── Main view ───────────────────────────────────────────────────────────────
 
+/** The prompts the scripted demo conversation answers word for word. */
+const SCRIPTED_PROMPTS = [
+  m.ai_dashboard_prompts_badminton_near_me,
+  m.ai_dashboard_prompts_short_badminton_near_me,
+  m.ai_dashboard_prompts_book_tomorrow,
+  m.ai_dashboard_prompts_short_book_tomorrow,
+  m.ai_dashboard_prompts_same_level_players,
+  m.ai_dashboard_prompts_short_same_level_players,
+  m.ai_dashboard_prompts_quick_match,
+  m.ai_dashboard_prompts_short_quick_match,
+]
+
+/**
+ * Lower-cased, trimmed, NFC text — so a prompt typed with a different
+ * Vietnamese input method (precomposed vs. combining accents) or stray spaces
+ * still matches its keyword.
+ */
+function normalizePrompt(text: string): string {
+  return text.normalize("NFC").trim().replace(/s+/g, " ").toLowerCase()
+}
+
+/** Whether `text` contains any of the keywords. */
+function includesAny(text: string, keywords: readonly string[]): boolean {
+  return keywords.some((keyword) => text.includes(keyword))
+}
+
+/** A message's text parts, normalized (see normalizePrompt). */
+function messageText(message: UIMessage): string {
+  return normalizePrompt(
+    message.parts
+      .filter((part) => part.type === "text")
+      .map((part) => ("text" in part ? part.text : ""))
+      .join(" ")
+  )
+}
+
 export function AiNativeDashboardView() {
   const { courts, user: USER, players: seedPlayers } = useData()
   const { requestLocation } = useUserLocationContext()
@@ -199,7 +235,8 @@ export function AiNativeDashboardView() {
   const [input, setInput] = React.useState("")
   const [atHome, setAtHome] = React.useState(false)
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
-  const [profile, setProfile] = React.useState<string | null>(null)
+  /** The suggested player whose profile is open. */
+  const [profile, setProfile] = React.useState<PlayerMatchResult | null>(null)
   const [inviteState, setInviteState] = React.useState<{
     status: "idle" | "sending" | "sent"
     roomId: string | null
@@ -222,6 +259,9 @@ export function AiNativeDashboardView() {
   sessionsRef.current = sessions
   const roomsRef = React.useRef(rooms)
   roomsRef.current = rooms
+  // The player's own level, for "same level" matches typed as free text.
+  const levelRef = React.useRef(userLevelForSport("badminton"))
+  levelRef.current = userLevelForSport("badminton")
 
   // Predefined chat conversations via @shadcn/helpers/ai-sdk
   const chat = React.useMemo(() => {
@@ -390,15 +430,17 @@ export function AiNativeDashboardView() {
 
   // Local transport with smart fallback handler for unscripted queries
   const transport = React.useMemo(() => {
-    return chat.transport({
+    const scripted = chat.transport({ delayMs: 25 })
+    // A chat with no scripted turns, so EVERY message reaches the keyword
+    // fallback below. The scripted chat can't be trusted with free text: when
+    // a message matches none of its prompts, the helper answers with the FIRST
+    // scripted reply (the "courts near me" one) instead of the fallback — which
+    // is why typing "ghép người chơi cùng trình độ" used to suggest courts.
+    const unscripted = createChat().transport({
       delayMs: 25,
       fallback: ({ writer, messages: transcript }) => {
         const last = transcript[transcript.length - 1]
-        const text = last.parts
-          .filter((p) => p.type === "text")
-          .map((p) => ("text" in p ? p.text : ""))
-          .join(" ")
-          .toLowerCase()
+        const text = messageText(last)
 
         if (
           text.includes("đặt") ||
@@ -434,7 +476,69 @@ export function AiNativeDashboardView() {
           }
         }
 
-        if (text.includes("sân") || text.includes("court")) {
+        // Most specific intent first: "người chơi … gần sân" is about players,
+        // and "ghép trận" (join a game) is about rooms, not about people.
+        if (
+          includesAny(text, [
+            "ghép trận",
+            "tham gia phòng",
+            "phòng chơi",
+            "quick match",
+            "join a game",
+          ])
+        ) {
+          writer.reasoning("Đang tìm kiếm các phòng ghép trận đang mở...")
+          writer.tool("findRooms", {
+            input: { sport: "badminton" },
+            output: {
+              rooms: roomsRef.current.slice(0, 3),
+              sport: "badminton",
+              level: levelRef.current,
+            },
+          })
+          writer.text(
+            "Có các phòng ghép trận đang tìm người chơi. Bạn có thể tham gia ngay:"
+          )
+          return
+        }
+
+        if (
+          includesAny(text, [
+            "người chơi",
+            "đồng đội",
+            "bạn chơi",
+            "đối thủ",
+            "cùng trình độ",
+            "ghép",
+            "tìm người",
+            "teammate",
+            "partner",
+            "player",
+          ])
+        ) {
+          writer.reasoning("Đang tìm kiếm người chơi phù hợp...")
+          const res = findMatchedPlayers(
+            text || "badminton player",
+            playersRef.current,
+            "badminton",
+            levelRef.current
+          )
+          writer.tool("findPlayers", {
+            input: { sport: "badminton" },
+            output: {
+              intent: res.intent,
+              players: res.matches.slice(0, 4),
+            },
+          })
+          writer.text(
+            res.matches.length
+              ? "Dưới đây là những người chơi cầu lông phù hợp với bạn. Chọn người chơi để gửi lời mời ghép nhóm:"
+              : "Chưa tìm thấy người chơi phù hợp. Bạn thử bỏ bớt điều kiện (khu vực, thời gian) hoặc tạo phòng để người khác tham gia nhé."
+          )
+          return
+        }
+
+        if (includesAny(text, ["sân", "court"])) {
           writer.reasoning("Đang tìm kiếm sân cầu lông phù hợp...")
           writer.tool("findCourts", {
             input: { sport: "badminton" },
@@ -446,33 +550,6 @@ export function AiNativeDashboardView() {
           })
           writer.text(
             "Dưới đây là các sân cầu lông phù hợp với yêu cầu của bạn:"
-          )
-          return
-        }
-
-        if (
-          text.includes("người") ||
-          text.includes("bạn") ||
-          text.includes("đồng đội") ||
-          text.includes("player") ||
-          text.includes("ghép")
-        ) {
-          writer.reasoning("Đang tìm kiếm người chơi phù hợp...")
-          const res = findMatchedPlayers(
-            text || "badminton player",
-            playersRef.current,
-            "badminton",
-            "intermediate"
-          )
-          writer.tool("findPlayers", {
-            input: { sport: "badminton" },
-            output: {
-              intent: res.intent,
-              players: res.matches.slice(0, 4),
-            },
-          })
-          writer.text(
-            "Dưới đây là danh sách những người chơi cầu lông đang hoạt động phù hợp với bạn:"
           )
           return
         }
@@ -495,11 +572,31 @@ export function AiNativeDashboardView() {
         )
       },
     })
+    const scriptedPrompts = new Set(
+      SCRIPTED_PROMPTS.map((prompt) => normalizePrompt(prompt()))
+    )
+    return {
+      sendMessages: (options) => {
+        const last = options.messages.at(-1)
+        const useScript =
+          last?.role === "user" && scriptedPrompts.has(messageText(last))
+        return (useScript ? scripted : unscripted).sendMessages(options)
+      },
+      reconnectToStream: () => Promise.resolve(null),
+    } satisfies ChatTransport<UIMessage>
   }, [chat])
 
   const { messages, sendMessage, status, setMessages, error, regenerate } =
     useChat({ transport })
-  const isLoading = status === "streaming" || status === "submitted"
+  // True from the moment a message is submitted until it has been handed to
+  // the chat. Covers the gap while the browser location is resolved — during
+  // which `status` is still "ready", so a second Enter (key repeat, or the
+  // extra keydown some Vietnamese input methods send) used to send the same
+  // message again. The ref is the synchronous guard; the state drives the UI.
+  const sendingRef = React.useRef(false)
+  const [preparing, setPreparing] = React.useState(false)
+  const isLoading =
+    preparing || status === "streaming" || status === "submitted"
 
   React.useEffect(() => {
     const handleClear = () => {
@@ -628,7 +725,9 @@ export function AiNativeDashboardView() {
 
   const submit = async (text: string) => {
     const trimmed = text.trim()
-    if (!trimmed || isLoading) return
+    if (!trimmed || isLoading || sendingRef.current) return
+    sendingRef.current = true
+    setPreparing(true)
     if (showWelcome && !prefersReducedMotion()) {
       composerFlip.current = Flip.getState('[data-flip-id="ai-composer"]')
     }
@@ -642,8 +741,14 @@ export function AiNativeDashboardView() {
     setInviteState({ status: "idle", roomId: null })
     setInput("")
 
-    await resolveLocation()
-    void sendMessage({ text: trimmed })
+    try {
+      await resolveLocation()
+      void sendMessage({ text: trimmed })
+    } finally {
+      // From here `status` ("submitted", then "streaming") blocks resends.
+      sendingRef.current = false
+      setPreparing(false)
+    }
   }
 
   const togglePlayer = (player: PlayerMatchResult) => {
@@ -745,6 +850,9 @@ export function AiNativeDashboardView() {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault()
+              // Enter that confirms an input-method composition (Telex/VNI)
+              // or a held-down key must not send again.
+              if (e.nativeEvent.isComposing || e.repeat) return
               void submit(input)
             }
           }}
@@ -777,7 +885,15 @@ export function AiNativeDashboardView() {
 
   const profileDialog = (
     <PlayerProfileDialog
-      initials={profile}
+      // A real account is looked up by id (initials collide between people);
+      // only a seed demo player is known by its initials alone.
+      initials={profile?.demo ? profile.initials : null}
+      member={
+        profile && !profile.demo
+          ? { name: profile.name, userId: profile.id }
+          : null
+      }
+      match={profile ? { pct: profile.matchPct, reason: profile.reason } : null}
       open={Boolean(profile)}
       onOpenChange={(open) => {
         if (!open) setProfile(null)
@@ -860,7 +976,7 @@ export function AiNativeDashboardView() {
               isStreaming={isLoading && index === messages.length - 1}
               onChoose={(choice) => void submit(choice)}
               onTogglePlayer={togglePlayer}
-              onOpenProfile={(p) => setProfile(p.initials)}
+              onOpenProfile={(p) => setProfile(p)}
               onBook={(courtId) => {
                 if (aiBookedCourtIds.has(courtId)) {
                   toast.info(m.ai_dashboard_already_booked())

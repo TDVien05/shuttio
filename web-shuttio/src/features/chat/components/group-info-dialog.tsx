@@ -29,6 +29,11 @@ import { RatePlayerDialog } from "@/features/chat/components/rate-player-dialog"
 import { UserPicker } from "@/features/chat/components/user-picker"
 import { chatQueries } from "@/features/chat/lib/chat-queries"
 import { PlayerProfileDialog } from "@/features/dashboard/components/profile-dialog"
+import {
+  PresenceDot,
+  presenceText,
+  usePresence,
+} from "@/features/presence/presence"
 import type { ChatChannel, ChatUser } from "@/lib/shared"
 import { m } from "@/paraglide/messages"
 
@@ -54,6 +59,12 @@ export function GroupInfoDialog({
   const queryClient = useQueryClient()
   const [name, setName] = React.useState(channel.name ?? "")
   const [adding, setAdding] = React.useState<FoundUser[]>([])
+
+  // Who of the members has the app open; re-read while the dialog is open.
+  const presence = usePresence(
+    channel.members.map((member) => member.id).filter((id) => id !== userId),
+    open
+  )
 
   const isGroup = channel.kind === "group"
   const isCreator = channel.createdBy === userId
@@ -182,8 +193,18 @@ export function GroupInfoDialog({
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-full text-left outline-none hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => setProfile(member)}
                 >
-                  <UserAvatar name={member.name} image={member.image} />
-                  <span className="truncate">{member.name}</span>
+                  <span className="relative shrink-0">
+                    <UserAvatar name={member.name} image={member.image} />
+                    <PresenceDot status={presence.get(member.id)} />
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate">{member.name}</span>
+                    {presenceText(presence.get(member.id)) ? (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {presenceText(presence.get(member.id))}
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
                 {!canRate(member.id) ? null : given ? (
                   <span
