@@ -13,6 +13,7 @@ export const queryKeys = {
   elo: {
     questionnaire: () => ["elo", "questionnaire"] as const,
     result: () => ["elo", "result"] as const,
+    history: () => ["elo", "history"] as const,
     level: (userId: string) => ["elo", "level", userId] as const,
   },
   ratings: (userId: string) => ["ratings", userId] as const,
@@ -42,6 +43,9 @@ export const queryKeys = {
   appReviews: () => ["app-reviews"] as const,
   appReviewsPublic: () => ["app-reviews", "public"] as const,
   appReviewMe: () => ["app-reviews", "me"] as const,
+
+  /** Presence of a set of users; `userIds` must be sorted (see usePresence). */
+  presence: (userIds: string[]) => ["presence", ...userIds] as const,
 
   banks: () => ["banks"] as const,
   account: () => ["account"] as const,

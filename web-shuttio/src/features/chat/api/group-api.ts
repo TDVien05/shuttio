@@ -65,6 +65,8 @@ export async function ratePlayer(input: {
   rateeId: string
   stars: number
   comment?: string
+  /** −1 weaker than / 0 matches / +1 stronger than the displayed level. */
+  skillVote?: -1 | 0 | 1
 }): Promise<void> {
   await api("/api/ratings", { method: "POST", body: input })
 }

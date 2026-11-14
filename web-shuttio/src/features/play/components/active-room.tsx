@@ -71,6 +71,7 @@ import { useSessionUi } from "@/features/play/state/session-ui"
 import { PlayerProfileDialog } from "@/features/dashboard/components/profile-dialog"
 import { RoomSharePanel } from "@/features/play/components/room-share"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
+import { usePresence } from "@/features/presence/presence"
 import { m } from "@/paraglide/messages"
 
 const trustMessages = {
@@ -229,6 +230,12 @@ function RoomDetail({
     declineRequest,
   } = useSessionActions()
   const sUser = useAuthUser()
+  // Which of the other real players have the app open right now.
+  const presence = usePresence(
+    (room.members ?? []).flatMap((member) =>
+      member.userId && member.userId !== sUser.id ? member.userId : []
+    )
+  )
   const { bookCourtForSession } = useBookingWizard()
   const { players: MATCH_SUGGESTIONS, user: USER, courtByVenue } = useData()
   const markPaid = useMarkSharePaid()
@@ -461,6 +468,7 @@ function RoomDetail({
                   sport={room.sport}
                   initials={initials}
                   member={member}
+                  online={presence.get(memberId ?? "")?.online ?? false}
                   canKick={isHost && initials !== USER.initials}
                   onKick={() => kickPlayer(room.id, initials)}
                   onViewProfile={openProfile}
@@ -691,6 +699,7 @@ function ParticipantRow({
   sport,
   initials,
   member,
+  online,
   canKick,
   onKick,
   onViewProfile,
@@ -702,6 +711,8 @@ function ParticipantRow({
   sport: MatchRoom["sport"]
   initials: string
   member?: RoomMember
+  /** This player has the app open right now (never set for oneself). */
+  online?: boolean
   canKick?: boolean
   onKick?: () => void
   onViewProfile?: (initials: string) => void
@@ -731,7 +742,7 @@ function ParticipantRow({
 
   const info = (
     <>
-      <PlayerAvatar initials={displayInitials} />
+      <PlayerAvatar initials={displayInitials} online={online} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">

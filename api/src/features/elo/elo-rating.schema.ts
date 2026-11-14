@@ -6,8 +6,11 @@ import type { EloLabelCode } from "./initial-assessment.scoring.js"
 
 /** Môn/nội dung thi đấu được chấm Elo. Hiện chỉ có đánh đôi. */
 export type EloDiscipline = "DOUBLES"
-/** Elo khởi tạo luôn tạm thời; chưa có cơ chế xác minh qua trận đấu. */
-export type EloStatus = "PROVISIONAL"
+/**
+ * PROVISIONAL: ước lượng còn bất định (mới khởi tạo, ít đánh giá chéo).
+ * ESTABLISHED: `rd` đã thu hẹp dưới ngưỡng nhờ đánh giá chéo (peer-update.ts).
+ */
+export type EloStatus = "PROVISIONAL" | "ESTABLISHED"
 /**
  * Nguồn của Elo hiện tại:
  *  - ASSESSMENT: tính từ bảng hỏi (đã hoàn tất, KHÔNG làm lại được).
@@ -39,12 +42,32 @@ export class EloRating {
   @Prop({ type: String, required: true }) userId: string
   @Prop({ type: String, required: true, enum: ["DOUBLES"] })
   discipline: EloDiscipline
-  /** Elo hiện tại; ban đầu bằng `initialElo`. Giai đoạn này chưa ai sửa nó. */
+  /**
+   * Elo hiện tại; ban đầu bằng `initialElo`, sau đó chỉ đổi qua
+   * `EloService.applyPeerVotes` (đánh giá chéo sau trận).
+   */
   @Prop({ type: Number, required: true }) currentElo: number
   /** Elo lúc khởi tạo (800–1200 từ bảng hỏi, hoặc 1000 mặc định). */
   @Prop({ type: Number, required: true }) initialElo: number
-  @Prop({ type: String, required: true, enum: ["PROVISIONAL"] })
+  @Prop({
+    type: String,
+    required: true,
+    enum: ["PROVISIONAL", "ESTABLISHED"],
+  })
   status: EloStatus
+  /**
+   * Độ bất định của Elo (rating deviation). Thiếu ở document cũ → suy ra từ
+   * `source` bằng `initialRd`. Xem peer-update.ts.
+   */
+  @Prop({ type: Number }) rd?: number
+  /** Lần cuối Elo được cập nhật từ đánh giá chéo; mốc để `rd` nở lại. */
+  @Prop({ type: Date }) lastPeerUpdateAt?: Date
+  /**
+   * Các trận gần nhất đã được tính vào Elo (tối đa 50). Nằm trong filter của
+   * thao tác cập nhật nên một trận không bao giờ bị cộng hai lần khi sweep
+   * chạy lại.
+   */
+  @Prop({ type: [String], default: [] }) peerAppliedSessions?: string[]
   @Prop({ type: String, required: true, enum: ["ASSESSMENT", "DEFAULT"] })
   source: EloSource
   /** Mã nhãn tại thời điểm khởi tạo (BEGINNER…HIGH). */
@@ -62,9 +85,10 @@ export class EloRating {
   /** Cờ cảnh báo không nhất quán (chỉ thông tin, không ảnh hưởng điểm). */
   @Prop({ type: Boolean, default: false }) inconsistencyWarning: boolean
   /**
-   * Số lần rating đã bị cập nhật bởi hoạt động khác (trận đấu…). Hiện luôn 0;
-   * hệ thống trận đấu tương lai phải tăng trường này. Điều kiện "chưa có cập
-   * nhật nào" để thay Elo mặc định dựa vào nó.
+   * Số lần rating đã bị cập nhật sau khởi tạo (hiện là đánh giá chéo; hệ thống
+   * trận đấu tương lai cũng phải tăng trường này). Điều kiện "chưa có cập nhật
+   * nào" để thay Elo mặc định dựa vào nó, và nó là khoá lạc quan của mọi lần
+   * cập nhật.
    */
   @Prop({ type: Number, required: true, default: 0 }) ratingUpdateCount: number
   /** Thời điểm hoàn tất bảng hỏi (UTC); null khi vẫn đang ở Elo mặc định cũ. */

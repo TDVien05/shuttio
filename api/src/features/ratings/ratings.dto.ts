@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -27,6 +28,11 @@ export class CreateRatingBodyDto {
   @IsString()
   @Length(0, 300)
   comment?: string
+
+  /** −1 weaker than / 0 matches / +1 stronger than the displayed level. */
+  @IsOptional()
+  @IsIn([-1, 0, 1])
+  skillVote?: number
 }
 
 export class SessionIdParamDto {

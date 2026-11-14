@@ -1185,7 +1185,8 @@ export interface PlayerElo {
   elo: number
   label: EloLabel
   level: Level
-  status: "PROVISIONAL"
+  /** ESTABLISHED once enough anonymous peer ratings narrowed the estimate. */
+  status: "PROVISIONAL" | "ESTABLISHED"
   source: "ASSESSMENT" | "DEFAULT"
   /** UTC ISO; null while the player is still on the skipped default. */
   completedAt: string | null
@@ -1202,6 +1203,22 @@ export interface PlayerSkillLevel {
   level: Level
   elo: number
   label: EloLabel
+  /** ESTABLISHED once enough anonymous peer ratings narrowed the estimate. */
+  status: "PROVISIONAL" | "ESTABLISHED"
+}
+
+// ── Presence ─────────────────────────────────────────────────────────────────
+
+/**
+ * Whether a player has the app open right now, and when they were last known
+ * to. `online` is live (a realtime connection exists); `lastSeenAt` is accurate
+ * to within a few minutes and null for someone never seen.
+ */
+export interface UserPresenceStatus {
+  userId: string
+  online: boolean
+  /** UTC ISO. */
+  lastSeenAt: string | null
 }
 
 // ── The seed payload (what the API serves & the web hydrates) ─────────────────

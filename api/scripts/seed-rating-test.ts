@@ -5,21 +5,33 @@
 //   cd api
 //   node --import tsx scripts/seed-rating-test.ts <user> <user> [<user> ...]
 //   node --import tsx scripts/seed-rating-test.ts --with-ratings <user> <user>
+//   node --import tsx scripts/seed-rating-test.ts --with-skill-votes <user> <user> <user>
 //   node --import tsx scripts/seed-rating-test.ts --clean
 //
 // Each <user> is a REAL account, given as its sign-in email or its Clerk id
 // (`user_...`). The first one hosts the match. 2–4 users.
 //
-//   --with-ratings  also record a review from every other player to the host,
-//                   so the host's profile shows anonymous reviews straight away
-//                   (the host can still rate everyone).
-//   --clean         delete everything this script ever created, and nothing else.
+//   --with-ratings      also record a review from every other player to the
+//                       host, so the host's profile shows anonymous reviews
+//                       straight away (the host can still rate everyone).
+//   --with-skill-votes  for testing Elo from peer skill votes (each user needs
+//                       an Elo rating). Every non-host player has already
+//                       rated everyone else with a "stronger" skill vote,
+//                       dated so the collection window closes 15 minutes from
+//                       now; the next Elo sweep (every 15 min) applies them.
+//                       With 3–4 users the host rates the others in the UI
+//                       within those 15 minutes and everything lands within
+//                       ~30 minutes. With 2 users the host's own vote opens a
+//                       fresh window — set PEER_VOTE_WINDOW_MINUTES=15 in
+//                       api/.env (and restart the api) to see it applied soon.
+//   --clean             delete everything this script ever created, undo the
+//                       Elo changes those test matches caused, and nothing else.
 //
 // Reads DATABASE_URL and CLERK_SECRET_KEY from api/.env — it writes to the
 // same database the server uses, so check the database name it prints. Every
 // record it creates is tagged (`group-seedrating…` / `seed-rating-…`), which is
-// what --clean removes — along with the "rated you" notifications raised by
-// ratings given in those matches. Re-running creates a fresh group each time.
+// what --clean removes — along with the notifications and Elo history raised
+// by ratings given in those matches. Re-running creates a fresh group each time.
 
 import "dotenv/config"
 import "reflect-metadata"
@@ -38,9 +50,19 @@ import {
   ChatMessageSchema,
 } from "../src/features/chat/chat.schema.js"
 import {
+  EloChange,
+  EloChangeSchema,
+} from "../src/features/elo/elo-change.schema.js"
+import {
+  EloRating,
+  EloRatingSchema,
+} from "../src/features/elo/elo-rating.schema.js"
+import { statusForRd } from "../src/features/elo/peer-update.js"
+import {
   Notification,
   NotificationSchema,
 } from "../src/features/notifications/notification.schema.js"
+import { PEER_VOTE_WINDOW_MS } from "../src/features/ratings/peer-elo.service.js"
 import { Rating, RatingSchema } from "../src/features/ratings/rating.schema.js"
 import {
   PlaySession,
@@ -58,6 +80,15 @@ const SESSION_PREFIX = "seed-rating-"
 
 const MIN_USERS = 2
 const MAX_USERS = 4
+/**
+ * The api's vote-collection window — the same `PEER_VOTE_WINDOW_MINUTES`
+ * override the server reads, else the 24-hour default.
+ */
+const VOTE_WINDOW_MS = Number(process.env.PEER_VOTE_WINDOW_MINUTES)
+  ? Number(process.env.PEER_VOTE_WINDOW_MINUTES) * 60_000
+  : PEER_VOTE_WINDOW_MS
+/** `--with-skill-votes`: minutes until the seeded votes' window closes. */
+const SKILL_WINDOW_CLOSES_IN_MIN = 15
 
 interface SeedUser {
   id: string
@@ -72,7 +103,7 @@ function fail(message: string): never {
 const flags = new Set(process.argv.slice(2).filter((a) => a.startsWith("--")))
 const userArgs = process.argv.slice(2).filter((a) => !a.startsWith("--"))
 const unknown = [...flags].filter(
-  (f) => f !== "--clean" && f !== "--with-ratings"
+  (f) => f !== "--clean" && f !== "--with-ratings" && f !== "--with-skill-votes"
 )
 if (unknown.length) fail(`Tham số không hợp lệ: ${unknown.join(", ")}`)
 
@@ -88,6 +119,8 @@ const messages = mongoose.model(ChatMessage.name, ChatMessageSchema)
 const sessions = mongoose.model(PlaySession.name, PlaySessionSchema)
 const ratings = mongoose.model(Rating.name, RatingSchema)
 const notifications = mongoose.model(Notification.name, NotificationSchema)
+const eloRatings = mongoose.model(EloRating.name, EloRatingSchema)
+const eloChanges = mongoose.model(EloChange.name, EloChangeSchema)
 
 try {
   if (flags.has("--clean")) await clean()
@@ -100,12 +133,15 @@ try {
 async function clean(): Promise<void> {
   const channelFilter = { channelId: { $regex: `^${CHANNEL_PREFIX}` } }
   const sessionFilter = { sessionId: { $regex: `^${SESSION_PREFIX}` } }
+  const eloReverted = await revertEloChanges(sessionFilter)
   const removed = {
-    // "X rated you" notifications raised while testing: `RatingsService`
-    // builds their id as `rating-<sessionId>-<uuid>`.
+    eloReverted,
+    eloHistory: (await eloChanges.deleteMany(sessionFilter)).deletedCount,
+    // Notifications raised while testing: `RatingsService` builds
+    // `rating-<sessionId>-<uuid>`, `PeerEloService` `elo-peer-<sessionId>-…`.
     notifications: (
       await notifications.deleteMany({
-        notifId: { $regex: `^rating-${SESSION_PREFIX}` },
+        notifId: { $regex: `^(rating|elo-peer)-${SESSION_PREFIX}` },
       })
     ).deletedCount,
     ratings: (await ratings.deleteMany(sessionFilter)).deletedCount,
@@ -117,7 +153,45 @@ async function clean(): Promise<void> {
   console.log("✔ Đã xoá dữ liệu test:", removed)
 }
 
+/**
+ * Undo the Elo changes the test matches caused, newest first: give the points
+ * back, drop the match from the rating's applied list and step the update
+ * counter down. `rd`/status are restored only while the change being undone is
+ * still the rating's latest one (its `rd` equals the change's `rdAfter`) — a
+ * later real change keeps its own uncertainty.
+ */
+async function revertEloChanges(sessionFilter: object): Promise<number> {
+  const changes = await eloChanges
+    .find(sessionFilter)
+    .sort({ createdAt: -1, _id: -1 })
+    .lean()
+  let reverted = 0
+  for (const c of changes) {
+    const key = { userId: c.userId, discipline: c.discipline }
+    const res = await eloRatings.updateOne(
+      { ...key, peerAppliedSessions: c.sessionId },
+      {
+        $inc: { currentElo: -c.delta, ratingUpdateCount: -1 },
+        $pull: { peerAppliedSessions: c.sessionId },
+      }
+    )
+    if (res.modifiedCount !== 1) continue
+    reverted += 1
+    await eloRatings.updateOne(
+      { ...key, rd: c.rdAfter },
+      { $set: { rd: c.rdBefore, status: statusForRd(c.rdBefore) } }
+    )
+    // Back to a never-updated rating: no "last peer update" either.
+    await eloRatings.updateOne(
+      { ...key, ratingUpdateCount: 0 },
+      { $unset: { lastPeerUpdateAt: 1 } }
+    )
+  }
+  return reverted
+}
+
 async function seed(): Promise<void> {
+  const withSkillVotes = flags.has("--with-skill-votes")
   if (userArgs.length < MIN_USERS || userArgs.length > MAX_USERS) {
     fail(
       `Cần ${MIN_USERS}–${MAX_USERS} tài khoản (email hoặc Clerk id), ví dụ:\n` +
@@ -129,6 +203,22 @@ async function seed(): Promise<void> {
     fail("Các tài khoản phải khác nhau")
   }
   const [host, ...others] = users
+
+  // A skill vote for a player without an Elo rating is discarded by the sweep.
+  const eloByUser = new Map<string, number>()
+  if (withSkillVotes) {
+    const rated = await eloRatings
+      .find({ userId: { $in: users.map((u) => u.id) } })
+      .select({ userId: 1, currentElo: 1 })
+      .lean()
+    for (const r of rated) eloByUser.set(r.userId, r.currentElo)
+    const missing = users.filter((u) => !eloByUser.has(u.id))
+    if (missing.length) {
+      fail(
+        `Chưa có Elo (cần làm bảng hỏi trước): ${missing.map((u) => u.name).join(", ")}`
+      )
+    }
+  }
 
   const tag = randomUUID().replaceAll("-", "").slice(0, 12)
   const channelId = `${CHANNEL_PREFIX}${tag}`
@@ -222,6 +312,32 @@ async function seed(): Promise<void> {
     )
   }
 
+  let windowClosesAt: Date | null = null
+  if (withSkillVotes) {
+    // Dated so the 24h window (counted from a player's first vote) closes in
+    // SKILL_WINDOW_CLOSES_IN_MIN minutes. Written through the raw collection
+    // so Mongoose timestamps don't replace the back-dated `createdAt`.
+    windowClosesAt = new Date(
+      now.getTime() + SKILL_WINDOW_CLOSES_IN_MIN * 60_000
+    )
+    const votedAt = new Date(windowClosesAt.getTime() - VOTE_WINDOW_MS)
+    const votes = others.flatMap((rater) =>
+      users
+        .filter((ratee) => ratee.id !== rater.id)
+        .map((ratee) => ({
+          raterId: rater.id,
+          rateeId: ratee.id,
+          sessionId,
+          stars: 5,
+          skillVote: 1,
+          eloPending: true,
+          createdAt: votedAt,
+          updatedAt: votedAt,
+        }))
+    )
+    await ratings.collection.insertMany(votes)
+  }
+
   console.log("✔ Đã tạo dữ liệu test")
   console.log(`  Nhóm chat : [TEST] Nhóm đánh giá ${slot}  (${channelId})`)
   console.log(`  Trận      : ${title}  (${sessionId})`)
@@ -231,6 +347,36 @@ async function seed(): Promise<void> {
     console.log(
       `  Đã có ${others.length} đánh giá ẩn danh cho ${host.name} — xem trên hồ sơ.`
     )
+  }
+  if (windowClosesAt) {
+    const at = windowClosesAt.toLocaleTimeString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    console.log(
+      "  Phiếu kỹ năng “Mạnh hơn” đã có sẵn từ người chơi (không phải chủ trận)."
+    )
+    for (const u of users) {
+      console.log(`    Elo hiện tại của ${u.name}: ${eloByUser.get(u.id)}`)
+    }
+    const windowMin = Math.round(VOTE_WINDOW_MS / 60_000)
+    if (others.length >= 2) {
+      console.log(
+        `  → ${host.name}: hãy chấm kỹ năng những người còn lại TRƯỚC ${at}.\n` +
+          "    Lần quét Elo kế tiếp sau mốc đó (mỗi 15 phút, api phải đang chạy)\n" +
+          "    sẽ cập nhật Elo của mọi người — xem ở Hồ sơ → Lịch sử Elo."
+      )
+    } else {
+      // Two players: the other player has no seeded vote, so the host's own
+      // vote opens a fresh window for them.
+      console.log(
+        `  → Elo của ${host.name} sẽ đổi ở lần quét đầu tiên sau ${at}\n` +
+          "    (quét mỗi 15 phút, api phải đang chạy) — xem ở Hồ sơ → Lịch sử Elo.\n" +
+          `  → Phiếu ${host.name} tự chấm cho ${others[0].name} được tính sau ${windowMin} phút\n` +
+          "    kể từ lúc chấm (PEER_VOTE_WINDOW_MINUTES trong api/.env; mặc định 1440)."
+      )
+    }
   }
   console.log(
     "\nĐăng nhập bằng một trong các tài khoản trên → Trò chuyện → mở nhóm\n" +

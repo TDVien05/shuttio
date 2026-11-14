@@ -19,10 +19,12 @@ import {
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { useData } from "@/features/dashboard/components/data-provider"
 import { eloQueries } from "@/features/elo/api/elo.queries"
+import { EloHistory } from "@/features/elo/components/elo-history"
 import { profileQueries } from "@/features/dashboard/api/profile.queries"
 import { usePlayerIdentity } from "@/features/play/hooks/use-player-identity"
 import { LevelChip, SportDot } from "@/features/dashboard/components/shared"
 import { ELO_ASSESSMENT_PATH } from "@/features/elo/lib/elo"
+import { presenceText, usePresence } from "@/features/presence/presence"
 import { m } from "@/paraglide/messages"
 
 const sportsMessages = {
@@ -55,14 +57,14 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     <Dialog
       isOpen={open}
       onOpenChange={onOpenChange}
-      className="flex max-h-sheet-90 max-w-page-width flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
+      className="no-scrollbar block max-h-sheet-90 max-w-page-width gap-0 overflow-y-auto p-0 sm:max-w-md"
     >
       <DialogHeader className="sr-only">
         <DialogTitle>{m.sidebar_profile()}</DialogTitle>
         <DialogDescription>{m.profile_dialog_description()}</DialogDescription>
       </DialogHeader>
 
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+      <div>
         <div
           className="bg-court-lines relative h-32 w-full shrink-0 bg-linear-to-br from-brand via-lime/60 to-chart-3 sm:h-36"
           aria-hidden="true"
@@ -106,6 +108,14 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                   <span className="font-mono text-mini font-semibold tracking-wider text-chart-3 uppercase">
                     {m.common_sports_badminton()}
                   </span>
+                  {/* Tạm tính cho đến khi đủ đánh giá chéo thu hẹp ước lượng. */}
+                  {elo ? (
+                    <span className="ml-auto rounded-full bg-background/70 px-2 py-0.5 text-micro font-medium text-muted-foreground ring-1 ring-foreground/10">
+                      {elo.status === "ESTABLISHED"
+                        ? m.profile_elo_status_established()
+                        : m.profile_elo_status_provisional()}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="z-10 mt-1">
                   <p className="font-heading text-base leading-tight font-bold text-foreground">
@@ -136,6 +146,8 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
             ) : null}
           </div>
 
+          {elo ? <EloHistory open={open} /> : null}
+
           <PlayerReviews userId={sUser.id} open={open} />
         </div>
       </div>
@@ -154,6 +166,11 @@ interface PlayerProfileDialogProps {
    * `initials={null}`, so no seed player is matched by initials.
    */
   member?: { name: string; userId?: string; image?: string } | null
+  /**
+   * Why this player was suggested, when the caller ranked them (the AI's
+   * player search): the compatibility score and its reasons.
+   */
+  match?: { pct: number; reason: string } | null
 }
 
 export function PlayerProfileDialog({
@@ -161,23 +178,36 @@ export function PlayerProfileDialog({
   open,
   onOpenChange,
   member,
+  match,
 }: PlayerProfileDialogProps) {
   const { players, playerByInitials } = useData()
   const pathname = useLocation({ select: (l) => l.pathname })
   const playScope = pathname === "/app/play"
 
-  const fullPlayer = initials
-    ? players.find((p) => p.initials === initials)
-    : null
+  // A real account is found by its id (initials collide between people); a
+  // seed player only has its initials.
+  const fullPlayer = member?.userId
+    ? players.find((p) => p.id === member.userId)
+    : initials
+      ? players.find((p) => p.initials === initials)
+      : null
+  /** A real account: its level, presence and reviews come from the api. */
+  const real = Boolean(member?.userId) && !fullPlayer?.demo
   const rosterEntry = initials ? playerByInitials(initials) : null
 
   const name =
     fullPlayer?.name || member?.name || rosterEntry?.name || initials || ""
   const level = fullPlayer?.level ?? rosterEntry?.level
   const sport = fullPlayer?.sport
-  const matchPct = fullPlayer?.matchPct
+  // A real player's seed record carries no score (0), so only a caller-given
+  // match counts for them.
+  const matchPct = match?.pct ?? (real ? undefined : fullPlayer?.matchPct)
   const distanceKm = fullPlayer?.distanceKm
-  const online = fullPlayer?.online
+  // A real account's presence is live; a seed player keeps its fixture flag.
+  const presence = usePresence(member?.userId ? [member.userId] : [], open)
+  const live = member?.userId ? presence.get(member.userId) : undefined
+  const online = live ? live.online : fullPlayer?.online
+  const presenceLabel = presenceText(live)
   const blurb = fullPlayer?.blurb
   const shownInitials = initials ?? (name ? initialsOf(name) : "")
 
@@ -186,7 +216,7 @@ export function PlayerProfileDialog({
       isOpen={open}
       onOpenChange={onOpenChange}
       className={cn(
-        "flex max-h-sheet-90 max-w-page-width flex-col gap-0 overflow-hidden p-0 sm:max-w-md",
+        "no-scrollbar block max-h-sheet-90 max-w-page-width gap-0 overflow-y-auto p-0 sm:max-w-md",
         playScope && "player-play-overlay"
       )}
     >
@@ -197,7 +227,7 @@ export function PlayerProfileDialog({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+      <div>
         <div
           className="bg-court-lines relative h-32 w-full shrink-0 bg-linear-to-br from-brand via-lime/60 to-chart-3 sm:h-36"
           aria-hidden="true"
@@ -229,10 +259,13 @@ export function PlayerProfileDialog({
             <h3 className="font-heading text-xl leading-tight font-bold text-foreground">
               {name}
             </h3>
-            {initials ? (
+            {initials && !real ? (
               <p className="text-xs text-muted-foreground">
                 @{initials.toLowerCase()}
               </p>
+            ) : null}
+            {presenceLabel ? (
+              <p className="text-xs text-muted-foreground">{presenceLabel}</p>
             ) : null}
           </div>
 
@@ -242,7 +275,16 @@ export function PlayerProfileDialog({
             </p>
           ) : null}
 
-          {sport && level ? (
+          {real && member?.userId ? (
+            <>
+              <PlayerSkillLevels userId={member.userId} open={open} />
+              <PlayerMatchFacts
+                matchPct={matchPct}
+                reason={match?.reason}
+                trust={fullPlayer?.trust}
+              />
+            </>
+          ) : sport && level ? (
             <div className="mt-5 flex flex-col gap-3">
               <h4 className="font-mono text-micro font-bold tracking-wider text-muted-foreground uppercase">
                 {m.profile_player_level()}
@@ -277,7 +319,7 @@ export function PlayerProfileDialog({
             </div>
           ) : null}
 
-          {member?.userId && !fullPlayer ? (
+          {member?.userId && !real ? (
             <PlayerSkillLevels userId={member.userId} open={open} />
           ) : null}
 
@@ -325,15 +367,23 @@ function PlayerSkillLevels({
             className="flex items-center gap-3 rounded-2xl border border-chart-3/20 bg-chart-3/5 p-3.5"
           >
             <SportDot sport={l.sport} />
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <span className="text-sm font-semibold text-foreground">
-                {sportsMessages[l.sport]()}
+                {sportsMessages[l.sport]()} · {l.label.name}
               </span>
               <LevelChip level={l.level} />
             </div>
-            <span className="ml-auto font-mono text-sm font-bold text-brand tabular-nums">
-              {m.profile_elo({ elo: l.elo })}
-            </span>
+            <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
+              <span className="font-mono text-sm font-bold text-brand tabular-nums">
+                {m.profile_elo({ elo: l.elo })}
+              </span>
+              {/* Older api responses have no status; treat as provisional. */}
+              <span className="rounded-full bg-background/70 px-2 py-0.5 text-micro font-medium text-muted-foreground ring-1 ring-foreground/10">
+                {l.status === "ESTABLISHED"
+                  ? m.profile_elo_status_established()
+                  : m.profile_elo_status_provisional()}
+              </span>
+            </div>
           </div>
         ))
       ) : (
@@ -341,6 +391,53 @@ function PlayerSkillLevels({
           {isError ? m.profile_level_unavailable() : m.profile_not_assessed()}
         </p>
       )}
+    </div>
+  )
+}
+
+/**
+ * Why a real player was suggested and how reliable they are: the AI's
+ * compatibility score with its reasons, and the trust score. Renders nothing
+ * when neither is known.
+ */
+function PlayerMatchFacts({
+  matchPct,
+  reason,
+  trust,
+}: {
+  matchPct?: number
+  reason?: string
+  trust?: number
+}) {
+  const hasMatch = matchPct != null && matchPct > 0
+  if (!hasMatch && trust == null) return null
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-3">
+      {hasMatch ? (
+        <div className="flex flex-col gap-0.5 rounded-2xl bg-muted/40 px-3.5 py-3 ring-1 ring-foreground/5 dark:ring-foreground/10">
+          <span className="font-mono text-base font-bold text-brand tabular-nums">
+            {matchPct}%
+          </span>
+          <span className="text-micro text-muted-foreground">
+            {m.profile_match_score()}
+          </span>
+        </div>
+      ) : null}
+      {trust != null ? (
+        <div className="flex flex-col gap-0.5 rounded-2xl bg-muted/40 px-3.5 py-3 ring-1 ring-foreground/5 dark:ring-foreground/10">
+          <span className="font-mono text-base font-bold text-foreground tabular-nums">
+            {trust}
+          </span>
+          <span className="text-micro text-muted-foreground">
+            {m.profile_trust_score()}
+          </span>
+        </div>
+      ) : null}
+      {hasMatch && reason ? (
+        <p className="col-span-2 text-xs leading-relaxed text-muted-foreground">
+          {m.profile_match_reason({ reason })}
+        </p>
+      ) : null}
     </div>
   )
 }

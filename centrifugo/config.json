@@ -24,6 +24,7 @@
       {
         "name": "personal",
         "allow_user_limited_channels": true,
+        "presence": true,
         "channel_regex": "^(sessions|notifications|chat)#[A-Za-z0-9_-]{1,64}$"
       }
     ]

@@ -2,6 +2,8 @@ import { Inject, Injectable, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { createHmac } from "node:crypto"
 
+import { userNotificationsChannel } from "./channels.js"
+
 /**
  * Short-lived on purpose: the client refreshes via `getToken` before expiry, so
  * a leaked token (or a user we stop trusting) is good for minutes, not hours.
@@ -90,6 +92,67 @@ export class CentrifugoService {
       })
     } catch (err) {
       this.logger.warn(`disconnect of ${userId} failed: ${String(err)}`)
+    }
+  }
+
+  /**
+   * Which of `userIds` have a live connection right now, from Centrifugo's
+   * presence of each user's own `personal:notifications#<id>` channel — the
+   * one every signed-in client subscribes to (needs `presence: true` on the
+   * `personal` namespace in centrifugo/config.json). One batched call.
+   *
+   * Returns `null` when Centrifugo can't be asked (outage, timeout, presence
+   * not enabled), so callers can tell "unknown" from "nobody is online".
+   */
+  async onlineUsers(userIds: readonly string[]): Promise<Set<string> | null> {
+    if (!userIds.length) return new Set()
+    try {
+      const base = this.config
+        .getOrThrow<string>("CENTRIFUGO_API_URL")
+        .replace(/\/+$/, "")
+      const res = await fetch(`${base}/batch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": this.config.getOrThrow<string>("CENTRIFUGO_API_KEY"),
+        },
+        body: JSON.stringify({
+          commands: userIds.map((id) => ({
+            presence_stats: { channel: userNotificationsChannel(id) },
+          })),
+          parallel: true,
+        }),
+        signal: AbortSignal.timeout(PUBLISH_TIMEOUT_MS),
+      })
+      const body = (await res.json().catch(() => ({}))) as {
+        replies?: {
+          presence_stats?: { num_clients?: number }
+          error?: { code: number; message: string }
+        }[]
+        error?: { code: number; message: string }
+      }
+      const replies = body.replies
+      if (!res.ok || !replies || replies.length !== userIds.length) {
+        this.logger.warn(
+          `presence lookup failed: ${body.error?.message ?? res.status}`
+        )
+        return null
+      }
+      const failed = replies.find((r) => r.error)
+      if (failed?.error) {
+        // E.g. "not available" when presence is off for the namespace.
+        this.logger.warn(`presence lookup failed: ${failed.error.message}`)
+        return null
+      }
+      // Replies come back in command order.
+      return new Set(
+        userIds.filter(
+          (_, i) => (replies[i].presence_stats?.num_clients ?? 0) > 0
+        )
+      )
+    } catch (err) {
+      this.logger.warn(`presence lookup failed: ${String(err)}`)
+      return null
     }
   }
 

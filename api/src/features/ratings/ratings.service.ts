@@ -57,6 +57,8 @@ export class RatingsService {
       rateeId: string
       stars: number
       comment?: string
+      /** −1 / 0 / +1 against the ratee's displayed level; feeds their Elo. */
+      skillVote?: number
     }
   ): Promise<void> {
     if (raterId === input.rateeId) {
@@ -91,6 +93,11 @@ export class RatingsService {
         sessionId: input.sessionId,
         stars: input.stars,
         ...(comment ? { comment } : {}),
+        // Queued for the Elo sweep (`PeerEloService`), never applied inline:
+        // an instant Elo change would reveal who just voted.
+        ...(input.skillVote === undefined
+          ? {}
+          : { skillVote: input.skillVote, eloPending: true }),
       })
     } catch (err) {
       if ((err as { code?: number })?.code === DUPLICATE_KEY) {

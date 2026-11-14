@@ -7,6 +7,7 @@ import { BadRequestException, ConflictException } from "@nestjs/common"
 import { getModelToken } from "@nestjs/mongoose"
 import { Test } from "@nestjs/testing"
 
+import { EloChange } from "../src/features/elo/elo-change.schema.js"
 import { EloRating } from "../src/features/elo/elo-rating.schema.js"
 import { EloService } from "../src/features/elo/elo.service.js"
 import {
@@ -92,6 +93,8 @@ async function makeService(seed: Doc[] = []) {
     providers: [
       EloService,
       { provide: getModelToken(EloRating.name), useValue: model },
+      // Lịch sử Elo chỉ dùng khi áp đánh giá chéo (elo-peer-update.test.ts).
+      { provide: getModelToken(EloChange.name), useValue: {} },
     ],
   }).compile()
   return { service: moduleRef.get(EloService), model }
@@ -457,7 +460,13 @@ void test("getPlayerElo là null khi chưa có rating, có level khi đã có", 
   assert.equal(p?.level, "intermediate")
   assert.equal(p?.canTakeAssessment, false)
   assert.deepEqual(await service.getPublicLevels("u1"), [
-    { sport: "badminton", level: "intermediate", elo: 1004, label: p?.label },
+    {
+      sport: "badminton",
+      level: "intermediate",
+      elo: 1004,
+      label: p?.label,
+      status: "PROVISIONAL",
+    },
   ])
 })
 
