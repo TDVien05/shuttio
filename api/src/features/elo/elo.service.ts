@@ -1,15 +1,30 @@
-import { ConflictException, Injectable } from "@nestjs/common"
+import { ConflictException, Injectable, Logger } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
 import type { Model } from "mongoose"
 
 import { isDuplicateKeyError } from "../../common/mongo-util.js"
 import type { PlayerElo, PlayerSkillLevel } from "../../shared/index.js"
 import {
+  EloChange,
+  type EloChangeDocument,
+  type EloChangeReason,
+} from "./elo-change.schema.js"
+import {
   EloRating,
   type EloDiscipline,
   type EloRatingDocument,
+  type EloStatus,
   type QuestionSnapshot,
 } from "./elo-rating.schema.js"
+import {
+  PEER_MIN_VOTERS,
+  RD_ASSESSMENT,
+  computePeerUpdate,
+  inflateRd,
+  initialRd,
+  statusForRd,
+  type WeightedVote,
+} from "./peer-update.js"
 import {
   INITIAL_ASSESSMENT_QUESTIONS,
   INITIAL_ASSESSMENT_VERSION,
@@ -18,6 +33,7 @@ import {
 } from "./initial-assessment.questions.js"
 import {
   INCONSISTENCY_WARNING_MESSAGE,
+  PEER_ADJUSTED_NOTICE,
   PROVISIONAL_NOTICE,
   classifyElo,
   evaluateAssessment,
@@ -31,10 +47,61 @@ import {
 /** Giai đoạn này chỉ có đánh đôi. */
 const DISCIPLINE: EloDiscipline = "DOUBLES"
 
+/** Số trận gần nhất được nhớ trong `peerAppliedSessions` (chống cộng trùng). */
+const APPLIED_SESSIONS_KEPT = 50
+/** Số lần thử lại khi thua cuộc đua cập nhật (khoá lạc quan). */
+const PEER_UPDATE_ATTEMPTS = 3
+const DAY_MS = 86_400_000
+
+/**
+ * Kết quả áp đánh giá chéo của một trận vào Elo của một người:
+ *  - applied: đã cập nhật (delta có thể bằng 0 — chỉ thu hẹp rd);
+ *  - skipped: không bao giờ áp được (chưa có rating, chưa đủ người chấm, hoặc
+ *    trận này đã được tính) — người gọi coi các phiếu là đã xử lý;
+ *  - retry: thua cuộc đua cập nhật nhiều lần — để lần sweep sau thử lại.
+ */
+export type PeerEloOutcome =
+  | {
+      outcome: "applied"
+      eloBefore: number
+      eloAfter: number
+      delta: number
+      status: EloStatus
+    }
+  | { outcome: "skipped" }
+  | { outcome: "retry" }
+
 /** Bộ câu hỏi công khai: không note, không điểm gốc, không trọng số. */
 export interface PublicAssessment {
   version: string
   questions: PublicQuestion[]
+}
+
+/** Số thay đổi gần nhất trả về cho màn hình lịch sử Elo. */
+export const ELO_HISTORY_LIMIT = 50
+
+/** Một lần Elo thay đổi, như người chơi thấy trong lịch sử của chính mình. */
+export interface EloHistoryEntry {
+  reason: EloChangeReason
+  delta: number
+  eloBefore: number
+  eloAfter: number
+  /** UTC ISO. */
+  createdAt: string
+}
+
+/**
+ * Lịch sử Elo của chính người chơi. Chỉ có điểm trước/sau và thời điểm — không
+ * có trận nào, ai chấm hay bao nhiêu người chấm (đánh giá là ẩn danh).
+ */
+export interface EloHistory {
+  /** Null khi chưa có rating. */
+  initialElo: number | null
+  currentElo: number | null
+  /** UTC ISO; thời điểm cấp Elo khởi tạo. */
+  initializedAt: string | null
+  /** Mới nhất trước, tối đa `ELO_HISTORY_LIMIT`. */
+  changes: EloHistoryEntry[]
 }
 
 /** Kết quả trả cho người chơi. Không chứa note/điểm gốc/trọng số. */
@@ -43,7 +110,7 @@ export interface EloResult {
   discipline: EloDiscipline
   elo: number | null
   label: EloLabel | null
-  status: "PROVISIONAL" | null
+  status: EloStatus | null
   source: "ASSESSMENT" | "DEFAULT" | null
   assessmentVersion: string | null
   inconsistencyWarning: boolean
@@ -61,9 +128,13 @@ export interface EloResult {
 // unique index, nên gửi đồng thời không thể cấp điểm hai lần hay ghi đè.
 @Injectable()
 export class EloService {
+  private readonly logger = new Logger(EloService.name)
+
   constructor(
     @InjectModel(EloRating.name)
-    private readonly ratings: Model<EloRatingDocument>
+    private readonly ratings: Model<EloRatingDocument>,
+    @InjectModel(EloChange.name)
+    private readonly changes: Model<EloChangeDocument>
   ) {}
 
   /** Bộ câu hỏi công khai, đúng thứ tự định nghĩa. */
@@ -108,7 +179,7 @@ export class EloService {
       elo: r.elo,
       label: r.label,
       level: levelForElo(r.elo),
-      status: "PROVISIONAL",
+      status: r.status ?? "PROVISIONAL",
       source: r.source,
       completedAt: r.completedAt,
       canTakeAssessment: r.canTakeAssessment,
@@ -122,8 +193,49 @@ export class EloService {
   async getPublicLevels(userId: string): Promise<PlayerSkillLevel[]> {
     const p = await this.getPlayerElo(userId)
     return p
-      ? [{ sport: "badminton", level: p.level, elo: p.elo, label: p.label }]
+      ? [
+          {
+            sport: "badminton",
+            level: p.level,
+            elo: p.elo,
+            label: p.label,
+            status: p.status,
+          },
+        ]
       : []
+  }
+
+  /** Lịch sử thay đổi Elo của chính người chơi, mới nhất trước. */
+  async getHistory(userId: string): Promise<EloHistory> {
+    const doc = await this.ratings
+      .findOne({ userId, discipline: DISCIPLINE })
+      .lean()
+    if (!doc) {
+      return {
+        initialElo: null,
+        currentElo: null,
+        initializedAt: null,
+        changes: [],
+      }
+    }
+    const rows = await this.changes
+      .find({ userId, discipline: DISCIPLINE })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(ELO_HISTORY_LIMIT)
+      .select({ reason: 1, delta: 1, eloBefore: 1, eloAfter: 1, createdAt: 1 })
+      .lean()
+    return {
+      initialElo: doc.initialElo,
+      currentElo: doc.currentElo,
+      initializedAt: doc.initializedAt.toISOString(),
+      changes: rows.map((r) => ({
+        reason: r.reason,
+        delta: r.delta,
+        eloBefore: r.eloBefore,
+        eloAfter: r.eloAfter,
+        createdAt: new Date(r.createdAt).toISOString(),
+      })),
+    }
   }
 
   /**
@@ -184,7 +296,111 @@ export class EloService {
     )
   }
 
+  /**
+   * Áp các phiếu kỹ năng ẩn danh của MỘT trận vào Elo của người được chấm
+   * (công thức: peer-update.ts).
+   *
+   * Vẫn là một thao tác nguyên tử có điều kiện trên document rating: filter
+   * gồm `ratingUpdateCount` đã đọc (khoá lạc quan — giá trị mới tính từ trạng
+   * thái đã đọc) và `peerAppliedSessions ≠ sessionId` (một trận chỉ được tính
+   * một lần, kể cả khi sweep chạy lại sau sự cố). Lịch sử (`elo_history`) ghi
+   * sau, không ảnh hưởng tính đúng đắn.
+   */
+  async applyPeerVotes(
+    userId: string,
+    sessionId: string,
+    votes: readonly WeightedVote[],
+    now: Date = new Date(),
+    /** Ngưỡng người chấm của trận này (`minVotersFor`). */
+    minVoters: number = PEER_MIN_VOTERS
+  ): Promise<PeerEloOutcome> {
+    for (let attempt = 0; attempt < PEER_UPDATE_ATTEMPTS; attempt++) {
+      const doc = await this.ratings
+        .findOne({ userId, discipline: DISCIPLINE })
+        .lean()
+      if (!doc) return { outcome: "skipped" }
+      if (doc.peerAppliedSessions?.includes(sessionId)) {
+        return { outcome: "skipped" }
+      }
+
+      const cap = initialRd(doc.source)
+      const idleDays = doc.lastPeerUpdateAt
+        ? (now.getTime() - new Date(doc.lastPeerUpdateAt).getTime()) / DAY_MS
+        : 0
+      const rdBefore = inflateRd(doc.rd ?? cap, idleDays, cap)
+      const next = computePeerUpdate({
+        elo: doc.currentElo,
+        rd: rdBefore,
+        votes,
+        minVoters,
+      })
+      if (!next) return { outcome: "skipped" }
+
+      const rdAfter = Math.round(next.rd * 100) / 100
+      const status = statusForRd(rdAfter)
+      const res = await this.ratings.updateOne(
+        {
+          userId,
+          discipline: DISCIPLINE,
+          ratingUpdateCount: doc.ratingUpdateCount,
+          peerAppliedSessions: { $ne: sessionId },
+        },
+        {
+          $set: {
+            currentElo: next.elo,
+            rd: rdAfter,
+            status,
+            lastPeerUpdateAt: now,
+          },
+          $inc: { ratingUpdateCount: 1 },
+          $push: {
+            peerAppliedSessions: {
+              $each: [sessionId],
+              $slice: -APPLIED_SESSIONS_KEPT,
+            },
+          },
+        }
+      )
+      if (res.modifiedCount !== 1) continue // thua cuộc đua: đọc lại, tính lại
+
+      await this.recordChange({
+        userId,
+        discipline: DISCIPLINE,
+        sessionId,
+        reason: "PEER_RATING",
+        eloBefore: doc.currentElo,
+        eloAfter: next.elo,
+        delta: next.delta,
+        rdBefore: Math.round(rdBefore * 100) / 100,
+        rdAfter,
+        voters: next.voters,
+      })
+      return {
+        outcome: "applied",
+        eloBefore: doc.currentElo,
+        eloAfter: next.elo,
+        delta: next.delta,
+        status,
+      }
+    }
+    return { outcome: "retry" }
+  }
+
   // ── nội bộ ────────────────────────────────────────────────────────────
+
+  /** Ghi nhật ký thay đổi Elo; lỗi ở đây không được làm hỏng lần cập nhật. */
+  private async recordChange(
+    change: Omit<EloChange, "createdAt">
+  ): Promise<void> {
+    try {
+      await this.changes.create(change)
+    } catch (err) {
+      if (isDuplicateKeyError(err)) return
+      this.logger.error(
+        `Không ghi được lịch sử Elo (${change.userId}, ${change.sessionId}): ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
 
   /**
    * Chèn document nếu chưa có. Trả true khi chính lời gọi này tạo ra nó.
@@ -256,6 +472,7 @@ function assessmentFields(outcome: AssessmentOutcome, now: Date) {
     currentElo: outcome.elo,
     initialElo: outcome.elo,
     status: "PROVISIONAL" as const,
+    rd: RD_ASSESSMENT,
     source: "ASSESSMENT" as const,
     labelCode: outcome.label.code,
     assessmentScore: outcome.rawScore,
@@ -302,6 +519,7 @@ function toResult(doc: EloRating | null): EloResult {
     completedAt: doc.completedAt ? doc.completedAt.toISOString() : null,
     initializedAt: doc.initializedAt.toISOString(),
     canTakeAssessment: doc.source === "DEFAULT" && doc.ratingUpdateCount === 0,
-    notice: PROVISIONAL_NOTICE,
+    notice:
+      doc.ratingUpdateCount > 0 ? PEER_ADJUSTED_NOTICE : PROVISIONAL_NOTICE,
   }
 }

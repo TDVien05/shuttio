@@ -46,6 +46,12 @@ export class EloController {
     return this.elo.submitAssessment(userId, body?.version, body?.answers)
   }
 
+  /** Lịch sử thay đổi Elo của chính người gọi (không xem được của người khác). */
+  @Get("history")
+  history(@UserId() userId: string) {
+    return this.elo.getHistory(userId)
+  }
+
   /** Trình độ công khai của một người chơi khác — hiện trên hồ sơ của họ. */
   @Get("users/:userId/level")
   publicLevel(@Param() param: EloUserIdParamDto) {

@@ -18,6 +18,19 @@ export class Rating {
   @Prop({ required: true, type: String }) sessionId: string
   @Prop({ required: true, type: Number, min: 1, max: 5 }) stars: number
   @Prop({ type: String }) comment?: string
+  /**
+   * Optional skill vote, separate from the stars (which mostly reflect how
+   * pleasant the match was): −1 weaker than / 0 matches / +1 stronger than
+   * the ratee's displayed level. Feeds the ratee's Elo (`PeerEloService`).
+   */
+  @Prop({ type: Number, enum: [-1, 0, 1] }) skillVote?: number
+  /**
+   * Set while the skill vote still waits for the Elo sweep; unset once the
+   * sweep handled it (applied or discarded). Sparse-indexed below.
+   */
+  @Prop({ type: Boolean }) eloPending?: boolean
+  /** When the Elo sweep handled this vote. */
+  @Prop({ type: Date }) eloProcessedAt?: Date
 
   createdAt: Date
 }
@@ -28,3 +41,5 @@ export const RatingSchema = SchemaFactory.createForClass(Rating)
 RatingSchema.index({ raterId: 1, rateeId: 1, sessionId: 1 }, { unique: true })
 // Profile summary: a ratee's newest reviews first.
 RatingSchema.index({ rateeId: 1, createdAt: -1 })
+// The Elo sweep's queue: only ratings with an unprocessed skill vote.
+RatingSchema.index({ eloPending: 1, createdAt: 1 }, { sparse: true })
