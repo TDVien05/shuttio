@@ -1,10 +1,13 @@
 import {
   IsIn,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from "class-validator"
 
@@ -53,4 +56,23 @@ export class ResolveComplaintBodyDto {
   @IsString()
   @MaxLength(300)
   note?: string
+}
+
+/** `POST /api/rooms/:id/check-in` — the player's position on site. */
+export class CheckInBodyDto {
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat: number
+
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng: number
+
+  /** Reported GPS accuracy in metres, when the browser gives one. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  accuracy?: number
 }

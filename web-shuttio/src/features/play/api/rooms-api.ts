@@ -1,4 +1,9 @@
-import type { LeaveRoomResult, PlaySession } from "@/lib/shared"
+import type {
+  AttendanceMark,
+  LeaveRoomResult,
+  PlaySession,
+  ReliabilitySummary,
+} from "@/lib/shared"
 
 import { api, apiResult } from "@/lib/api"
 import type { ApiResult } from "@/lib/api"
@@ -93,5 +98,48 @@ export async function remindSharePayment(
   return apiResult<void>(
     `/api/rooms/${encodeURIComponent(roomId)}/members/${encodeURIComponent(memberUserId)}/remind`,
     { method: "POST" }
+  )
+}
+
+// ── Self-booked rooms (`courtMode: "self"`) ──────────────────────────────────
+
+/** Host says the court is booked with the venue ("Đã chốt sân"). */
+export async function confirmSelfCourt(
+  roomId: string
+): Promise<RoomActionResult<void>> {
+  return apiResult<void>(
+    `/api/rooms/${encodeURIComponent(roomId)}/court-confirmed`,
+    { method: "PUT" }
+  )
+}
+
+/** Check in on site — the server measures the position against the pinned court. */
+export async function checkInRoom(
+  roomId: string,
+  position: { lat: number; lng: number; accuracy?: number }
+): Promise<RoomActionResult<AttendanceMark>> {
+  return apiResult<AttendanceMark>(
+    `/api/rooms/${encodeURIComponent(roomId)}/check-in`,
+    { method: "POST", body: position }
+  )
+}
+
+/** A player who is there confirms another seat holder came. */
+export async function vouchAttendance(
+  roomId: string,
+  userId: string
+): Promise<RoomActionResult<void>> {
+  return apiResult<void>(
+    `/api/rooms/${encodeURIComponent(roomId)}/attendance/${encodeURIComponent(userId)}`,
+    { method: "POST" }
+  )
+}
+
+/** Any player's show-up record. */
+export async function getReliability(
+  userId: string
+): Promise<ReliabilitySummary> {
+  return api<ReliabilitySummary>(
+    `/api/reliability/${encodeURIComponent(userId)}`
   )
 }

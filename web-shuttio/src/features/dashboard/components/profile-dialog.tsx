@@ -25,6 +25,7 @@ import { usePlayerIdentity } from "@/features/play/hooks/use-player-identity"
 import { LevelChip, SportDot } from "@/features/dashboard/components/shared"
 import { ELO_ASSESSMENT_PATH } from "@/features/elo/lib/elo"
 import { presenceText, usePresence } from "@/features/presence/presence"
+import { ReliabilityBadge } from "@/features/play/components/reliability-badge"
 import { m } from "@/paraglide/messages"
 
 const sportsMessages = {
@@ -321,6 +322,10 @@ export function PlayerProfileDialog({
 
           {member?.userId && !real ? (
             <PlayerSkillLevels userId={member.userId} open={open} />
+          ) : null}
+
+          {real && member?.userId && open ? (
+            <ReliabilityBadge userId={member.userId} detailed />
           ) : null}
 
           {member?.userId ? (

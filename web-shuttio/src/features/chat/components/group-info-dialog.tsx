@@ -1,7 +1,11 @@
 import * as React from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Star } from "lucide-react"
+import { Star, UserCheck } from "lucide-react"
 import { queryKeys } from "@/lib/query-keys"
+import { cn } from "@/lib/utils"
+import { sessionStartMsOf } from "@/lib/shared"
+import { useVouchAttendance } from "@/features/play/api/session.queries"
+import { useClock } from "@/features/play/hooks/use-clock"
 import { toast } from "sonner"
 
 import {
@@ -34,7 +38,7 @@ import {
   presenceText,
   usePresence,
 } from "@/features/presence/presence"
-import type { ChatChannel, ChatUser } from "@/lib/shared"
+import type { AttendanceMark, ChatChannel, ChatUser } from "@/lib/shared"
 import { m } from "@/paraglide/messages"
 
 /**
@@ -98,6 +102,29 @@ export function GroupInfoDialog({
   const hasUnrated = channel.members.some(
     (member) => canRate(member.id) && !rated[member.id]
   )
+
+  // ── Self-booked match: who turned up (only they may rate / be rated) ──
+  const now = useClock()
+  const selfMatch = match?.courtMode === "self" ? match : null
+  const marks: Partial<Record<string, AttendanceMark>> =
+    selfMatch?.attendance ?? {}
+  const vouchOpen = (() => {
+    if (!selfMatch || now === null) return false
+    if (selfMatch.status === "cancelled" || selfMatch.status === "completed")
+      return false
+    const start = sessionStartMsOf(selfMatch)
+    const closes = selfMatch.attendanceClosesAt
+      ? Date.parse(selfMatch.attendanceClosesAt)
+      : null
+    return start !== null && closes !== null && now >= start && now <= closes
+  })()
+  const canVouch = (memberId: string) =>
+    vouchOpen &&
+    Boolean(marks[userId]) &&
+    memberId !== userId &&
+    !marks[memberId] &&
+    Boolean(selfMatch?.memberIds?.includes(memberId))
+  const vouch = useVouchAttendance()
 
   const done = () =>
     void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all() })
@@ -204,8 +231,51 @@ export function GroupInfoDialog({
                         {presenceText(presence.get(member.id))}
                       </span>
                     ) : null}
+                    {selfMatch?.memberIds?.includes(member.id) ? (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 text-xs",
+                          marks[member.id]
+                            ? "text-brand"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {marks[member.id] ? (
+                          <UserCheck className="size-3" />
+                        ) : null}
+                        {marks[member.id]
+                          ? marks[member.id]?.via === "gps"
+                            ? m.self_court_attended_gps()
+                            : m.self_court_attended_vouch()
+                          : m.self_court_not_attended()}
+                      </span>
+                    ) : null}
                   </span>
                 </button>
+                {canVouch(member.id) ? (
+                  <Button
+                    shape="pill"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    isDisabled={vouch.isPending}
+                    onPress={() =>
+                      vouch.mutate(
+                        { roomId: selfMatch!.sessionId, userId: member.id },
+                        {
+                          onSuccess: () =>
+                            toast.success(
+                              m.self_court_vouch_done({ name: member.name })
+                            ),
+                          onError: (error) => toast.error(error.message),
+                        }
+                      )
+                    }
+                  >
+                    <UserCheck />
+                    {m.self_court_vouch()}
+                  </Button>
+                ) : null}
                 {!canRate(member.id) ? null : given ? (
                   <span
                     title={m.group_info_rated_title()}
@@ -236,6 +306,12 @@ export function GroupInfoDialog({
             {m.group_info_rate_hint()} {m.group_info_rate_anonymous()}
           </p>
         ) : null}
+        {selfMatch ? (
+          <p className="text-xs text-muted-foreground">
+            {m.self_court_rating_rule()}
+            {selfMatch.ranked ? null : ` ${m.self_court_unranked_note()}`}
+          </p>
+        ) : null}
       </section>
 
       {/* A member's profile: skill level and the anonymous reviews they got. */}
@@ -254,6 +330,7 @@ export function GroupInfoDialog({
         <RatePlayerDialog
           member={rating}
           sessionId={match.sessionId}
+          ranked={match.ranked !== false}
           onClose={() => setRating(null)}
         />
       ) : null}

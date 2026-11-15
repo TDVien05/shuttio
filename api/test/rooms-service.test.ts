@@ -18,6 +18,7 @@ import { RoomsService } from "../src/features/rooms/rooms.service.js"
 import { RoomComplaint } from "../src/features/rooms/room-complaint.schema.js"
 import { Booking } from "../src/features/bookings/booking.schema.js"
 import { BookingsService } from "../src/features/bookings/bookings.service.js"
+import { ReliabilityService } from "../src/features/reliability/reliability.service.js"
 import { PlaySession } from "../src/features/sessions/session.schema.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
 import { ProfileService } from "../src/features/players/profile.service.js"
@@ -228,6 +229,13 @@ async function makeService(
       { provide: RoomEventsService, useValue: eventsMock },
       { provide: getModelToken(Booking.name), useValue: bookingModelMock },
       { provide: BookingsService, useValue: {} },
+      {
+        provide: ReliabilityService,
+        useValue: {
+          assertCanJoin: () => Promise.resolve(),
+          record: () => Promise.resolve(),
+        },
+      },
     ],
   }).compile()
   return { service: moduleRef.get(RoomsService), recorder }
@@ -709,6 +717,31 @@ void test("disbandRoom deletes a forming room and notifies every member and requ
     (recorder.notifications[0]?.input as { text: string }).text,
     /đã huỷ phòng/
   )
+})
+
+void test("disbandRoom picks the host's own room when another user's room shares its id", async () => {
+  // Older clients generated per-page ids (`r-new-1`) that collide across users.
+  const theirs = makeDoc("someone-else", makeRoom({ id: "r-new-1" }), "doc-0")
+  const mine = makeDoc("host-1", makeRoom({ id: "r-new-1" }), "doc-1")
+  let deleted: unknown
+  const { service } = await makeService({
+    findOne: (f: unknown) => {
+      const filter = f as { userId?: string }
+      return Promise.resolve(
+        filter.userId === undefined
+          ? theirs
+          : ([theirs, mine].find((d) => d.userId === filter.userId) ?? null)
+      )
+    },
+    deleteOne: (filter: unknown) => {
+      deleted = filter
+      return Promise.resolve({ deletedCount: 1 })
+    },
+  })
+
+  await service.disbandRoom("host-1", "r-new-1")
+
+  assert.deepEqual(deleted, { _id: "doc-1" })
 })
 
 void test("disbandRoom delists a booked room as cancelled instead of deleting it", async () => {

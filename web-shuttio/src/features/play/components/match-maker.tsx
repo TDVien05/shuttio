@@ -26,6 +26,11 @@ import {
 import { formatVnd } from "@/lib/shared"
 import type { MatchRoom } from "@/lib/shared"
 import { RoomPreviewSheet } from "@/features/play/components/active-room"
+import {
+  SelfCourtCardBadge,
+  isSelfRoom,
+  selfCourtCostLabel,
+} from "@/features/play/components/self-court-panel"
 import { useSessionData } from "@/features/play/hooks/use-session-data"
 import { useSessionActions } from "@/features/play/hooks/use-session-actions"
 import { useSessionUi } from "@/features/play/state/session-ui"
@@ -174,6 +179,8 @@ function RoomCard({
               >
                 {m.match_maker_demo_badge()}
               </span>
+            ) : isSelfRoom(room) ? (
+              <SelfCourtCardBadge room={room} />
             ) : (
               // Creating a room doesn't book a court — say so up front.
               <span
@@ -214,7 +221,12 @@ function RoomCard({
         <span className="flex min-w-0 items-center gap-1.5">
           <MapPin className="size-3.5 shrink-0" />
           <span className="min-w-0 truncate">
-            {room.venue ? (
+            {isSelfRoom(room) ? (
+              // Not one of the app's courts: no distance to show.
+              [room.venue, room.ward, selfCourtCostLabel(room)]
+                .filter(Boolean)
+                .join(" · ")
+            ) : room.venue ? (
               <>
                 {room.venue} · {address} ·{" "}
                 <CourtDistance courtId={room.courtId} venue={room.venue} />

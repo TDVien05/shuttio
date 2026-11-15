@@ -11,6 +11,12 @@ import {
   raterWeight,
   type SkillVote,
 } from "../elo/peer-update.js"
+import {
+  gpsCheckInCount,
+  isRanked,
+  isSelfCourt,
+  SELF_RANKED_MIN_GPS,
+} from "../../shared/index.js"
 import { NotificationsService } from "../notifications/notifications.service.js"
 import { sessionParticipantIds } from "../rooms/group-match.js"
 import {
@@ -27,6 +33,21 @@ import { Rating, type RatingDocument } from "./rating.schema.js"
  * `PEER_VOTE_WINDOW_MINUTES` env var overrides it (dev/testing).
  */
 export const PEER_VOTE_WINDOW_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Whether a match's skill votes may move Elo at all: not for a "Giao lưu"
+ * (unranked) match, and a self-booked match — no venue vouches it happened —
+ * only with at least {@link SELF_RANKED_MIN_GPS} on-site GPS check-ins, so a
+ * group can't farm Elo from rooms it never played.
+ */
+export function matchCountsForElo(
+  hostUserId: string,
+  data: PlaySessionDocument["data"]
+): boolean {
+  if (!isRanked(data)) return false
+  if (!isSelfCourt(data)) return true
+  return gpsCheckInCount(hostUserId, data) >= SELF_RANKED_MIN_GPS
+}
 
 /** (match, ratee) batches handled per run; the rest wait for the next tick. */
 const BATCHES_PER_RUN = 200
@@ -141,13 +162,20 @@ export class PeerEloService {
    * only be rated by the other), otherwise the usual minimum. A match that
    * can no longer be found keeps the usual minimum.
    */
-  private async minVoters(sessionId: string): Promise<number> {
+  private async sessionRule(
+    sessionId: string
+  ): Promise<{ minVoters: number; counts: boolean }> {
     const doc = await this.sessionModel
       .findOne({ sessionId })
       .sort({ createdAt: 1, _id: 1 })
       .lean<PlaySessionDocument>()
-    if (!doc) return PEER_MIN_VOTERS
-    return minVotersFor(sessionParticipantIds(doc.userId, doc.data).length)
+    if (!doc) return { minVoters: PEER_MIN_VOTERS, counts: true }
+    return {
+      minVoters: minVotersFor(
+        sessionParticipantIds(doc.userId, doc.data).length
+      ),
+      counts: matchCountsForElo(doc.userId, doc.data),
+    }
   }
 
   private async applyBatch(
@@ -160,6 +188,17 @@ export class PeerEloService {
       .select({ raterId: 1, skillVote: 1 })
       .lean<PendingVote[]>()
     if (!votes.length) return "skipped"
+
+    const rule = await this.sessionRule(sessionId)
+    if (!rule.counts) {
+      // An unranked match, or a self-booked one without enough on-site
+      // check-ins to prove it was played: the votes are dropped.
+      await this.ratingModel.updateMany(
+        { _id: { $in: votes.map((v) => v._id) } },
+        { $unset: { eloPending: 1 }, $set: { eloProcessedAt: now } }
+      )
+      return "skipped"
+    }
 
     // Earlier, already-handled skill votes each rater gave this same player:
     // a pair that keeps rating each other counts for less every time.
@@ -187,7 +226,7 @@ export class PeerEloService {
         weight: raterWeight(priorByRater.get(v.raterId) ?? 0),
       })),
       now,
-      await this.minVoters(sessionId)
+      rule.minVoters
     )
     if (outcome.outcome === "retry") return "deferred"
 
