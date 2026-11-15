@@ -11,7 +11,11 @@ import {
 import { InjectModel } from "@nestjs/mongoose"
 import { Types, type Model } from "mongoose"
 
-import type { PlayerReviewPage, RatingSummary } from "../../shared/index.js"
+import {
+  isRanked,
+  type PlayerReviewPage,
+  type RatingSummary,
+} from "../../shared/index.js"
 import { NotificationsService } from "../notifications/notifications.service.js"
 import { isSessionEnded, sessionParticipantIds } from "../rooms/group-match.js"
 import {
@@ -95,7 +99,8 @@ export class RatingsService {
         ...(comment ? { comment } : {}),
         // Queued for the Elo sweep (`PeerEloService`), never applied inline:
         // an instant Elo change would reveal who just voted.
-        ...(input.skillVote === undefined
+        // A "Giao lưu" (unranked) match never moves Elo: drop the vote.
+        ...(input.skillVote === undefined || !isRanked(doc.data)
           ? {}
           : { skillVote: input.skillVote, eloPending: true }),
       })

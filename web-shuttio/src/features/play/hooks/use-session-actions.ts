@@ -41,9 +41,9 @@ import {
 import { removeGroupMember } from "@/features/chat/api/group-api"
 import { m } from "@/paraglide/messages"
 
-let sequence = 0
+/** A session id unique across every user — rooms are looked up by id alone. */
 function newId(prefix: string): string {
-  return `s-${prefix}-${Date.now().toString(36)}-${sequence++}`
+  return `s-${prefix}-${crypto.randomUUID()}`
 }
 
 function openRoomChat(sessionId: string, title: string) {
@@ -295,13 +295,23 @@ export function useSessionActions() {
         })
         return
       }
-      const court = courtByVenue(room.venue)
+      const self = room.courtMode === "self"
+      // A self-booked court is never one of the app's courts, even if a
+      // venue on the app happens to share its name.
+      const court = self ? undefined : courtByVenue(room.venue)
       const next: PlaySession = {
         id: room.id,
         title: room.title,
         sport: room.sport,
         format: room.format,
-        courtId: room.courtId ?? court?.id ?? null,
+        courtId: self ? null : (room.courtId ?? court?.id ?? null),
+        ...(self
+          ? {
+              courtMode: "self" as const,
+              selfCourt: room.selfCourt,
+              ranked: room.ranked ?? true,
+            }
+          : {}),
         dayKey: room.dayKey ?? todayIso,
         dayLabel: room.day,
         slot: room.time ? room.time.split(" – ")[0] : null,

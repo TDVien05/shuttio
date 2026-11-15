@@ -12,13 +12,18 @@ import {
   saveSession,
 } from "@/features/play/api/session-api"
 import {
+  checkInRoom,
+  confirmSelfCourt,
   decideRoomRequest,
   disbandRoom,
+  getReliability,
   leaveRoomMembership,
   listRooms,
   markSharePaid,
   requestJoinRoom,
+  vouchAttendance,
 } from "@/features/play/api/rooms-api"
+import { roomChannelId } from "@/features/chat/lib/channel-ids"
 import { cancelBookingRecord } from "@/features/booking/api/booking-api"
 import { wellFormedRooms } from "@/features/play/lib/matchmaking-derive"
 
@@ -336,3 +341,65 @@ export function useCancelBookingRecord() {
     },
   })
 }
+
+// ── Self-booked rooms ────────────────────────────────────────────────────────
+
+/** Everything that shows a self-booked room's court/attendance state. */
+function invalidateSelfCourt(
+  queryClient: ReturnType<typeof useQueryClient>,
+  roomId: string
+) {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.rooms() })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.sessions() })
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.chat.groupMatch(roomChannelId(roomId)),
+  })
+}
+
+/** Host marks the externally booked court as confirmed. */
+export function useConfirmSelfCourt() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (roomId: string) =>
+      unwrap(await confirmSelfCourt(roomId)),
+    onSuccess: (_data, roomId) => invalidateSelfCourt(queryClient, roomId),
+  })
+}
+
+export interface CheckInInput {
+  roomId: string
+  position: { lat: number; lng: number; accuracy?: number }
+}
+
+/** On-site GPS check-in. */
+export function useCheckInRoom() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: CheckInInput) =>
+      unwrap(await checkInRoom(input.roomId, input.position)),
+    onSuccess: (_data, input) => invalidateSelfCourt(queryClient, input.roomId),
+  })
+}
+
+export interface VouchInput {
+  roomId: string
+  userId: string
+}
+
+/** Confirm another seat holder was there. */
+export function useVouchAttendance() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: VouchInput) =>
+      unwrap(await vouchAttendance(input.roomId, input.userId)),
+    onSuccess: (_data, input) => invalidateSelfCourt(queryClient, input.roomId),
+  })
+}
+
+/** A player's show-up record, cached briefly — it changes once per match. */
+export const reliabilityQuery = (userId: string) =>
+  queryOptions({
+    queryKey: queryKeys.reliability(userId),
+    queryFn: () => getReliability(userId),
+    staleTime: 5 * 60_000,
+  })

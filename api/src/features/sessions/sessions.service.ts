@@ -9,6 +9,10 @@ import { InjectModel } from "@nestjs/mongoose"
 import type { Model } from "mongoose"
 
 import {
+  isLatLng,
+  isSelfCourt,
+  SELF_COST_MAX,
+  vnNowIso,
   withoutExpiredRsvps,
   type BookingRecordStatus,
   type PlaySession as PlaySessionData,
@@ -32,6 +36,115 @@ const MAX_CAPACITY = 8
  * client's own cap is only a UX pre-check.
  */
 const MAX_HOSTED_ROOMS = 3
+
+/**
+ * The host's client owns most of a session, but some of it only the server
+ * may write: a self-booked room's attendance and settlement, its court mode
+ * and ranked flag (fixed at creation), and the end state the sweeper set (a
+ * stale client must not revive a room that was cancelled or settled). Copy
+ * those from the stored doc over whatever the PUT body says.
+ */
+export function keepServerOwnedFields(
+  incoming: PlaySessionData,
+  prev: PlaySessionData | undefined
+): PlaySessionData {
+  const next: PlaySessionData = { ...incoming }
+  delete next.attendance
+  delete next.attendanceSettledAt
+  if (next.selfCourt) {
+    next.selfCourt = { ...next.selfCourt }
+    delete next.selfCourt.remindedAt
+    if (next.selfCourt.confirmed) next.selfCourt.confirmedAt ??= vnNowIso()
+    else delete next.selfCourt.confirmedAt
+  }
+  // A self-booked court is never one of the app's courts.
+  if (isSelfCourt(prev ?? next)) next.courtId = null
+  if (!prev) return next
+
+  if (prev.courtMode) next.courtMode = prev.courtMode
+  else delete next.courtMode
+  if (prev.ranked !== undefined) next.ranked = prev.ranked
+  else delete next.ranked
+  if (prev.attendance) next.attendance = prev.attendance
+  if (prev.attendanceSettledAt) {
+    next.attendanceSettledAt = prev.attendanceSettledAt
+  }
+  if (isSelfCourt(prev)) {
+    if (prev.selfCourt) {
+      const confirmed = Boolean(
+        prev.selfCourt.confirmed || next.selfCourt?.confirmed
+      )
+      next.selfCourt = {
+        ...prev.selfCourt,
+        ...next.selfCourt,
+        confirmed,
+        ...(prev.selfCourt.confirmedAt
+          ? { confirmedAt: prev.selfCourt.confirmedAt }
+          : {}),
+        ...(prev.selfCourt.remindedAt
+          ? { remindedAt: prev.selfCourt.remindedAt }
+          : {}),
+      }
+      if (confirmed) next.selfCourt.confirmedAt ??= vnNowIso()
+    }
+    if (prev.status === "cancelled" || prev.status === "completed") {
+      next.status = prev.status
+      next.listed = false
+    }
+  }
+  return next
+}
+
+/** Reject a self-booked room whose advertised court is missing or malformed. */
+export function assertValidSelfCourt(session: PlaySessionData): void {
+  const mode: unknown = session.courtMode
+  if (mode !== undefined && mode !== "app" && mode !== "self") {
+    throw new BadRequestException("Hình thức đặt sân không hợp lệ")
+  }
+  if (mode !== "self") {
+    if (session.selfCourt) {
+      throw new BadRequestException("Chỉ phòng tự đặt sân mới có sân ngoài")
+    }
+    return
+  }
+  if (session.reservationId) {
+    throw new BadRequestException("Phòng tự đặt sân không thể gắn đặt sân")
+  }
+  const c = session.selfCourt
+  if (!c || typeof c !== "object") {
+    throw new BadRequestException("Vui lòng nhập thông tin sân đã đặt")
+  }
+  const text = (v: unknown, min: number, max: number) =>
+    typeof v === "string" && v.trim().length >= min && v.trim().length <= max
+  if (!text(c.name, 2, 80)) {
+    throw new BadRequestException("Tên sân cần từ 2 đến 80 ký tự")
+  }
+  if (!text(c.address, 5, 200)) {
+    throw new BadRequestException("Địa chỉ sân cần từ 5 đến 200 ký tự")
+  }
+  if (!isLatLng({ lat: c.lat, lng: c.lng })) {
+    throw new BadRequestException("Vui lòng ghim vị trí sân trên bản đồ")
+  }
+  if (c.courtNote !== undefined && !text(c.courtNote, 0, 80)) {
+    throw new BadRequestException("Ghi chú sân tối đa 80 ký tự")
+  }
+  if (
+    c.costPerPerson !== undefined &&
+    !(
+      Number.isInteger(c.costPerPerson) &&
+      c.costPerPerson >= 0 &&
+      c.costPerPerson <= SELF_COST_MAX
+    )
+  ) {
+    throw new BadRequestException("Chi phí mỗi người không hợp lệ")
+  }
+  if (typeof c.confirmed !== "boolean") {
+    throw new BadRequestException("Thiếu trạng thái chốt sân")
+  }
+  if (session.ranked !== undefined && typeof session.ranked !== "boolean") {
+    throw new BadRequestException("Chế độ tính Elo không hợp lệ")
+  }
+}
 
 /** Map a linked booking's status onto the player's session status + hold. */
 function mapBookingStatus(status: BookingRecordStatus): {
@@ -201,8 +314,15 @@ export class SessionsService {
     session: PlaySessionData
   ): Promise<PlaySessionData> {
     this.assertValidRoom(session)
-    await this.assertHostedRoomLimit(userId, session)
-    const toSave = this.stripBookingOwnedFields(session)
+    const prev = await this.sessionModel
+      .findOne({ userId, sessionId: session.id })
+      .select({ data: 1 })
+      .lean<{ data: PlaySessionData } | null>()
+    if (!prev) await this.assertIdFree(userId, session.id)
+    const merged = keepServerOwnedFields(session, prev?.data)
+    assertValidSelfCourt(merged)
+    await this.assertHostedRoomLimit(userId, merged)
+    const toSave = this.stripBookingOwnedFields(merged)
     await this.sessionModel.updateOne(
       { userId, sessionId: session.id },
       { $set: { data: toSave } },
@@ -210,8 +330,22 @@ export class SessionsService {
     )
     // A listed room (new, or its capacity/roster changed) is visible to every
     // player — let them refetch now. Solo court holds stay private.
-    if (session.listed) this.roomEvents.emit(session.id)
+    if (toSave.listed) this.roomEvents.emit(session.id)
     return toSave
+  }
+
+  /**
+   * Rooms are found by id alone across every user (joining, the room chat),
+   * so a new session may not reuse an id another player already holds.
+   */
+  private async assertIdFree(userId: string, sessionId: string): Promise<void> {
+    const taken = await this.sessionModel
+      .findOne({ sessionId, userId: { $ne: userId } })
+      .select({ _id: 1 })
+      .lean()
+    if (taken) {
+      throw new ConflictException("Mã phòng đã tồn tại — hãy tạo lại phòng")
+    }
   }
 
   /** Reject a room whose capacity or roster size breaks the shape invariants. */

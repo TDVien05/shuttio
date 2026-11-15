@@ -26,6 +26,7 @@ import { PaymentsModule } from "./features/payments/payments.module.js"
 import { PlayersModule } from "./features/players/players.module.js"
 import { RealtimeModule } from "./features/realtime/realtime.module.js"
 import { RatingsModule } from "./features/ratings/ratings.module.js"
+import { ReliabilityModule } from "./features/reliability/reliability.module.js"
 import { RoomsModule } from "./features/rooms/rooms.module.js"
 import { SeedModule } from "./features/seed/seed.module.js"
 import { SessionsModule } from "./features/sessions/sessions.module.js"
@@ -68,6 +69,7 @@ import { VenuesModule } from "./features/venues/venues.module.js"
     SessionsModule,
     RoomsModule,
     RatingsModule,
+    ReliabilityModule,
     EloModule,
     VenuesModule,
     VenueWorkspaceModule,

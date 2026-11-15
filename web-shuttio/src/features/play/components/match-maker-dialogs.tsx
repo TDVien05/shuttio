@@ -4,7 +4,15 @@ import { useForm, useStore } from "@tanstack/react-form"
 import { getLocale } from "@/paraglide/runtime"
 import { toast } from "sonner"
 import * as z from "zod"
-import { Check, Minus, Plus, Search, TriangleAlert, Zap } from "lucide-react"
+import {
+  Check,
+  LocateFixed,
+  Minus,
+  Plus,
+  Search,
+  TriangleAlert,
+  Zap,
+} from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -37,8 +45,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { LEVELS, diffMinutes, locStr } from "@/lib/shared"
-import type { RoomLevel } from "@/lib/shared"
+import {
+  LEVELS,
+  SELF_CHECKIN_RADIUS_M,
+  SELF_COST_MAX,
+  diffMinutes,
+  locStr,
+} from "@/lib/shared"
+import type { CourtMode, RoomLevel, SelfCourt } from "@/lib/shared"
+import { currentPosition } from "@/features/play/lib/geolocation"
+import { PlaceSuggestField } from "@/features/play/components/self-court-place-field"
+import type { PlaceHit } from "@/features/play/lib/place-search"
+import type { GeoFailure } from "@/features/play/lib/geolocation"
 import { useData } from "@/features/dashboard/components/data-provider"
 import { useSessionData } from "@/features/play/hooks/use-session-data"
 import { useSessionActions } from "@/features/play/hooks/use-session-actions"
@@ -83,6 +101,115 @@ function FilterChips<T extends string>({
             {o.label}
           </Button>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/** The slice of a TanStack Form field a plain text input needs. */
+interface TextFieldApi {
+  name: string
+  state: {
+    value: string
+    meta: {
+      isTouched: boolean
+      isValid: boolean
+      errors: Array<{ message?: string } | undefined>
+    }
+  }
+  handleBlur: () => void
+  handleChange: (value: string) => void
+}
+
+function TextField({
+  field,
+  label,
+  placeholder,
+  description,
+  inputMode,
+}: {
+  field: TextFieldApi
+  label: string
+  placeholder?: string
+  description?: string
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"]
+}) {
+  const invalid = field.state.meta.isTouched && !field.state.meta.isValid
+  return (
+    <Field data-invalid={invalid}>
+      <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+      <Input
+        id={field.name}
+        name={field.name}
+        value={field.state.value}
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(e.target.value)}
+        aria-invalid={invalid}
+        placeholder={placeholder}
+        inputMode={inputMode}
+        autoComplete="off"
+      />
+      {description ? <FieldDescription>{description}</FieldDescription> : null}
+      {invalid && <FieldError errors={field.state.meta.errors} />}
+    </Field>
+  )
+}
+
+/** Where place search is biased before anything is pinned. */
+const HCMC_CENTER = { lat: 10.7769, lng: 106.7009 }
+
+// Mapbox ships only once a host actually pins a self-booked court.
+const SelfCourtLocationPicker = React.lazy(
+  () => import("@/features/play/components/self-court-location-picker")
+)
+
+const geoMessages: Record<GeoFailure, () => string> = {
+  denied: m.self_court_geo_denied,
+  unavailable: m.self_court_geo_unavailable,
+  unsupported: m.self_court_geo_unsupported,
+}
+
+/** Pin a self-booked court: from the host's own position, or on the map. */
+function SelfCourtPinField({
+  value,
+  onChange,
+}: {
+  value: { lat: number; lng: number } | null
+  onChange: (next: { lat: number; lng: number }) => void
+}) {
+  const [locating, setLocating] = React.useState(false)
+  const pinMyLocation = () => {
+    setLocating(true)
+    currentPosition()
+      .then((fix) => onChange({ lat: fix.lat, lng: fix.lng }))
+      .catch((reason: GeoFailure) => toast.error(geoMessages[reason]()))
+      .finally(() => setLocating(false))
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <React.Suspense fallback={null}>
+        <SelfCourtLocationPicker value={value} onChange={onChange} />
+      </React.Suspense>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          shape="pill"
+          type="button"
+          size="sm"
+          variant="outline"
+          isDisabled={locating}
+          onPress={pinMyLocation}
+        >
+          <LocateFixed />
+          {locating ? m.self_court_pin_locating() : m.self_court_pin_use_mine()}
+        </Button>
+        {value ? (
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+            {m.self_court_pin_set({
+              lat: value.lat.toFixed(5),
+              lng: value.lng.toFixed(5),
+            })}
+          </span>
+        ) : null}
       </div>
     </div>
   )
@@ -291,7 +418,6 @@ function CreateRoomDialog() {
   } = useSessionData()
   const { addRoom } = useSessionActions()
   const { createRoomOpen, setCreateRoomOpen } = useSessionUi()
-  const idRef = React.useRef(0)
 
   /** Opening window of a court ("HH:MM"); the global window backs courts with none. */
   const openHoursOf = (id: string) => {
@@ -319,14 +445,65 @@ function CreateRoomDialog() {
       endTime: z.string().min(1, m.match_maker_validation_time()),
       level: z.enum(["beginner", "intermediate", "advanced", "any"]),
       note: z.string().max(120, m.match_maker_validation_note_max()),
+      // Self-booked court (`courtMode: "self"`): the host booked it directly
+      // with a venue that isn't on the app; the room only gathers players.
+      courtMode: z.enum(["app", "self"]),
+      selfName: z.string(),
+      selfAddress: z.string(),
+      selfWard: z.string(),
+      selfNote: z.string().max(80),
+      selfCost: z.string(),
+      selfPin: z.object({ lat: z.number(), lng: z.number() }).nullable(),
+      selfConfirmed: z.boolean(),
+      ranked: z.boolean(),
     })
     .refine((d) => d.endTime > d.startTime, {
       message: m.match_maker_validation_end_after_start(),
       path: ["endTime"],
     })
+    .superRefine((d, ctx) => {
+      if (d.courtMode !== "self") return
+      const len = (s: string) => s.trim().length
+      if (len(d.selfName) < 2 || len(d.selfName) > 80) {
+        ctx.addIssue({
+          code: "custom",
+          message: m.self_court_validation_name(),
+          path: ["selfName"],
+        })
+      }
+      if (len(d.selfAddress) < 5 || len(d.selfAddress) > 200) {
+        ctx.addIssue({
+          code: "custom",
+          message: m.self_court_validation_address(),
+          path: ["selfAddress"],
+        })
+      }
+      if (len(d.selfWard) < 1 || len(d.selfWard) > 60) {
+        ctx.addIssue({
+          code: "custom",
+          message: m.self_court_validation_ward(),
+          path: ["selfWard"],
+        })
+      }
+      if (!d.selfPin) {
+        ctx.addIssue({
+          code: "custom",
+          message: m.self_court_validation_pin(),
+          path: ["selfPin"],
+        })
+      }
+      const cost = d.selfCost.trim()
+      if (cost && (!/^\d+$/.test(cost) || Number(cost) > SELF_COST_MAX)) {
+        ctx.addIssue({
+          code: "custom",
+          message: m.self_court_validation_cost(),
+          path: ["selfCost"],
+        })
+      }
+    })
     // A chosen court only takes bookings inside its venue's opening hours.
     .superRefine((d, ctx) => {
-      if (d.courtId === NO_COURT) return
+      if (d.courtId === NO_COURT || d.courtMode === "self") return
       const hours = openHoursOf(d.courtId)
       if (d.startTime < hours.from || d.endTime > hours.to) {
         ctx.addIssue({
@@ -342,7 +519,8 @@ function CreateRoomDialog() {
     .refine(
       (d) => {
         const dur = diffMinutes(d.startTime, d.endTime)
-        if (dur <= 0 || d.courtId === NO_COURT) return true
+        if (dur <= 0 || d.courtId === NO_COURT || d.courtMode === "self")
+          return true
         return (
           conflictFor(sessions, {
             courtId: d.courtId,
@@ -367,6 +545,15 @@ function CreateRoomDialog() {
       endTime: "19:30",
       level: userLevelForSport("badminton") as RoomLevel,
       note: "",
+      courtMode: "app" as CourtMode,
+      selfName: "",
+      selfAddress: "",
+      selfWard: "",
+      selfNote: "",
+      selfCost: "",
+      selfPin: null as { lat: number; lng: number } | null,
+      selfConfirmed: false,
+      ranked: true,
     },
     validators: {
       onSubmit: createRoomSchema,
@@ -380,19 +567,43 @@ function CreateRoomDialog() {
         })
         return
       }
-      const court = COURTS.find((c) => c.id === value.courtId)
+      const self = value.courtMode === "self"
+      const court = self
+        ? undefined
+        : COURTS.find((c) => c.id === value.courtId)
       const capacity = value.maxPlayers
       const dayLabel = locStr(dayLabelFor(value.day), locale)
+      const selfCourt: SelfCourt | undefined =
+        self && value.selfPin
+          ? {
+              name: value.selfName.trim(),
+              address: value.selfAddress.trim(),
+              lat: value.selfPin.lat,
+              lng: value.selfPin.lng,
+              ...(value.selfNote.trim()
+                ? { courtNote: value.selfNote.trim() }
+                : {}),
+              ...(value.selfCost.trim()
+                ? { costPerPerson: Number(value.selfCost.trim()) }
+                : {}),
+              confirmed: value.selfConfirmed,
+            }
+          : undefined
       addRoom({
-        id: `r-new-${idRef.current++}`,
+        ...(selfCourt
+          ? { courtMode: "self" as const, selfCourt, ranked: value.ranked }
+          : {}),
+        // Globally unique: room ids are looked up across every user (the
+        // old per-page counter collided with other players' rooms).
+        id: `r-${crypto.randomUUID()}`,
         host: { name: userName, initials: USER.initials },
         title: value.title.trim(),
         // No court picked: an empty venue — the room only looks for players.
         courtId: court?.id,
         sport: value.sport,
         format: value.format,
-        venue: court?.name ?? "",
-        ward: court?.ward ?? "",
+        venue: selfCourt?.name ?? court?.name ?? "",
+        ward: selfCourt ? value.selfWard.trim() : (court?.ward ?? ""),
         distanceKm: court?.distanceKm ?? null,
         day: dayLabel,
         dayKey: value.day,
@@ -404,9 +615,10 @@ function CreateRoomDialog() {
         players: [USER.initials],
         pricePerHour: court?.pricePerHour ?? 0,
       })
+      const venueName = selfCourt?.name ?? court?.name
       toast.success(m.match_maker_toast_room_created(), {
-        description: court
-          ? `${value.title.trim()} · ${court.name}`
+        description: venueName
+          ? `${value.title.trim()} · ${venueName}`
           : value.title.trim(),
       })
       setCreateRoomOpen(false)
@@ -414,7 +626,27 @@ function CreateRoomDialog() {
     },
   })
 
-  const courtIdValue = useStore(form.store, (s) => s.values.courtId)
+  const courtIdValue = useStore(form.store, (s) =>
+    s.values.courtMode === "self" ? NO_COURT : s.values.courtId
+  )
+  const selfMode = useStore(form.store, (s) => s.values.courtMode === "self")
+  const selfPin = useStore(form.store, (s) => s.values.selfPin)
+
+  /**
+   * A place picked from the search fills the court in one go: its address,
+   * area and map pin — and its name too when picked from the name field (or
+   * no name was typed yet). The host then only double-checks the pin.
+   */
+  const pickPlace = (hit: PlaceHit, from: "name" | "address") => {
+    const values = form.state.values
+    if (from === "name" || !values.selfName.trim()) {
+      form.setFieldValue("selfName", hit.name.slice(0, 80))
+    }
+    form.setFieldValue("selfAddress", hit.address.slice(0, 200))
+    if (hit.ward) form.setFieldValue("selfWard", hit.ward.slice(0, 60))
+    form.setFieldValue("selfPin", { lat: hit.lat, lng: hit.lng })
+    toast.success(m.self_court_search_picked({ name: hit.name }))
+  }
   return (
     <Dialog
       isOpen={createRoomOpen}
@@ -534,9 +766,153 @@ function CreateRoomDialog() {
             }}
           </form.Field>
 
-          <form.Field name="courtId">
+          <form.Field name="courtMode">
             {(field) => (
               <Field>
+                <FilterChips<CourtMode>
+                  label={m.self_court_mode_label()}
+                  value={field.state.value}
+                  options={[
+                    { value: "app", label: m.self_court_mode_app() },
+                    { value: "self", label: m.self_court_mode_self() },
+                  ]}
+                  onChange={(v) => field.handleChange(v)}
+                />
+                {field.state.value === "self" ? (
+                  <FieldDescription>
+                    {m.self_court_mode_self_hint()}
+                  </FieldDescription>
+                ) : null}
+              </Field>
+            )}
+          </form.Field>
+
+          {selfMode ? (
+            <>
+              <form.Field name="selfName">
+                {(field) => (
+                  <PlaceSuggestField
+                    field={field}
+                    label={m.self_court_name()}
+                    placeholder={m.self_court_name_placeholder()}
+                    hint={m.self_court_search_hint()}
+                    near={selfPin ?? HCMC_CENTER}
+                    onPick={(hit) => pickPlace(hit, "name")}
+                  />
+                )}
+              </form.Field>
+              <form.Field name="selfAddress">
+                {(field) => (
+                  <PlaceSuggestField
+                    field={field}
+                    label={m.self_court_address()}
+                    placeholder={m.self_court_address_placeholder()}
+                    near={selfPin ?? HCMC_CENTER}
+                    onPick={(hit) => pickPlace(hit, "address")}
+                  />
+                )}
+              </form.Field>
+              <div className="grid gap-7 sm:grid-cols-2">
+                <form.Field name="selfWard">
+                  {(field) => (
+                    <TextField
+                      field={field}
+                      label={m.self_court_ward()}
+                      placeholder={m.self_court_ward_placeholder()}
+                    />
+                  )}
+                </form.Field>
+                <form.Field name="selfNote">
+                  {(field) => (
+                    <TextField
+                      field={field}
+                      label={m.self_court_note()}
+                      placeholder={m.self_court_note_placeholder()}
+                    />
+                  )}
+                </form.Field>
+              </div>
+              <p className="-mt-4 px-1 text-xs text-muted-foreground">
+                {m.self_court_ward_hint()}
+              </p>
+              <form.Field name="selfPin">
+                {(field) => {
+                  const invalid =
+                    field.state.meta.isTouched && !field.state.meta.isValid
+                  return (
+                    <Field data-invalid={invalid}>
+                      <FieldLabel>{m.self_court_pin()}</FieldLabel>
+                      <SelfCourtPinField
+                        value={field.state.value}
+                        onChange={(v) => field.handleChange(v)}
+                      />
+                      <FieldDescription>
+                        {m.self_court_pin_hint({
+                          radius: SELF_CHECKIN_RADIUS_M,
+                        })}
+                      </FieldDescription>
+                      {invalid && (
+                        <FieldError errors={field.state.meta.errors} />
+                      )}
+                    </Field>
+                  )
+                }}
+              </form.Field>
+              <form.Field name="selfCost">
+                {(field) => (
+                  <TextField
+                    field={field}
+                    label={m.self_court_cost()}
+                    placeholder={m.self_court_cost_placeholder()}
+                    description={m.self_court_cost_hint()}
+                    inputMode="numeric"
+                  />
+                )}
+              </form.Field>
+              <form.Field name="selfConfirmed">
+                {(field) => (
+                  <Field>
+                    <FilterChips<"yes" | "no">
+                      label={m.self_court_badge_confirmed()}
+                      value={field.state.value ? "yes" : "no"}
+                      options={[
+                        { value: "yes", label: m.self_court_confirmed_now() },
+                        { value: "no", label: m.self_court_confirmed_later() },
+                      ]}
+                      onChange={(v) => field.handleChange(v === "yes")}
+                    />
+                    {field.state.value ? null : (
+                      <FieldDescription>
+                        {m.self_court_confirmed_hint()}
+                      </FieldDescription>
+                    )}
+                  </Field>
+                )}
+              </form.Field>
+              <form.Field name="ranked">
+                {(field) => (
+                  <Field>
+                    <FilterChips<"ranked" | "friendly">
+                      label={m.self_court_ranked()}
+                      value={field.state.value ? "ranked" : "friendly"}
+                      options={[
+                        { value: "ranked", label: m.self_court_ranked_on() },
+                        { value: "friendly", label: m.self_court_ranked_off() },
+                      ]}
+                      onChange={(v) => field.handleChange(v === "ranked")}
+                    />
+                    <FieldDescription>
+                      {m.self_court_ranked_hint()}
+                    </FieldDescription>
+                  </Field>
+                )}
+              </form.Field>
+            </>
+          ) : null}
+
+          <form.Field name="courtId">
+            {(field) => (
+              <Field className={cn(selfMode && "hidden")}>
                 <FieldLabel>{m.match_maker_dialog_court_optional()}</FieldLabel>
                 <Select
                   aria-label={m.match_maker_dialog_court_optional()}
@@ -630,7 +1006,9 @@ function CreateRoomDialog() {
 
           <form.Subscribe
             selector={(s) => ({
-              courtId: s.values.courtId,
+              // A self-booked court isn't in the app's calendar to check.
+              courtId:
+                s.values.courtMode === "self" ? NO_COURT : s.values.courtId,
               day: s.values.day,
               startTime: s.values.startTime,
               endTime: s.values.endTime,

@@ -65,11 +65,14 @@ const COMMENT_MAX = 300
 export function RatePlayerDialog({
   member,
   sessionId,
+  ranked = true,
   onClose,
 }: {
   /** The player being rated, or null when the dialog is closed. */
   member: ChatUser | null
   sessionId: string
+  /** False for a "Giao lưu" match: no skill vote, Elo stays put. */
+  ranked?: boolean
   onClose: () => void
 }) {
   return (
@@ -86,6 +89,7 @@ export function RatePlayerDialog({
           key={member.id}
           member={member}
           sessionId={sessionId}
+          ranked={ranked}
           onClose={onClose}
         />
       ) : null}
@@ -96,10 +100,12 @@ export function RatePlayerDialog({
 function RateForm({
   member,
   sessionId,
+  ranked,
   onClose,
 }: {
   member: ChatUser
   sessionId: string
+  ranked: boolean
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
@@ -116,7 +122,8 @@ function RateForm({
     isPending: levelLoading,
     isError: levelFailed,
   } = useQuery(eloQueries.playerLevel(member.id))
-  const level = levels?.[0] ?? null
+  // An unranked match takes no skill vote — same as a player with no level.
+  const level = ranked ? (levels?.[0] ?? null) : null
 
   const rate = useMutation({
     mutationFn: () => {
@@ -212,7 +219,11 @@ function RateForm({
           </span>
         </div>
 
-        {levelLoading ? (
+        {!ranked ? (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {m.self_court_unranked_note()}
+          </p>
+        ) : levelLoading ? (
           <div className="h-24 animate-pulse rounded-2xl bg-muted/50" />
         ) : !level ? (
           <p className="text-xs leading-relaxed text-muted-foreground">

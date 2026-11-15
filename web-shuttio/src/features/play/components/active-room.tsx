@@ -70,6 +70,12 @@ import { useSessionActions } from "@/features/play/hooks/use-session-actions"
 import { useSessionUi } from "@/features/play/state/session-ui"
 import { PlayerProfileDialog } from "@/features/dashboard/components/profile-dialog"
 import { RoomSharePanel } from "@/features/play/components/room-share"
+import { ReliabilityBadge } from "@/features/play/components/reliability-badge"
+import {
+  SelfCourtSection,
+  isSelfRoom,
+  roomHasCourt,
+} from "@/features/play/components/self-court-panel"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { usePresence } from "@/features/presence/presence"
 import { m } from "@/paraglide/messages"
@@ -100,7 +106,7 @@ export function ActiveRoomPill() {
   if (!activeRoom) return null
 
   const extra = joinedRooms.length - 1
-  const booked = Boolean(activeRoom.bookingId)
+  const booked = roomHasCourt(activeRoom)
   // Join requests waiting on the user across every room they host.
   const pendingTotal = sessions.reduce(
     (n, s) =>
@@ -267,7 +273,13 @@ function RoomDetail({
   const others = joinedRooms.filter((r) => r.id !== room.id)
   const isHost = room.host.initials === USER.initials
   const full = room.joined >= room.capacity
+  // A self-booked room never has an in-app booking; its court state lives
+  // in `SelfCourtSection` instead.
+  const self = isSelfRoom(room)
   const booked = Boolean(room.bookingId)
+  const hostUserId = isHost
+    ? sUser.id
+    : room.members?.find((member) => member.host)?.userId
   // People to invite: not already in the room (nor awaiting approval),
   // same-sport listed first.
   const requestedInitials = new Set(requests.map((p) => p.initials))
@@ -313,11 +325,14 @@ function RoomDetail({
   const destructiveConfirm = isHost
     ? m.active_room_cancel_room_confirm()
     : m.active_room_leave_confirm()
-  const destructiveBody = isHost
+  const baseDestructiveBody = isHost
     ? booked
       ? m.active_room_cancel_booked_body()
       : m.active_room_cancel_forming_body()
     : m.active_room_leave_body()
+  const destructiveBody = self
+    ? `${baseDestructiveBody} ${m.self_court_late_cancel_warning()}`
+    : baseDestructiveBody
 
   return (
     <>
@@ -353,80 +368,98 @@ function RoomDetail({
           </div>
         ) : null}
 
-        <section className="flex flex-col gap-2.5">
-          <SectionLabel>{m.active_room_location()}</SectionLabel>
-          <div className="flex flex-col gap-2 text-sm">
-            <DetailRow icon={MapPin}>
-              {room.venue ? (
-                <>
-                  {room.venue} · {address} ·{" "}
-                  <CourtDistance courtId={room.courtId} venue={room.venue} />
-                  {/* Until booked, the court is only the host's proposal. */}
-                  {booked ? null : ` ${m.match_maker_proposed_suffix()}`}
-                </>
-              ) : (
-                m.match_maker_dialog_no_court()
-              )}
-            </DetailRow>
+        {self ? (
+          <section className="flex flex-col gap-2.5">
+            <SectionLabel>{m.active_room_location()}</SectionLabel>
             <DetailRow icon={Clock}>
               {room.time
                 ? `${dayWordLabel(room.day)} · ${room.time}`
                 : m.active_room_no_court_yet()}
             </DetailRow>
-            <DetailRow icon={Users}>
-              {sportsMessages[room.sport]()} · {formatLabel(room.format)}
-              {room.pricePerHour
-                ? ` · ${formatVnd(room.pricePerHour)}/h`
-                : null}
-            </DetailRow>
-          </div>
+            <SelfCourtSection
+              room={room}
+              isHost={isHost}
+              isMember={isMember}
+              hostUserId={hostUserId}
+              viewerId={sUser.id}
+            />
+          </section>
+        ) : (
+          <section className="flex flex-col gap-2.5">
+            <SectionLabel>{m.active_room_location()}</SectionLabel>
+            <div className="flex flex-col gap-2 text-sm">
+              <DetailRow icon={MapPin}>
+                {room.venue ? (
+                  <>
+                    {room.venue} · {address} ·{" "}
+                    <CourtDistance courtId={room.courtId} venue={room.venue} />
+                    {/* Until booked, the court is only the host's proposal. */}
+                    {booked ? null : ` ${m.match_maker_proposed_suffix()}`}
+                  </>
+                ) : (
+                  m.match_maker_dialog_no_court()
+                )}
+              </DetailRow>
+              <DetailRow icon={Clock}>
+                {room.time
+                  ? `${dayWordLabel(room.day)} · ${room.time}`
+                  : m.active_room_no_court_yet()}
+              </DetailRow>
+              <DetailRow icon={Users}>
+                {sportsMessages[room.sport]()} · {formatLabel(room.format)}
+                {room.pricePerHour
+                  ? ` · ${formatVnd(room.pricePerHour)}/h`
+                  : null}
+              </DetailRow>
+            </div>
 
-          {/* Court status — shown to ALL members */}
-          {booked ? (
-            <>
-              <div className="flex items-center justify-between gap-2 rounded-2xl bg-brand/10 px-3 py-2 text-sm">
-                <span className="inline-flex items-center gap-1.5 text-brand">
-                  <CalendarCheck className="size-4" />
-                  {m.active_room_booked({
-                    day: dayWordLabel(room.day),
-                    time: room.time,
-                  })}
-                </span>
-                <Button
-                  shape="pill"
-                  variant="ghost"
-                  size="xs"
+            {/* Court status — shown to ALL members */}
+            {booked ? (
+              <>
+                <div className="flex items-center justify-between gap-2 rounded-2xl bg-brand/10 px-3 py-2 text-sm">
+                  <span className="inline-flex items-center gap-1.5 text-brand">
+                    <CalendarCheck className="size-4" />
+                    {m.active_room_booked({
+                      day: dayWordLabel(room.day),
+                      time: room.time,
+                    })}
+                  </span>
+                  <Button
+                    shape="pill"
+                    variant="ghost"
+                    size="xs"
 
-                  onPress={() => {
-                    void router.navigate({ href: "/app/bookings" })
-                    onClose()
-                  }}
-                >
-                  {m.active_room_view_in_bookings()}
-                </Button>
-              </div>
-              <RoomSharePanel sharePrice={room.sharePrice} />
-            </>
-          ) : isHost ? (
-            <Button
-              shape="pill"
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onPress={() => {
-                bookCourtForSession(room.id)
-                onClose()
-              }}
-            >
-              <CalendarPlus />
-              {m.active_room_book_court()}
-            </Button>
-          ) : (
-            <p className="rounded-2xl bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-              {m.active_room_host_no_court()}
-            </p>
-          )}
-        </section>
+                    onPress={() => {
+                      void router.navigate({ href: "/app/bookings" })
+                      onClose()
+                    }}
+                  >
+                    {m.active_room_view_in_bookings()}
+                  </Button>
+                </div>
+                <RoomSharePanel sharePrice={room.sharePrice} />
+              </>
+            ) : isHost ? (
+              <Button
+                shape="pill"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onPress={() => {
+                  bookCourtForSession(room.id)
+                  onClose()
+                }}
+              >
+                <CalendarPlus />
+                {m.active_room_book_court()}
+              </Button>
+            ) : (
+              <p className="rounded-2xl bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                {m.active_room_host_no_court()}
+              </p>
+            )}
+          </section>
+        )}
 
         {/* Join requests — host reviews reliability before approving */}
         {isHost && requests.length ? (
@@ -904,9 +937,13 @@ function RequestRow({
             {real ? null : <LevelChip level={level} />}
           </div>
           {real ? (
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {m.match_maker_members_view_profile()}
-            </p>
+            <div className="mt-1 flex flex-col gap-1">
+              {/* A real stranger's show-up record — what a host most needs. */}
+              <ReliabilityBadge userId={requester?.userId} detailed />
+              <p className="text-xs text-muted-foreground">
+                {m.match_maker_members_view_profile()}
+              </p>
+            </div>
           ) : (
             <div
               className={cn(

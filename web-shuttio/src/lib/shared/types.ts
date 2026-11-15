@@ -151,6 +151,14 @@ export interface MatchRoom {
    * asking to join such a room pays this up front.
    */
   sharePrice?: number
+  /** Where the court comes from — see {@link CourtMode}. Absent = `"app"`. */
+  courtMode?: CourtMode
+  /** The court the host booked outside the app (`courtMode: "self"`). */
+  selfCourt?: SelfCourt
+  /** Peer skill votes from this match move Elo (default true). */
+  ranked?: boolean
+  /** Self-booked: confirmed attendance keyed by Clerk id (members only). */
+  attendance?: Record<string, AttendanceMark>
 }
 
 // ── Bookings ─────────────────────────────────────────────────────────────────
@@ -335,6 +343,83 @@ export interface PlaySession {
    * Never persisted — only attached on the read projection.
    */
   groupSession?: boolean
+  /**
+   * `"self"`: the players booked a court outside the app and only meet
+   * through this room. Absent = `"app"` (a court booked through the app).
+   * Fixed once the room is created.
+   */
+  courtMode?: CourtMode
+  /** The externally booked court — required when `courtMode` is `"self"`. */
+  selfCourt?: SelfCourt
+  /**
+   * Whether the post-match peer skill votes move Elo ("Tính Elo") or the match
+   * is just for fun ("Giao lưu"). Absent = true. Fixed once created.
+   */
+  ranked?: boolean
+  /**
+   * Server-owned: who actually showed up to a self-booked match, keyed by
+   * Clerk id (the host's key is the doc owner). A client PUT never sets it.
+   */
+  attendance?: Record<string, AttendanceMark>
+  /** Server-owned: when attendance was settled into reliability records. */
+  attendanceSettledAt?: string
+}
+
+/**
+ * Where a room's court comes from: `"app"` — booked and paid through a venue
+ * on the app; `"self"` — the host booked it directly with a venue that isn't
+ * on the app yet, and money is settled between the players.
+ */
+export type CourtMode = "app" | "self"
+
+/** A court the host booked outside the app, as the room advertises it. */
+export interface SelfCourt {
+  /** Venue name as players know it, e.g. "Sân cầu lông Kỳ Hoà". */
+  name: string
+  /**
+   * Street address and pinned location (check-in is measured against it).
+   * Always set on the stored room; `GET /api/rooms` omits them for players
+   * who aren't in the room.
+   */
+  address?: string
+  lat?: number
+  lng?: number
+  /** Free text, e.g. "Sân số 3, tầng 2". */
+  courtNote?: string
+  /** Estimated VND each player chips in (court + shuttles). */
+  costPerPerson?: number
+  /** The host says the court is booked with the venue ("Đã chốt sân"). */
+  confirmed: boolean
+  confirmedAt?: string
+  /** Server-owned: when the host was last reminded to confirm the court. */
+  remindedAt?: string
+}
+
+/** How a player's presence at a self-booked match was established. */
+export interface AttendanceMark {
+  /** ISO time it was recorded. */
+  at: string
+  /** `gps`: checked in on site; `vouch`: confirmed by a player already there. */
+  via: "gps" | "vouch"
+  /** Clerk id of the player who vouched (`via: "vouch"` only). */
+  by?: string
+}
+
+/** A player's show-up record (`GET /api/reliability/:userId`). */
+export interface ReliabilitySummary {
+  userId: string
+  /** Matches attended in the window. */
+  attended: number
+  /** Matches they held a seat in but never showed up to. */
+  noShows: number
+  /** Seats given up (or rooms cancelled) shortly before the start. */
+  lateCancels: number
+  /** 0–100, null while there is no history yet. */
+  score: number | null
+  /** ISO time until which they can't join new rooms; null when free. */
+  restrictedUntil: string | null
+  /** Days of history the counts cover. */
+  windowDays: number
 }
 
 export type Conflict = "court-taken" | "self-overlap" | null
@@ -404,8 +489,21 @@ export interface GroupMatch {
   booked: boolean
   /** The match has been played (completed, or a booked slot whose end has passed). */
   ended: boolean
-  /** Clerk ids of everyone who played (host + confirmed roster) — who may rate whom. */
+  /**
+   * Clerk ids of everyone who played — who may rate whom. For a self-booked
+   * match only those whose attendance was confirmed.
+   */
   participantIds: string[]
+  courtMode: CourtMode
+  /** Peer skill votes move Elo for this match. */
+  ranked: boolean
+  /** Self-booked match only: confirmed attendance keyed by Clerk id. */
+  attendance?: Record<string, AttendanceMark>
+  /** Every player holding a seat (host + going), self-booked match only. */
+  memberIds?: string[]
+  /** Self-booked: check-in opens / attendance can be confirmed until. */
+  checkInOpensAt?: string
+  attendanceClosesAt?: string
 }
 
 export interface GroupMatchResult {
