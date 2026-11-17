@@ -12,6 +12,8 @@ import { VenuesModule } from "../venues/venues.module.js"
 import { AdminController } from "./admin.controller.js"
 import { AdminService } from "./admin.service.js"
 import { OwnerRemovalService } from "./owner-removal.service.js"
+import { VenueAccountService } from "./venue-account.service.js"
+import { NotificationsModule } from "../notifications/notifications.module.js"
 
 // Every cross-tenant read/write composes the existing feature services'
 // unscoped methods — no new schema registrations of its own.
@@ -26,8 +28,9 @@ import { OwnerRemovalService } from "./owner-removal.service.js"
     RoomsModule,
     DirectoryModule,
     ChatModule,
+    NotificationsModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService, OwnerRemovalService],
+  providers: [AdminService, OwnerRemovalService, VenueAccountService],
 })
 export class AdminModule {}

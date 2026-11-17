@@ -35,7 +35,7 @@ export interface EloResult {
   initialized: boolean
   elo: number | null
   label: { code: string; name: string } | null
-  status: "PROVISIONAL" | null
+  status: "PROVISIONAL" | "ESTABLISHED" | null
   source: "ASSESSMENT" | "DEFAULT" | null
   inconsistencyWarning: boolean
   warningMessage: string | null
@@ -43,6 +43,23 @@ export interface EloResult {
   /** Còn được làm bảng hỏi (một lần) để thay Elo mặc định. */
   canTakeAssessment: boolean
   notice: string | null
+}
+
+/** Một lần Elo thay đổi sau khởi tạo (hiện chỉ từ đánh giá chéo ẩn danh). */
+export interface EloHistoryEntry {
+  reason: "PEER_RATING"
+  delta: number
+  eloBefore: number
+  eloAfter: number
+  createdAt: string
+}
+
+/** Lịch sử Elo của chính người chơi; `changes` mới nhất trước. */
+export interface EloHistory {
+  initialElo: number | null
+  currentElo: number | null
+  initializedAt: string | null
+  changes: EloHistoryEntry[]
 }
 
 const BASE = "/api/elo/initial-assessment"
@@ -61,6 +78,13 @@ export const eloQueries = {
     queryOptions({
       queryKey: queryKeys.elo.result(),
       queryFn: ({ signal }) => api<EloResult>(`${BASE}/result`, { signal }),
+    }),
+
+  /** Lịch sử thay đổi Elo của chính người chơi. */
+  history: () =>
+    queryOptions({
+      queryKey: queryKeys.elo.history(),
+      queryFn: ({ signal }) => api<EloHistory>("/api/elo/history", { signal }),
     }),
 
   /** Trình độ công khai của người chơi khác (rỗng nếu họ chưa có Elo). */

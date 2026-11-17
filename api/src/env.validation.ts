@@ -25,6 +25,10 @@ const envSchema = z.object({
   // this window ("silence = consent"). Overridable so dev can shrink the
   // real 30-minute SLA to seconds/minutes when exercising the sweeper.
   BOOKING_CONFIRM_SLA_MINUTES: z.coerce.number().int().positive().default(30),
+  // Peer Elo sweep (`ratings/peer-elo.service.ts`): how long a match's skill
+  // votes are collected before they move a player's Elo. 24 hours in
+  // production; overridable so dev can shrink it to minutes when testing.
+  PEER_VOTE_WINDOW_MINUTES: z.coerce.number().int().positive().default(1440),
   // OpenRouter (Vercel AI SDK provider) — powers POST /api/ai/chat. Required so a
   // missing key crashes at boot instead of 500ing the first chat request.
   OPENROUTER_API_KEY: z.string().min(1, "OPENROUTER_API_KEY is required"),

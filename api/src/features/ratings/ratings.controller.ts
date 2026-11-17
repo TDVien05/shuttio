@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common"
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common"
 
 import { UserId } from "../../common/user-id.decorator.js"
 import { UserThrottle } from "../../common/user-throttler.guard.js"
 import {
   CreateRatingBodyDto,
+  ReviewsQueryDto,
   SessionIdParamDto,
   UserIdParamDto,
 } from "./ratings.dto.js"
@@ -34,5 +35,11 @@ export class RatingsController {
   @Get("users/:userId/summary")
   summary(@Param() param: UserIdParamDto) {
     return this.ratings.summary(param.userId)
+  }
+
+  /** Any player's reviews, newest first, one page at a time. */
+  @Get("users/:userId/reviews")
+  reviews(@Param() param: UserIdParamDto, @Query() query: ReviewsQueryDto) {
+    return this.ratings.reviews(param.userId, query.cursor)
   }
 }

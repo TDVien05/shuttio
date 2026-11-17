@@ -1,6 +1,7 @@
 import { Transform } from "class-transformer"
 import {
   IsBoolean,
+  IsEmail,
   IsIn,
   IsInt,
   IsISO8601,
@@ -131,4 +132,21 @@ export class OwnerIdParamDto {
   @IsString()
   @IsNotEmpty()
   ownerId: string
+}
+
+export class CreateVenueAccountDto {
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === "string" ? value.trim().toLowerCase() : value
+  )
+  @IsEmail()
+  @MaxLength(254)
+  email: string
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === "string" ? value.trim() : value
+  )
+  @IsString()
+  @MaxLength(80)
+  name?: string
 }

@@ -16,13 +16,13 @@ import { RatingsService } from "../src/features/ratings/ratings.service.js"
 import { Rating } from "../src/features/ratings/rating.schema.js"
 import { PlaySession } from "../src/features/sessions/session.schema.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
-import { ProfileService } from "../src/features/players/profile.service.js"
 import type { PlaySession as PlaySessionData } from "../src/shared/index.js"
 
 /**
  * Peer ratings after a played match: only participants of a finished,
  * non-cancelled match may rate each other, once per (rater, ratee, match);
- * the ratee is notified; profiles read an average + newest reviews.
+ * the ratee is notified; profiles read an average + newest reviews. Reviews
+ * are anonymous — nothing sent to the ratee or a profile names the rater.
  */
 
 function playedSession(
@@ -67,26 +67,37 @@ async function makeService(opts: {
   recent?: {
     stars: number
     comment?: string
-    raterName: string
+    raterId?: string
+    _id?: string
     createdAt: Date
   }[]
 }) {
+  /** Filters passed to `ratingModel.find`, in call order. */
+  const finds: Record<string, unknown>[] = []
   const created: unknown[] = []
-  const notified: { userId: string; input: { kind: string; text: string } }[] =
-    []
+  const notified: {
+    userId: string
+    input: { id: string; kind: string; text: string }
+  }[] = []
   const ratingModel = {
     create(doc: unknown) {
       if (opts.createFails) return Promise.reject(opts.createFails)
       created.push(doc)
       return Promise.resolve(doc)
     },
-    find: () => ({
-      select: () => ({ lean: () => Promise.resolve(opts.ratings ?? []) }),
+    find: (filter: Record<string, unknown>) => {
+      finds.push(filter)
+      return findChain
+    },
+    aggregate: () => Promise.resolve(opts.aggregate ?? []),
+  }
+  const findChain = {
+    select: () => ({
+      lean: () => Promise.resolve(opts.ratings ?? []),
       sort: () => ({
         limit: () => ({ lean: () => Promise.resolve(opts.recent ?? []) }),
       }),
     }),
-    aggregate: () => Promise.resolve(opts.aggregate ?? []),
   }
   const sessionModel = {
     findOne: () => ({
@@ -106,16 +117,12 @@ async function makeService(opts: {
       { provide: getModelToken(Rating.name), useValue: ratingModel },
       { provide: getModelToken(PlaySession.name), useValue: sessionModel },
       {
-        provide: ProfileService,
-        useValue: {
-          getProfile: (id: string) =>
-            Promise.resolve({ user: { name: `Name ${id}`, initials: "XX" } }),
-        },
-      },
-      {
         provide: NotificationsService,
         useValue: {
-          create: (userId: string, input: { kind: string; text: string }) => {
+          create: (
+            userId: string,
+            input: { id: string; kind: string; text: string }
+          ) => {
             notified.push({ userId, input })
             return Promise.resolve()
           },
@@ -123,7 +130,7 @@ async function makeService(opts: {
       },
     ],
   }).compile()
-  return { service: moduleRef.get(RatingsService), created, notified }
+  return { service: moduleRef.get(RatingsService), created, notified, finds }
 }
 
 void test("rate: a participant rates another after the match, and the ratee is notified", async () => {
@@ -137,7 +144,6 @@ void test("rate: a participant rates another after the match, and the ratee is n
   assert.deepEqual(created, [
     {
       raterId: "host-1",
-      raterName: "Name host-1",
       rateeId: "user-an",
       sessionId: "s-1",
       stars: 5,
@@ -147,6 +153,9 @@ void test("rate: a participant rates another after the match, and the ratee is n
   assert.equal(notified.length, 1)
   assert.equal(notified[0].userId, "user-an")
   assert.equal(notified[0].input.kind, "rating")
+  // Anonymous: neither the notification's text nor its id names the rater.
+  assert.equal(notified[0].input.text.includes("host-1"), false)
+  assert.equal(notified[0].input.id.includes("host-1"), false)
 })
 
 void test("rate rejects self-rating, unknown/cancelled/unfinished matches and outsiders", async () => {
@@ -246,12 +255,12 @@ void test("summary: empty for an unrated player, else rounded average + newest r
       {
         stars: 5,
         comment: "Tuyệt",
-        raterName: "An",
+        raterId: "user-an",
         createdAt: new Date("2026-10-01T10:00:00Z"),
       },
       {
         stars: 4,
-        raterName: "Bình",
+        raterId: "user-binh",
         createdAt: new Date("2026-09-30T10:00:00Z"),
       },
     ],
@@ -259,11 +268,46 @@ void test("summary: empty for an unrated player, else rounded average + newest r
   const s = await rated.service.summary("u")
   assert.equal(s.average, 4.7)
   assert.equal(s.count, 3)
+  // Anonymous: a review carries no rater id or name, even if the doc has one.
   assert.deepEqual(s.recent[0], {
     stars: 5,
     comment: "Tuyệt",
-    raterName: "An",
     createdAt: "2026-10-01T10:00:00.000Z",
   })
   assert.equal("comment" in s.recent[1], false)
+})
+
+void test("reviews: pages newest-first, anonymous, with a cursor while older ones remain", async () => {
+  const doc = (i: number) => ({
+    _id: i.toString(16).padStart(24, "0"),
+    stars: 5,
+    raterId: "user-an",
+    createdAt: new Date(Date.UTC(2026, 9, 20) - i * 60_000),
+  })
+  // One row more than a page: an older page exists.
+  const full = await makeService({
+    recent: Array.from({ length: 11 }, (_, i) => doc(i)),
+  })
+  const first = await full.service.reviews("u")
+  assert.equal(first.reviews.length, 10)
+  assert.deepEqual(first.reviews[0], {
+    stars: 5,
+    createdAt: doc(0).createdAt.toISOString(),
+  })
+  // The cursor points at the last review RETURNED, not the extra row.
+  assert.equal(first.nextCursor, `${doc(9).createdAt.getTime()}_${doc(9)._id}`)
+  assert.deepEqual(full.finds[0], { rateeId: "u" })
+
+  // The next page reads strictly older reviews than the cursor.
+  await full.service.reviews("u", first.nextCursor)
+  const next = full.finds[1] as { rateeId: string; $or: unknown[] }
+  assert.equal(next.rateeId, "u")
+  assert.equal(next.$or.length, 2)
+  assert.deepEqual(next.$or[0], { createdAt: { $lt: doc(9).createdAt } })
+
+  // A short page is the last one.
+  const short = await makeService({ recent: [doc(0), doc(1)] })
+  const last = await short.service.reviews("u")
+  assert.equal(last.reviews.length, 2)
+  assert.equal("nextCursor" in last, false)
 })

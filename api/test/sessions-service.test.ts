@@ -3,6 +3,7 @@ import { test } from "node:test"
 
 import "reflect-metadata"
 
+import { ConflictException } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 
 import { RoomEventsService } from "../src/features/rooms/room-events.service.js"
@@ -117,7 +118,16 @@ async function makeService(
   const moduleRef = await Test.createTestingModule({
     providers: [
       SessionsService,
-      { provide: getModelToken(PlaySession.name), useValue: modelMock },
+      {
+        provide: getModelToken(PlaySession.name),
+        // upsertSession reads the stored doc first; none by default.
+        useValue: {
+          findOne: () => ({
+            select: () => ({ lean: () => Promise.resolve(null) }),
+          }),
+          ...modelMock,
+        },
+      },
       { provide: BookingsService, useValue: bookingsMock },
       { provide: RoomEventsService, useValue: { emit: () => {} } },
     ],
@@ -148,6 +158,33 @@ void test("upsertSession round-trips a new holdExpiresAt field untouched", async
       .holdExpiresAt,
     holdExpiresAt
   )
+})
+
+void test("upsertSession refuses a new room whose id another user already holds", async () => {
+  let saved = false
+  const service = await makeService({
+    // The caller has no copy yet; someone else does.
+    findOne: (f: unknown) => ({
+      select: () => ({
+        lean: () =>
+          Promise.resolve(
+            (f as { userId: unknown }).userId === "user-1"
+              ? null
+              : { _id: "theirs" }
+          ),
+      }),
+    }),
+    updateOne: () => {
+      saved = true
+      return Promise.resolve({ acknowledged: true })
+    },
+  })
+
+  await assert.rejects(
+    service.upsertSession("user-1", makeSession()),
+    ConflictException
+  )
+  assert.equal(saved, false)
 })
 
 void test("upsertSession round-trips a roster entry's rsvpAt untouched", async () => {

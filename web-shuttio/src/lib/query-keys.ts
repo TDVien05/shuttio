@@ -13,9 +13,14 @@ export const queryKeys = {
   elo: {
     questionnaire: () => ["elo", "questionnaire"] as const,
     result: () => ["elo", "result"] as const,
+    history: () => ["elo", "history"] as const,
     level: (userId: string) => ["elo", "level", userId] as const,
   },
   ratings: (userId: string) => ["ratings", userId] as const,
+  /** A player's show-up record (attended / no-shows / late cancels). */
+  reliability: (userId: string) => ["reliability", userId] as const,
+  /** Nested under `ratings(userId)`, so invalidating that refreshes both. */
+  ratingReviews: (userId: string) => ["ratings", userId, "reviews"] as const,
 
   venue: {
     all: () => ["venue"] as const,
@@ -41,6 +46,9 @@ export const queryKeys = {
   appReviewsPublic: () => ["app-reviews", "public"] as const,
   appReviewMe: () => ["app-reviews", "me"] as const,
 
+  /** Presence of a set of users; `userIds` must be sorted (see usePresence). */
+  presence: (userIds: string[]) => ["presence", ...userIds] as const,
+
   banks: () => ["banks"] as const,
   account: () => ["account"] as const,
 
@@ -52,5 +60,10 @@ export const queryKeys = {
     messages: (channelId: string) => ["chat", "messages", channelId] as const,
     messagesAll: () => ["chat", "messages"] as const,
     users: (query: string) => ["chat", "users", query] as const,
+    groupMatch: (channelId: string) =>
+      ["chat", "group-match", channelId] as const,
+    /** Who the caller already rated in a match. */
+    matchRatings: (sessionId: string) =>
+      ["chat", "match-ratings", sessionId] as const,
   },
 } as const

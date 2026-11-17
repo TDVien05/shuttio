@@ -19,6 +19,7 @@ import { RoomsService } from "../src/features/rooms/rooms.service.js"
 import { RoomComplaint } from "../src/features/rooms/room-complaint.schema.js"
 import { BookingChatService } from "../src/features/bookings/booking-chat.service.js"
 import { BookingsService } from "../src/features/bookings/bookings.service.js"
+import { ReliabilityService } from "../src/features/reliability/reliability.service.js"
 import { PlaySession } from "../src/features/sessions/session.schema.js"
 import { NotificationsService } from "../src/features/notifications/notifications.service.js"
 import { ProfileService } from "../src/features/players/profile.service.js"
@@ -177,6 +178,7 @@ async function makeRooms(
         useValue: { post: () => Promise.resolve() },
       },
       { provide: RoomEventsService, useValue: { emit: () => {} } },
+      { provide: ReliabilityService, useValue: {} },
     ],
   }).compile()
   return moduleRef.get(RoomsService)

@@ -40,6 +40,11 @@ import { MessageList } from "@/features/chat/components/message-list"
 import { NewChatDialog } from "@/features/chat/components/new-chat-dialog"
 import { UserAvatar } from "@/features/chat/components/user-avatar"
 import {
+  PresenceDot,
+  presenceText,
+  usePresence,
+} from "@/features/presence/presence"
+import {
   appendMessage,
   chatQueries,
   flattenMessages,
@@ -76,6 +81,14 @@ export function ChatView({
   const { data: channels, isError } = useQuery(chatQueries.channels(venueId))
   const [filter, setFilter] = React.useState("")
   const [newChatOpen, setNewChatOpen] = React.useState(false)
+
+  // Presence of the other person in each one-to-one conversation (groups
+  // show it per member, in the group's info dialog).
+  const presence = usePresence(
+    (channels ?? []).flatMap((c) =>
+      c.kind === "dm" ? (channelAvatarUser(c, userId)?.id ?? []) : []
+    )
+  )
 
   const selected = channels?.find((c) => c.id === selectedId)
   const shown = channels?.filter((c) =>
@@ -139,10 +152,18 @@ export function ChatView({
                   )}
                   onClick={() => onSelect(c.id)}
                 >
-                  <UserAvatar
-                    name={avatarUser?.name ?? title}
-                    image={avatarUser?.image}
-                  />
+                  <span className="relative shrink-0">
+                    <UserAvatar
+                      name={avatarUser?.name ?? title}
+                      image={avatarUser?.image}
+                    />
+                    {c.kind === "dm" && avatarUser ? (
+                      <PresenceDot
+                        status={presence.get(avatarUser.id)}
+                        className="border-background"
+                      />
+                    ) : null}
+                  </span>
                   <span className="flex min-w-0 flex-1 flex-col text-left">
                     <span className="flex items-baseline justify-between gap-2">
                       <span
@@ -312,6 +333,11 @@ function Conversation({
   const title = channelTitle(channel, userId)
   const avatarUser = channelAvatarUser(channel, userId)
   const isGroupLike = channel.kind === "group" || channel.kind === "room"
+  // Same ids as the list's query when this is the only DM; otherwise its own
+  // small query — either way re-read every 30 seconds while the chat is open.
+  const peerId = channel.kind === "dm" ? avatarUser?.id : undefined
+  const peerPresence = usePresence(peerId ? [peerId] : []).get(peerId ?? "")
+  const peerPresenceText = presenceText(peerPresence)
 
   return (
     <>
@@ -326,12 +352,18 @@ function Conversation({
         >
           <ArrowLeft />
         </Button>
-        <UserAvatar
-          name={avatarUser?.name ?? title}
-          image={avatarUser?.image}
-        />
+        <span className="relative shrink-0">
+          <UserAvatar
+            name={avatarUser?.name ?? title}
+            image={avatarUser?.image}
+          />
+          <PresenceDot status={peerPresence} className="border-background" />
+        </span>
         <div className="min-w-0 flex-1">
           <h2 className="truncate font-medium">{title}</h2>
+          {peerPresenceText ? (
+            <p className="text-xs text-muted-foreground">{peerPresenceText}</p>
+          ) : null}
           {isGroupLike && (
             <p className="text-xs text-muted-foreground">
               {m.chat_members({ count: channel.members.length })}

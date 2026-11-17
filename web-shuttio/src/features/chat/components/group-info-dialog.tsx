@@ -1,6 +1,11 @@
 import * as React from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Star, UserCheck } from "lucide-react"
 import { queryKeys } from "@/lib/query-keys"
+import { cn } from "@/lib/utils"
+import { sessionStartMsOf } from "@/lib/shared"
+import { useVouchAttendance } from "@/features/play/api/session.queries"
+import { useClock } from "@/features/play/hooks/use-clock"
 import { toast } from "sonner"
 
 import {
@@ -24,11 +29,23 @@ import {
   renameGroup,
 } from "@/features/chat/api/group-api"
 import { UserAvatar } from "@/features/chat/components/user-avatar"
+import { RatePlayerDialog } from "@/features/chat/components/rate-player-dialog"
 import { UserPicker } from "@/features/chat/components/user-picker"
-import type { ChatChannel } from "@/lib/shared"
+import { chatQueries } from "@/features/chat/lib/chat-queries"
+import { PlayerProfileDialog } from "@/features/dashboard/components/profile-dialog"
+import {
+  PresenceDot,
+  presenceText,
+  usePresence,
+} from "@/features/presence/presence"
+import type { AttendanceMark, ChatChannel, ChatUser } from "@/lib/shared"
 import { m } from "@/paraglide/messages"
 
-/** Group / room details: rename, members, add people, leave or delete. */
+/**
+ * Group / room details: rename, members, add people, leave or delete — and,
+ * once the group's match has been played, anonymously rate fellow players.
+ * Tapping a member opens their profile (level + the reviews they received).
+ */
 export function GroupInfoDialog({
   channel,
   userId,
@@ -47,11 +64,67 @@ export function GroupInfoDialog({
   const [name, setName] = React.useState(channel.name ?? "")
   const [adding, setAdding] = React.useState<FoundUser[]>([])
 
+  // Who of the members has the app open; re-read while the dialog is open.
+  const presence = usePresence(
+    channel.members.map((member) => member.id).filter((id) => id !== userId),
+    open
+  )
+
   const isGroup = channel.kind === "group"
   const isCreator = channel.createdBy === userId
   const onlyMember = channel.members.length === 1
   const canDelete =
     (isGroup && (isCreator || onlyMember)) || (!isGroup && onlyMember)
+
+  // ── Anonymous peer ratings, once the group's match has been played ──
+  // Only people who actually played (host + confirmed roster) rate each other.
+  const [rating, setRating] = React.useState<ChatUser | null>(null)
+  /** The member whose profile is open. */
+  const [profile, setProfile] = React.useState<ChatUser | null>(null)
+  const { data: groupMatch } = useQuery({
+    ...chatQueries.groupMatch(channel.id),
+    enabled: open,
+  })
+  const match = groupMatch?.match ?? null
+  const iPlayed = Boolean(
+    match?.ended &&
+    match.status !== "cancelled" &&
+    match.participantIds.includes(userId)
+  )
+  const { data: rated = {} } = useQuery({
+    ...chatQueries.matchRatings(match?.sessionId ?? ""),
+    enabled: open && iPlayed,
+  })
+  const canRate = (memberId: string) =>
+    iPlayed &&
+    memberId !== userId &&
+    Boolean(match?.participantIds.includes(memberId))
+  const hasUnrated = channel.members.some(
+    (member) => canRate(member.id) && !rated[member.id]
+  )
+
+  // ── Self-booked match: who turned up (only they may rate / be rated) ──
+  const now = useClock()
+  const selfMatch = match?.courtMode === "self" ? match : null
+  const marks: Partial<Record<string, AttendanceMark>> =
+    selfMatch?.attendance ?? {}
+  const vouchOpen = (() => {
+    if (!selfMatch || now === null) return false
+    if (selfMatch.status === "cancelled" || selfMatch.status === "completed")
+      return false
+    const start = sessionStartMsOf(selfMatch)
+    const closes = selfMatch.attendanceClosesAt
+      ? Date.parse(selfMatch.attendanceClosesAt)
+      : null
+    return start !== null && closes !== null && now >= start && now <= closes
+  })()
+  const canVouch = (memberId: string) =>
+    vouchOpen &&
+    Boolean(marks[userId]) &&
+    memberId !== userId &&
+    !marks[memberId] &&
+    Boolean(selfMatch?.memberIds?.includes(memberId))
+  const vouch = useVouchAttendance()
 
   const done = () =>
     void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all() })
@@ -137,14 +210,130 @@ export function GroupInfoDialog({
           {m.chat_members({ count: channel.members.length })}
         </h3>
         <ul className="flex flex-col gap-2">
-          {channel.members.map((member) => (
-            <li key={member.id} className="flex items-center gap-3">
-              <UserAvatar name={member.name} image={member.image} />
-              <span className="truncate">{member.name}</span>
-            </li>
-          ))}
+          {channel.members.map((member) => {
+            const given = rated[member.id]
+            return (
+              <li key={member.id} className="flex items-center gap-3">
+                <button
+                  type="button"
+                  title={m.profile_view_profile()}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-full text-left outline-none hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => setProfile(member)}
+                >
+                  <span className="relative shrink-0">
+                    <UserAvatar name={member.name} image={member.image} />
+                    <PresenceDot status={presence.get(member.id)} />
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate">{member.name}</span>
+                    {presenceText(presence.get(member.id)) ? (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {presenceText(presence.get(member.id))}
+                      </span>
+                    ) : null}
+                    {selfMatch?.memberIds?.includes(member.id) ? (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 text-xs",
+                          marks[member.id]
+                            ? "text-brand"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {marks[member.id] ? (
+                          <UserCheck className="size-3" />
+                        ) : null}
+                        {marks[member.id]
+                          ? marks[member.id]?.via === "gps"
+                            ? m.self_court_attended_gps()
+                            : m.self_court_attended_vouch()
+                          : m.self_court_not_attended()}
+                      </span>
+                    ) : null}
+                  </span>
+                </button>
+                {canVouch(member.id) ? (
+                  <Button
+                    shape="pill"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    isDisabled={vouch.isPending}
+                    onPress={() =>
+                      vouch.mutate(
+                        { roomId: selfMatch!.sessionId, userId: member.id },
+                        {
+                          onSuccess: () =>
+                            toast.success(
+                              m.self_court_vouch_done({ name: member.name })
+                            ),
+                          onError: (error) => toast.error(error.message),
+                        }
+                      )
+                    }
+                  >
+                    <UserCheck />
+                    {m.self_court_vouch()}
+                  </Button>
+                ) : null}
+                {!canRate(member.id) ? null : given ? (
+                  <span
+                    title={m.group_info_rated_title()}
+                    aria-label={m.group_info_rated_stars({ count: given })}
+                    className="flex shrink-0 items-center gap-1 text-xs font-semibold text-muted-foreground tabular-nums"
+                  >
+                    <Star className="size-3.5 fill-star text-star" />
+                    {given}
+                  </span>
+                ) : (
+                  <Button
+                    shape="pill"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onPress={() => setRating(member)}
+                  >
+                    <Star />
+                    {m.group_info_rate()}
+                  </Button>
+                )}
+              </li>
+            )
+          })}
         </ul>
+        {hasUnrated ? (
+          <p className="text-xs text-muted-foreground">
+            {m.group_info_rate_hint()} {m.group_info_rate_anonymous()}
+          </p>
+        ) : null}
+        {selfMatch ? (
+          <p className="text-xs text-muted-foreground">
+            {m.self_court_rating_rule()}
+            {selfMatch.ranked ? null : ` ${m.self_court_unranked_note()}`}
+          </p>
+        ) : null}
       </section>
+
+      {/* A member's profile: skill level and the anonymous reviews they got. */}
+      <PlayerProfileDialog
+        initials={null}
+        open={profile !== null}
+        onOpenChange={(isOpen) => !isOpen && setProfile(null)}
+        member={
+          profile
+            ? { name: profile.name, userId: profile.id, image: profile.image }
+            : null
+        }
+      />
+
+      {match ? (
+        <RatePlayerDialog
+          member={rating}
+          sessionId={match.sessionId}
+          ranked={match.ranked !== false}
+          onClose={() => setRating(null)}
+        />
+      ) : null}
 
       {isGroup && isCreator && (
         <section className="flex flex-col gap-3">

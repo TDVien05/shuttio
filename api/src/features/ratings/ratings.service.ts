@@ -9,11 +9,14 @@ import {
   NotFoundException,
 } from "@nestjs/common"
 import { InjectModel } from "@nestjs/mongoose"
-import type { Model } from "mongoose"
+import { Types, type Model } from "mongoose"
 
-import type { RatingSummary } from "../../shared/index.js"
+import {
+  isRanked,
+  type PlayerReviewPage,
+  type RatingSummary,
+} from "../../shared/index.js"
 import { NotificationsService } from "../notifications/notifications.service.js"
-import { ProfileService } from "../players/profile.service.js"
 import { isSessionEnded, sessionParticipantIds } from "../rooms/group-match.js"
 import {
   PlaySession,
@@ -24,6 +27,9 @@ import { Rating, type RatingDocument } from "./rating.schema.js"
 /** Newest reviews included in a profile summary. */
 const SUMMARY_RECENT = 5
 
+/** Reviews per page of a profile's lazily loaded list. */
+export const REVIEWS_PAGE_SIZE = 10
+
 /** Mongo duplicate-key error code (the unique rater/ratee/session index). */
 const DUPLICATE_KEY = 11000
 
@@ -32,6 +38,9 @@ const DUPLICATE_KEY = 11000
  * they actually played with — both must be participants of the session (the
  * host or a confirmed real roster member), the match must be over, and each
  * (rater, ratee, match) is rated once. Profiles read the aggregate.
+ *
+ * Reviews are anonymous: nothing the ratee or a profile viewer receives
+ * (the notification, its id, the summary) identifies the rater.
  */
 @Injectable()
 export class RatingsService {
@@ -40,8 +49,6 @@ export class RatingsService {
     private readonly ratingModel: Model<RatingDocument>,
     @InjectModel(PlaySession.name)
     private readonly sessionModel: Model<PlaySessionDocument>,
-    @Inject(ProfileService)
-    private readonly profiles: ProfileService,
     @Inject(NotificationsService)
     private readonly notifications: NotificationsService
   ) {}
@@ -54,6 +61,8 @@ export class RatingsService {
       rateeId: string
       stars: number
       comment?: string
+      /** −1 / 0 / +1 against the ratee's displayed level; feeds their Elo. */
+      skillVote?: number
     }
   ): Promise<void> {
     if (raterId === input.rateeId) {
@@ -80,16 +89,20 @@ export class RatingsService {
       throw new BadRequestException("Người này không tham gia trận đấu")
     }
 
-    const rater = await this.profiles.getProfile(raterId)
     const comment = input.comment?.trim()
     try {
       await this.ratingModel.create({
         raterId,
-        raterName: rater.user.name,
         rateeId: input.rateeId,
         sessionId: input.sessionId,
         stars: input.stars,
         ...(comment ? { comment } : {}),
+        // Queued for the Elo sweep (`PeerEloService`), never applied inline:
+        // an instant Elo change would reveal who just voted.
+        // A "Giao lưu" (unranked) match never moves Elo: drop the vote.
+        ...(input.skillVote === undefined || !isRanked(doc.data)
+          ? {}
+          : { skillVote: input.skillVote, eloPending: true }),
       })
     } catch (err) {
       if ((err as { code?: number })?.code === DUPLICATE_KEY) {
@@ -99,9 +112,10 @@ export class RatingsService {
     }
 
     await this.notifications.create(input.rateeId, {
-      id: `rating-${input.sessionId}-${raterId}-${randomUUID()}`,
+      // No rater id in the notification id either — it is sent to the ratee.
+      id: `rating-${input.sessionId}-${randomUUID()}`,
       kind: "rating",
-      text: `${rater.user.name} đã đánh giá bạn ${input.stars}★ sau trận "${doc.data.title}".`,
+      text: `Một người chơi cùng đã đánh giá ẩn danh bạn ${input.stars}★ sau trận "${doc.data.title}".`,
     })
   }
 
@@ -115,6 +129,45 @@ export class RatingsService {
       .select({ rateeId: 1, stars: 1 })
       .lean()
     return docs.map((d) => ({ rateeId: d.rateeId, stars: d.stars }))
+  }
+
+  /**
+   * One page of a player's reviews, newest first. `cursor` is the previous
+   * page's `nextCursor` ("<createdAt ms>_<review id>"); the id breaks ties
+   * between reviews created in the same millisecond. Anonymous like
+   * {@link summary}: no rater field is selected or returned.
+   */
+  async reviews(userId: string, cursor?: string): Promise<PlayerReviewPage> {
+    const filter: Record<string, unknown> = { rateeId: userId }
+    if (cursor) {
+      const [ms, id] = cursor.split("_")
+      const at = new Date(Number(ms))
+      filter.$or = [
+        { createdAt: { $lt: at } },
+        { createdAt: at, _id: { $lt: new Types.ObjectId(id) } },
+      ]
+    }
+    // One extra row tells whether an older page exists.
+    const docs = await this.ratingModel
+      .find(filter)
+      .select({ stars: 1, comment: 1, createdAt: 1 })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(REVIEWS_PAGE_SIZE + 1)
+      .lean()
+    const page = docs.slice(0, REVIEWS_PAGE_SIZE)
+    const last = page.at(-1)
+    return {
+      reviews: page.map((r) => ({
+        stars: r.stars,
+        ...(r.comment ? { comment: r.comment } : {}),
+        createdAt: new Date(r.createdAt).toISOString(),
+      })),
+      ...(docs.length > REVIEWS_PAGE_SIZE && last
+        ? {
+            nextCursor: `${new Date(last.createdAt).getTime()}_${String(last._id)}`,
+          }
+        : {}),
+    }
   }
 
   /** A player's average + count and newest reviews, for their profile. */
@@ -131,6 +184,7 @@ export class RatingsService {
     if (!agg?.count) return { average: 0, count: 0, recent: [] }
     const recent = await this.ratingModel
       .find({ rateeId: userId })
+      .select({ stars: 1, comment: 1, createdAt: 1 })
       .sort({ createdAt: -1 })
       .limit(SUMMARY_RECENT)
       .lean()
@@ -140,7 +194,6 @@ export class RatingsService {
       recent: recent.map((r) => ({
         stars: r.stars,
         ...(r.comment ? { comment: r.comment } : {}),
-        raterName: r.raterName,
         createdAt: new Date(r.createdAt).toISOString(),
       })),
     }

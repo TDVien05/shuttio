@@ -1,4 +1,8 @@
-import type { GroupMatchResult, RatingSummary } from "@/lib/shared"
+import type {
+  GroupMatchResult,
+  PlayerReviewPage,
+  RatingSummary,
+} from "@/lib/shared"
 import { api } from "@/lib/api"
 
 // Group-chat management (rename, members, the match a group coordinates) and
@@ -61,6 +65,8 @@ export async function ratePlayer(input: {
   rateeId: string
   stars: number
   comment?: string
+  /** −1 weaker than / 0 matches / +1 stronger than the displayed level. */
+  skillVote?: -1 | 0 | 1
 }): Promise<void> {
   await api("/api/ratings", { method: "POST", body: input })
 }
@@ -78,5 +84,16 @@ export async function playerRatingSummary(
 ): Promise<RatingSummary> {
   return api<RatingSummary>(
     `/api/ratings/users/${encodeURIComponent(userId)}/summary`
+  )
+}
+
+/** One page of a player's anonymous reviews, newest first. */
+export async function playerReviewPage(
+  userId: string,
+  cursor?: string
+): Promise<PlayerReviewPage> {
+  return api<PlayerReviewPage>(
+    `/api/ratings/users/${encodeURIComponent(userId)}/reviews`,
+    { query: { cursor } }
   )
 }

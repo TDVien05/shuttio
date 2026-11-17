@@ -198,6 +198,10 @@ export const INCONSISTENCY_WARNING_MESSAGE =
 export const PROVISIONAL_NOTICE =
   "Đây là điểm khởi tạo từ tự đánh giá, chưa được xác minh qua trận đấu."
 
+/** Thông báo thay thế khi Elo đã được điều chỉnh bằng đánh giá chéo. */
+export const PEER_ADJUSTED_NOTICE =
+  "Điểm đã được điều chỉnh theo đánh giá ẩn danh từ những người chơi cùng."
+
 /** Kết quả tính toán từ một bộ câu trả lời hợp lệ. */
 export interface AssessmentOutcome {
   answers: AnswerInput[]

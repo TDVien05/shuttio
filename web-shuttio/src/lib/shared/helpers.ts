@@ -715,6 +715,10 @@ export function sessionToRoom(s: PlaySession): MatchRoom {
     bookingId: s.status === "booked" ? s.id : undefined,
     demo: s.demo,
     sharePrice: s.sharePrice,
+    ...(s.courtMode ? { courtMode: s.courtMode } : {}),
+    ...(s.selfCourt ? { selfCourt: s.selfCourt } : {}),
+    ...(s.ranked !== undefined ? { ranked: s.ranked } : {}),
+    ...(s.attendance ? { attendance: s.attendance } : {}),
   }
 }
 

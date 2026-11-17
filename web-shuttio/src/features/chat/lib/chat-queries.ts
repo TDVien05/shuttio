@@ -4,6 +4,7 @@ import type { InfiniteData } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import type { ChatChannel, ChatMessage } from "@/lib/shared"
 import { listChannels, listMessages } from "@/features/chat/api/chat-api"
+import { getGroupMatch, myMatchRatings } from "@/features/chat/api/group-api"
 
 /** One conversation's pages, newest page first (`pages[0]` is the latest). */
 export type MessagePages = InfiniteData<{
@@ -27,6 +28,22 @@ export const chatQueries = {
       // The next (older) page ends before this page's oldest message.
       getNextPageParam: (last) =>
         last.hasMore ? last.messages[0]?.id : undefined,
+    }),
+  /** The match a group chat coordinates — drives who may rate whom. */
+  groupMatch: (channelId: string) =>
+    queryOptions({
+      queryKey: queryKeys.chat.groupMatch(channelId),
+      queryFn: () => getGroupMatch(channelId),
+      staleTime: 30_000,
+    }),
+  /** Stars the caller already gave in a match, by ratee id. */
+  matchRatings: (sessionId: string) =>
+    queryOptions({
+      queryKey: queryKeys.chat.matchRatings(sessionId),
+      queryFn: async () => {
+        const mine = await myMatchRatings(sessionId)
+        return Object.fromEntries(mine.map((r) => [r.rateeId, r.stars]))
+      },
     }),
 }
 

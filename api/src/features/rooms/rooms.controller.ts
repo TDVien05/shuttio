@@ -10,13 +10,16 @@ import {
 } from "@nestjs/common"
 
 import { UserId } from "../../common/user-id.decorator.js"
+import { UserThrottle } from "../../common/user-throttler.guard.js"
 import {
   ChannelIdParamDto,
+  CheckInBodyDto,
   RoomIdParamDto,
   RoomRequestDecisionBodyDto,
   RoomRequestParamDto,
 } from "./rooms.dto.js"
 import { RoomsService } from "./rooms.service.js"
+import { SelfCourtService } from "./self-court.service.js"
 
 // Cross-user room browsing/coordination (VienTD-Review Phase 9 G2). The
 // global `/api` prefix + `ClerkAuthGuard` apply automatically, so every
@@ -26,12 +29,40 @@ import { RoomsService } from "./rooms.service.js"
 export class RoomsController {
   // Explicit tokens: tsx-based runners don't emit the constructor metadata
   // implicit injection relies on (same note as SessionsService).
-  constructor(@Inject(RoomsService) private readonly rooms: RoomsService) {}
+  constructor(
+    @Inject(RoomsService) private readonly rooms: RoomsService,
+    @Inject(SelfCourtService) private readonly selfCourt: SelfCourtService
+  ) {}
 
   /** Every listed, non-demo, still-open room across all users. */
   @Get()
-  list() {
-    return this.rooms.listRooms()
+  list(@UserId() userId: string) {
+    return this.rooms.listRooms(userId)
+  }
+
+  /** Self-booked room: the host says the court is booked with the venue. */
+  @Put(":id/court-confirmed")
+  async confirmCourt(@UserId() userId: string, @Param() param: RoomIdParamDto) {
+    await this.selfCourt.confirmCourt(userId, param.id)
+    return { ok: true }
+  }
+
+  /** Self-booked room: check in on site (GPS, near the pinned court). */
+  @UserThrottle({ limit: 20, ttl: 60_000 })
+  @Post(":id/check-in")
+  checkIn(
+    @UserId() userId: string,
+    @Param() param: RoomIdParamDto,
+    @Body() body: CheckInBodyDto
+  ) {
+    return this.selfCourt.checkIn(userId, param.id, body)
+  }
+
+  /** Self-booked room: a player who is there confirms another seat holder came. */
+  @Post(":id/attendance/:userId")
+  async vouch(@UserId() userId: string, @Param() param: RoomRequestParamDto) {
+    await this.selfCourt.vouch(userId, param.id, param.userId)
+    return { ok: true }
   }
 
   /** The match a group chat is coordinating — any member of the chat may read it. */

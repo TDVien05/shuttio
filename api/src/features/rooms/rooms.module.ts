@@ -12,6 +12,8 @@ import { RoomEventsModule } from "./room-events.module.js"
 import { RoomComplaint, RoomComplaintSchema } from "./room-complaint.schema.js"
 import { RoomsController } from "./rooms.controller.js"
 import { RoomsService } from "./rooms.service.js"
+import { SelfCourtService } from "./self-court.service.js"
+import { ReliabilityModule } from "../reliability/reliability.module.js"
 
 // Cross-user room coordination (VienTD-Review Phase 9 G2). Registers the
 // `PlaySession` schema again under its own model token — the same pattern
@@ -37,9 +39,11 @@ import { RoomsService } from "./rooms.service.js"
     RoomEventsModule,
     // A booked room's court is read through the booking.
     BookingsModule,
+    // Show-up records: late cancels, settled attendance, join restrictions.
+    ReliabilityModule,
   ],
   controllers: [RoomsController],
-  providers: [RoomsService],
+  providers: [RoomsService, SelfCourtService],
   exports: [RoomsService],
 })
 export class RoomsModule {}

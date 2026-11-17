@@ -26,11 +26,17 @@ import {
 import { formatVnd } from "@/lib/shared"
 import type { MatchRoom } from "@/lib/shared"
 import { RoomPreviewSheet } from "@/features/play/components/active-room"
+import {
+  SelfCourtCardBadge,
+  isSelfRoom,
+  selfCourtCostLabel,
+} from "@/features/play/components/self-court-panel"
 import { useSessionData } from "@/features/play/hooks/use-session-data"
 import { useSessionActions } from "@/features/play/hooks/use-session-actions"
 import { useSessionUi } from "@/features/play/state/session-ui"
 import { useAuthUser } from "@/features/dashboard/hooks/use-auth-user"
 import { useData } from "@/features/dashboard/components/data-provider"
+import { usePresence } from "@/features/presence/presence"
 import { m } from "@/paraglide/messages"
 
 export function RoomsView() {
@@ -44,6 +50,10 @@ export function RoomsView() {
     id: string | null
     open: boolean
   }>({ id: null, open: false })
+  // Is each room's host around right now? One query for the whole grid.
+  const hostIdOf = (room: MatchRoom) =>
+    room.members?.find((member) => member.host)?.userId
+  const presence = usePresence(rooms.flatMap((room) => hostIdOf(room) ?? []))
   return (
     <div className="no-scrollbar flex flex-col gap-5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
       <RoomPreviewSheet
@@ -62,6 +72,10 @@ export function RoomsView() {
               <RoomCard
                 key={room.id}
                 room={room}
+                hostOnline={
+                  !hosted &&
+                  (presence.get(hostIdOf(room) ?? "")?.online ?? false)
+                }
                 hosted={hosted}
                 joined={joined}
                 requested={requested}
@@ -116,6 +130,7 @@ export function RoomsView() {
 
 function RoomCard({
   room,
+  hostOnline,
   hosted,
   joined,
   requested,
@@ -125,6 +140,8 @@ function RoomCard({
   onOpen,
 }: {
   room: MatchRoom
+  /** The host has the app open right now (never set for one's own room). */
+  hostOnline: boolean
   hosted: boolean
   joined: boolean
   requested: boolean
@@ -162,6 +179,8 @@ function RoomCard({
               >
                 {m.match_maker_demo_badge()}
               </span>
+            ) : isSelfRoom(room) ? (
+              <SelfCourtCardBadge room={room} />
             ) : (
               // Creating a room doesn't book a court — say so up front.
               <span
@@ -202,7 +221,12 @@ function RoomCard({
         <span className="flex min-w-0 items-center gap-1.5">
           <MapPin className="size-3.5 shrink-0" />
           <span className="min-w-0 truncate">
-            {room.venue ? (
+            {isSelfRoom(room) ? (
+              // Not one of the app's courts: no distance to show.
+              [room.venue, room.ward, selfCourtCostLabel(room)]
+                .filter(Boolean)
+                .join(" · ")
+            ) : room.venue ? (
               <>
                 {room.venue} · {address} ·{" "}
                 <CourtDistance courtId={room.courtId} venue={room.venue} />
@@ -250,6 +274,14 @@ function RoomCard({
 
       <div className="mt-auto flex items-center gap-2 pt-1">
         <span className="min-w-0 truncate text-xs text-muted-foreground">
+          {hostOnline ? (
+            <span
+              role="img"
+              aria-label={m.presence_online()}
+              title={m.presence_online()}
+              className="mr-1.5 inline-block size-2 rounded-full bg-brand align-middle"
+            />
+          ) : null}
           {m.match_maker_hosted_by({
             name: hosted ? sUser.name || userName : room.host.name,
           })}

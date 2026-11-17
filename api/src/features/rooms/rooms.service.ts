@@ -16,7 +16,12 @@ import {
   activeRoster,
   initialsOf,
   isRsvpExpired,
+  isSelfCourt,
+  LATE_CANCEL_WINDOW_MS,
   REQUEST_EXPIRY_MS,
+  seatHolderIds,
+  sessionEndMsOf,
+  sessionStartMsOf,
   withoutExpiredRsvps,
   vnNowIso,
   type GroupMatchResult,
@@ -37,6 +42,7 @@ import {
 } from "../sessions/session.schema.js"
 import { ClerkDirectoryService } from "../directory/clerk-directory.service.js"
 import { ChatService, roomChannelId } from "../chat/chat.service.js"
+import { ReliabilityService } from "../reliability/reliability.service.js"
 import { RoomEventsService } from "./room-events.service.js"
 import {
   RoomComplaint,
@@ -124,7 +130,9 @@ export class RoomsService {
     private readonly bookingModel: Model<BookingDocument>,
     @InjectModel(RoomComplaint.name)
     private readonly complaintModel: Model<RoomComplaintDocument>,
-    @Inject(BookingsService) private readonly bookings: BookingsService
+    @Inject(BookingsService) private readonly bookings: BookingsService,
+    @Inject(ReliabilityService)
+    private readonly reliability: ReliabilityService
   ) {}
 
   private readonly nameCache = new Map<
@@ -137,8 +145,41 @@ export class RoomsService {
    * matchmaking browse pool. Demo seed rooms never live in this collection
    * (they're client-only fixtures), but `data.demo` is filtered defensively
    * in case a session was ever cloned from one.
+   *
+   * With a `viewerId`, a self-booked room is tailored to who is looking: a
+   * player outside the room doesn't see its exact address or pin (only the
+   * venue name and ward) and doesn't see it at all once it has started —
+   * its members still do, to check in.
    */
-  async listRooms(): Promise<PlaySessionData[]> {
+  async listRooms(viewerId?: string): Promise<PlaySessionData[]> {
+    const rooms = await this.listAllRooms()
+    if (!viewerId) return rooms
+    const now = Date.now()
+    return rooms.flatMap((room) => {
+      if (!isSelfCourt(room)) return [room]
+      const hostId = room.roster.find((p) => p.rsvp === "host")?.userId
+      const isMember =
+        hostId === viewerId ||
+        room.roster.some(
+          (p) =>
+            p.userId === viewerId && (p.rsvp === "going" || p.rsvp === "host")
+        )
+      if (isMember) return [room]
+      const start = sessionStartMsOf(room)
+      if (start !== null && start <= now) return []
+      const outsider: PlaySessionData = { ...room }
+      delete outsider.attendance
+      if (room.selfCourt) {
+        outsider.selfCourt = { ...room.selfCourt }
+        delete outsider.selfCourt.address
+        delete outsider.selfCourt.lat
+        delete outsider.selfCourt.lng
+      }
+      return [outsider]
+    })
+  }
+
+  private async listAllRooms(): Promise<PlaySessionData[]> {
     const docs = await this.sessionModel
       .find({
         "data.listed": true,
@@ -219,8 +260,19 @@ export class RoomsService {
   }
 
   /** Load a room by its client id, regardless of which user owns it. */
-  private async findRoomDoc(roomId: string): Promise<PlaySessionDocument> {
-    const doc = await this.sessionModel.findOne({ sessionId: roomId })
+  /**
+   * Load a room by its client id. Older clients generated colliding ids
+   * (`r-new-0`, `r-new-1`… per page load), so a host acting on their own
+   * room passes `ownerId` to pick their copy over another user's.
+   */
+  private async findRoomDoc(
+    roomId: string,
+    ownerId?: string
+  ): Promise<PlaySessionDocument> {
+    const own = ownerId
+      ? await this.sessionModel.findOne({ sessionId: roomId, userId: ownerId })
+      : null
+    const doc = own ?? (await this.sessionModel.findOne({ sessionId: roomId }))
     if (!doc) throw new NotFoundException("Phòng không tồn tại")
     return doc
   }
@@ -248,6 +300,12 @@ export class RoomsService {
       throw new ConflictException("Phòng đã đóng")
     }
     const now = Date.now()
+    const start = sessionStartMsOf(room)
+    if (start !== null && start <= now) {
+      throw new ConflictException("Trận đã bắt đầu")
+    }
+    // Repeat no-shows sit out for a while before joining strangers again.
+    await this.reliability.assertCanJoin(userId, new Date(now))
     // A stale request is treated as absent so the player can ask again instead
     // of being blocked by a row the host can no longer approve.
     const liveRoster = room.roster.filter((p) => !isRsvpExpired(p, now))
@@ -319,7 +377,7 @@ export class RoomsService {
     targetUserId: string,
     decision: RoomRequestDecision
   ): Promise<void> {
-    const doc = await this.findRoomDoc(roomId)
+    const doc = await this.findRoomDoc(roomId, hostUserId)
     if (doc.userId !== hostUserId) {
       throw new ForbiddenException("Chỉ chủ phòng mới có quyền duyệt yêu cầu")
     }
@@ -394,12 +452,41 @@ export class RoomsService {
         "Chủ phòng không thể tự rời phòng — hãy huỷ phòng thay vào đó"
       )
     }
-    if (!doc.data.roster.some((p) => p.userId === userId)) {
+    const entry = doc.data.roster.find((p) => p.userId === userId)
+    if (!entry) {
       throw new NotFoundException("Bạn không ở trong phòng này")
     }
 
     await this.dropMember(doc, userId)
+    if (entry.rsvp === "going") {
+      await this.recordLateCancel(userId, doc.data)
+    }
     return { status: "left" }
+  }
+
+  /**
+   * Giving up a confirmed seat (or cancelling a room others joined) within
+   * {@link LATE_CANCEL_WINDOW_MS} of the start leaves the rest a player short
+   * with little time to replace them — it counts against reliability. Never
+   * fails the leave/cancel itself.
+   */
+  private async recordLateCancel(
+    userId: string,
+    room: PlaySessionData,
+    now: number = Date.now()
+  ): Promise<void> {
+    const start = sessionStartMsOf(room)
+    const end = sessionEndMsOf(room)
+    if (start === null || end === null) return
+    if (now < start - LATE_CANCEL_WINDOW_MS || now >= end) return
+    await this.reliability
+      .record(userId, room.id, "late_cancel", new Date(now))
+      .catch((err: unknown) => {
+        this.logger.error(
+          `Late-cancel record failed for room ${room.id}`,
+          err instanceof Error ? err.stack : String(err)
+        )
+      })
   }
 
   /** Pull a member off the roster and out of the room chat. */
@@ -497,12 +584,13 @@ export class RoomsService {
    * poll, and each member/pending requester is notified.
    */
   async disbandRoom(userId: string, roomId: string): Promise<void> {
-    const doc = await this.findRoomDoc(roomId)
+    const doc = await this.findRoomDoc(roomId, userId)
     if (doc.userId !== userId) {
       throw new ForbiddenException("Chỉ chủ phòng mới có quyền huỷ phòng")
     }
     const room = doc.data
-    if (room.reservationId) {
+    // A self-booked room is kept too: its chat still points at it.
+    if (room.reservationId || isSelfCourt(room)) {
       await this.sessionModel.updateOne(
         { _id: doc._id },
         { $set: { "data.listed": false, "data.status": "cancelled" } }
@@ -516,6 +604,9 @@ export class RoomsService {
         p.rsvp !== "host" && p.userId && p.userId !== userId ? [p.userId] : []
       )
     )
+    if (seatHolderIds(userId, room).some((id) => id !== userId)) {
+      await this.recordLateCancel(userId, room)
+    }
     // A failed notification must never undo the disband itself.
     await Promise.all(
       [...memberIds].map((memberId) =>
@@ -598,7 +689,7 @@ export class RoomsService {
     roomId: string,
     memberUserId: string
   ): Promise<void> {
-    const doc = await this.findRoomDoc(roomId)
+    const doc = await this.findRoomDoc(roomId, hostUserId)
     if (doc.userId !== hostUserId) {
       throw new ForbiddenException(
         "Chỉ chủ phòng mới có quyền xác nhận thanh toán"
@@ -633,7 +724,7 @@ export class RoomsService {
     roomId: string,
     memberUserId: string
   ): Promise<void> {
-    const doc = await this.findRoomDoc(roomId)
+    const doc = await this.findRoomDoc(roomId, hostUserId)
     if (doc.userId !== hostUserId) {
       throw new ForbiddenException("Chỉ chủ phòng mới có quyền gửi nhắc nhở")
     }
@@ -682,7 +773,9 @@ export class RoomsService {
     const match = toGroupMatch(doc.userId, doc.data, Date.now())
     return {
       match,
+      // A self-booked match's court is booked outside the app.
       canBook:
+        match.courtMode !== "self" &&
         match.status !== "cancelled" &&
         !match.booked &&
         match.hostUserId === userId,
