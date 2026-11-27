@@ -2,7 +2,6 @@ import { Inject, Injectable } from "@nestjs/common"
 
 import type {
   Brand as BrandInfo,
-  RefundQueueItem,
   RoomComplaintRow,
   Venue as VenueInfo,
 } from "../../shared/index.js"
@@ -221,11 +220,6 @@ export class AdminService {
     return this.venues.updateVenue(venueId, { archived: false })
   }
 
-  /** The global manual-refund worklist, across every venue, oldest first. */
-  async refundQueue(): Promise<(RefundQueueItem & { venueId: string })[]> {
-    return this.bookings.listRefundQueueAll()
-  }
-
   /** Room-share complaints, open ones first. */
   async listComplaints(): Promise<RoomComplaintRow[]> {
     return this.rooms.listComplaints()
@@ -237,10 +231,6 @@ export class AdminService {
     note?: string
   ): Promise<RoomComplaintRow> {
     return this.rooms.resolveComplaint(id, decision, note)
-  }
-
-  async settleRefund(bookingId: string, ref?: string): Promise<void> {
-    await this.bookings.settleRefund(bookingId, ref)
   }
 
   async forceCancelBooking(

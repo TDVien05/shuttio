@@ -34,7 +34,6 @@ import { Route as AuthenticatedAppAdminApprovalsRouteImport } from './routes/_au
 import { Route as AuthenticatedAppAdminBookingsRouteImport } from './routes/_authenticated/app/admin/bookings'
 import { Route as AuthenticatedAppAdminComplaintsRouteImport } from './routes/_authenticated/app/admin/complaints'
 import { Route as AuthenticatedAppAdminDiscountsRouteImport } from './routes/_authenticated/app/admin/discounts'
-import { Route as AuthenticatedAppAdminRefundsRouteImport } from './routes/_authenticated/app/admin/refunds'
 import { Route as AuthenticatedAppAdminReviewsRouteImport } from './routes/_authenticated/app/admin/reviews'
 import { Route as AuthenticatedAppAdminVenuesRouteImport } from './routes/_authenticated/app/admin/venues'
 import { Route as AuthenticatedAppPaymentBookingIdRouteImport } from './routes/_authenticated/app/payment/$bookingId'
@@ -179,12 +178,6 @@ const AuthenticatedAppAdminDiscountsRoute =
     path: '/discounts',
     getParentRoute: () => AuthenticatedAppAdminRouteRoute,
   } as any)
-const AuthenticatedAppAdminRefundsRoute =
-  AuthenticatedAppAdminRefundsRouteImport.update({
-    id: '/refunds',
-    path: '/refunds',
-    getParentRoute: () => AuthenticatedAppAdminRouteRoute,
-  } as any)
 const AuthenticatedAppAdminReviewsRoute =
   AuthenticatedAppAdminReviewsRouteImport.update({
     id: '/reviews',
@@ -282,7 +275,6 @@ export interface FileRoutesByFullPath {
   '/app/admin/bookings': typeof AuthenticatedAppAdminBookingsRoute
   '/app/admin/complaints': typeof AuthenticatedAppAdminComplaintsRoute
   '/app/admin/discounts': typeof AuthenticatedAppAdminDiscountsRoute
-  '/app/admin/refunds': typeof AuthenticatedAppAdminRefundsRoute
   '/app/admin/reviews': typeof AuthenticatedAppAdminReviewsRoute
   '/app/admin/venues': typeof AuthenticatedAppAdminVenuesRoute
   '/app/payment/$bookingId': typeof AuthenticatedAppPaymentBookingIdRoute
@@ -317,7 +309,6 @@ export interface FileRoutesByTo {
   '/app/admin/bookings': typeof AuthenticatedAppAdminBookingsRoute
   '/app/admin/complaints': typeof AuthenticatedAppAdminComplaintsRoute
   '/app/admin/discounts': typeof AuthenticatedAppAdminDiscountsRoute
-  '/app/admin/refunds': typeof AuthenticatedAppAdminRefundsRoute
   '/app/admin/reviews': typeof AuthenticatedAppAdminReviewsRoute
   '/app/admin/venues': typeof AuthenticatedAppAdminVenuesRoute
   '/app/payment/$bookingId': typeof AuthenticatedAppPaymentBookingIdRoute
@@ -358,7 +349,6 @@ export interface FileRoutesById {
   '/_authenticated/app/admin/bookings': typeof AuthenticatedAppAdminBookingsRoute
   '/_authenticated/app/admin/complaints': typeof AuthenticatedAppAdminComplaintsRoute
   '/_authenticated/app/admin/discounts': typeof AuthenticatedAppAdminDiscountsRoute
-  '/_authenticated/app/admin/refunds': typeof AuthenticatedAppAdminRefundsRoute
   '/_authenticated/app/admin/reviews': typeof AuthenticatedAppAdminReviewsRoute
   '/_authenticated/app/admin/venues': typeof AuthenticatedAppAdminVenuesRoute
   '/_authenticated/app/payment/$bookingId': typeof AuthenticatedAppPaymentBookingIdRoute
@@ -398,7 +388,6 @@ export interface FileRouteTypes {
     | '/app/admin/bookings'
     | '/app/admin/complaints'
     | '/app/admin/discounts'
-    | '/app/admin/refunds'
     | '/app/admin/reviews'
     | '/app/admin/venues'
     | '/app/payment/$bookingId'
@@ -433,7 +422,6 @@ export interface FileRouteTypes {
     | '/app/admin/bookings'
     | '/app/admin/complaints'
     | '/app/admin/discounts'
-    | '/app/admin/refunds'
     | '/app/admin/reviews'
     | '/app/admin/venues'
     | '/app/payment/$bookingId'
@@ -473,7 +461,6 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin/bookings'
     | '/_authenticated/app/admin/complaints'
     | '/_authenticated/app/admin/discounts'
-    | '/_authenticated/app/admin/refunds'
     | '/_authenticated/app/admin/reviews'
     | '/_authenticated/app/admin/venues'
     | '/_authenticated/app/payment/$bookingId'
@@ -673,13 +660,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminDiscountsRouteImport
       parentRoute: typeof AuthenticatedAppAdminRouteRoute
     }
-    '/_authenticated/app/admin/refunds': {
-      id: '/_authenticated/app/admin/refunds'
-      path: '/refunds'
-      fullPath: '/app/admin/refunds'
-      preLoaderRoute: typeof AuthenticatedAppAdminRefundsRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRouteRoute
-    }
     '/_authenticated/app/admin/reviews': {
       id: '/_authenticated/app/admin/reviews'
       path: '/reviews'
@@ -788,7 +768,6 @@ interface AuthenticatedAppAdminRouteRouteChildren {
   AuthenticatedAppAdminBookingsRoute: typeof AuthenticatedAppAdminBookingsRoute
   AuthenticatedAppAdminComplaintsRoute: typeof AuthenticatedAppAdminComplaintsRoute
   AuthenticatedAppAdminDiscountsRoute: typeof AuthenticatedAppAdminDiscountsRoute
-  AuthenticatedAppAdminRefundsRoute: typeof AuthenticatedAppAdminRefundsRoute
   AuthenticatedAppAdminReviewsRoute: typeof AuthenticatedAppAdminReviewsRoute
   AuthenticatedAppAdminVenuesRoute: typeof AuthenticatedAppAdminVenuesRoute
   AuthenticatedAppAdminIndexRoute: typeof AuthenticatedAppAdminIndexRoute
@@ -800,7 +779,6 @@ const AuthenticatedAppAdminRouteRouteChildren: AuthenticatedAppAdminRouteRouteCh
     AuthenticatedAppAdminBookingsRoute: AuthenticatedAppAdminBookingsRoute,
     AuthenticatedAppAdminComplaintsRoute: AuthenticatedAppAdminComplaintsRoute,
     AuthenticatedAppAdminDiscountsRoute: AuthenticatedAppAdminDiscountsRoute,
-    AuthenticatedAppAdminRefundsRoute: AuthenticatedAppAdminRefundsRoute,
     AuthenticatedAppAdminReviewsRoute: AuthenticatedAppAdminReviewsRoute,
     AuthenticatedAppAdminVenuesRoute: AuthenticatedAppAdminVenuesRoute,
     AuthenticatedAppAdminIndexRoute: AuthenticatedAppAdminIndexRoute,

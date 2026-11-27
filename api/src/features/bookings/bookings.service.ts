@@ -981,31 +981,6 @@ export class BookingsService {
     }))
   }
 
-  /**
-   * Mark a queued manual refund settled (an admin action, cross-tenant — no
-   * venue ownership to check). Recording `ref` and flipping `status` to
-   * `"settled"` is what drops the booking off `listRefundQueue`/
-   * `listRefundQueueAll`, both of which filter on `"refund.status": "manual"`.
-   */
-  async settleRefund(bookingId: string, ref?: string): Promise<void> {
-    await withVersionRetry(async () => {
-      const doc = await this.bookingModel.findOne({ bookingId })
-      if (!doc) throw new NotFoundException("Booking not found")
-      if (!doc.refund || doc.refund.status !== "manual") {
-        throw new ConflictException(
-          "This booking has no manual refund awaiting settlement"
-        )
-      }
-      doc.refund = {
-        ...doc.refund,
-        status: "settled",
-        ref: ref ?? doc.refund.ref,
-      }
-      doc.markModified("refund")
-      await doc.save()
-    })
-  }
-
   // ── VietQR payment flow (plan 025) ───────────────────────────────────────────
   // The player transfers straight to the venue and uploads a screenshot; the
   // venue checks its own bank app, then approves, or rejects and refunds by

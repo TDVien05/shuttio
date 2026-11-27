@@ -83,14 +83,6 @@ function createAdminActions(queryClient: QueryClient) {
         })
       ),
 
-    settleRefund: async (bookingId: string, ref: string): Promise<void> => {
-      await api(`/api/admin/refunds/${bookingId}/settle`, {
-        method: "POST",
-        body: { ref },
-      })
-      invalidateAdmin()
-    },
-
     forceCancelBooking: async (
       bookingId: string,
       reason: string

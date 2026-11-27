@@ -24,7 +24,6 @@ import {
   ForceCancelBookingDto,
   ListBookingsQueryDto,
   RejectBrandDto,
-  SettleRefundDto,
   UpdateDiscountDto,
   OwnerIdParamDto,
   VenueIdParamDto,
@@ -65,11 +64,6 @@ export class AdminController {
     return this.admin.recentBookings(
       query.limit ? Number(query.limit) : undefined
     )
-  }
-
-  @Get("refunds")
-  refunds() {
-    return this.admin.refundQueue()
   }
 
   @Get("complaints")
@@ -128,15 +122,6 @@ export class AdminController {
   @Post("venues/:venueId/restore")
   restoreVenue(@Param() param: VenueIdParamDto) {
     return this.admin.restoreVenue(param.venueId)
-  }
-
-  @Post("refunds/:bookingId/settle")
-  async settleRefund(
-    @Param() param: BookingIdParamDto,
-    @Body() body: SettleRefundDto
-  ) {
-    await this.admin.settleRefund(param.bookingId, body.ref)
-    return { ok: true }
   }
 
   @Post("bookings/:bookingId/cancel")

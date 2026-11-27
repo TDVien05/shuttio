@@ -1,6 +1,5 @@
 import {
   BadgeCheck,
-  Banknote,
   Building2,
   CalendarClock,
   LayoutDashboard,
@@ -17,7 +16,6 @@ export type AdminSectionKey =
   | "venues"
   | "bookings"
   | "discounts"
-  | "refunds"
   | "complaints"
   | "approvals"
   | "reviews"
@@ -52,13 +50,6 @@ export const ADMIN_NAV: NavItem<AdminSectionKey>[] = [
     label: m.admin_nav_discounts_label,
     icon: TicketPercent,
     caption: m.admin_nav_discounts_caption,
-  },
-  {
-    key: "refunds",
-    href: `${ADMIN_BASE_PREFIX}/refunds`,
-    label: m.admin_nav_refunds_label,
-    icon: Banknote,
-    caption: m.admin_nav_refunds_caption,
   },
   {
     key: "complaints",

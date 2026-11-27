@@ -38,13 +38,6 @@ export class RejectBrandDto {
   reason?: string
 }
 
-export class SettleRefundDto {
-  @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  ref?: string
-}
-
 export class ForceCancelBookingDto {
   @IsOptional()
   @IsString()

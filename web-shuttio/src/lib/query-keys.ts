@@ -35,7 +35,6 @@ export const queryKeys = {
     overview: () => ["admin", "overview"] as const,
     venues: () => ["admin", "venues"] as const,
     bookings: () => ["admin", "bookings"] as const,
-    refunds: () => ["admin", "refunds"] as const,
     complaints: () => ["admin", "complaints"] as const,
     approvals: () => ["admin", "approvals"] as const,
     discounts: () => ["admin", "discounts"] as const,

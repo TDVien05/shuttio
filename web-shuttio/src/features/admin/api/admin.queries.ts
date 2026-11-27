@@ -9,7 +9,6 @@ import type {
   AdminBrandGroup,
   AdminDiscountRow,
   AdminOverview,
-  AdminRefundRow,
 } from "@/features/admin/types/admin-types"
 
 /** Reads owned by the cross-tenant admin workspace. */
@@ -36,14 +35,6 @@ export const adminQueries = {
       queryKey: queryKeys.admin.bookings(),
       queryFn: ({ signal }) =>
         api<AdminBookingRow[]>("/api/admin/bookings", { signal }),
-    }),
-
-  /** `GET /api/admin/refunds` — global manual-refund worklist. */
-  adminRefunds: () =>
-    queryOptions({
-      queryKey: queryKeys.admin.refunds(),
-      queryFn: ({ signal }) =>
-        api<AdminRefundRow[]>("/api/admin/refunds", { signal }),
     }),
 
   /** `GET /api/admin/complaints` — room-share complaints. */

@@ -1,4 +1,4 @@
-import type { BookingRecord, Brand, RefundQueueItem, Venue } from "@/lib/shared"
+import type { BookingRecord, Brand, Venue } from "@/lib/shared"
 
 /** `GET /api/admin/overview` — system-wide KPIs, the admin landing page. */
 export interface AdminOverview {
@@ -49,9 +49,6 @@ export type AdminBookingRow = Pick<
   | "status"
   | "paymentStatus"
 >
-
-/** `GET /api/admin/refunds` — the global manual-refund worklist. */
-export type AdminRefundRow = RefundQueueItem & { venueId: string }
 
 /**
  * `GET /api/admin/approvals` — one BRAND awaiting admin review (approval is
