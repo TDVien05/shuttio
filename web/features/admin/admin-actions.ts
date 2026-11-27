@@ -86,17 +86,6 @@ export async function removeVenueOwner(
   )
 }
 
-export async function settleRefund(
-  bookingId: string,
-  ref: string
-): Promise<void> {
-  await api(`/api/admin/refunds/${bookingId}/settle`, {
-    method: "POST",
-    body: JSON.stringify({ ref }),
-  })
-  revalidateAdmin()
-}
-
 export async function forceCancelBooking(
   bookingId: string,
   reason: string

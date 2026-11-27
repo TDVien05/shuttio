@@ -2330,10 +2330,6 @@
       "label": "Coupons",
       "caption": "Discount codes and usage"
     },
-    "refunds": {
-      "label": "Refund queue",
-      "caption": "Manual refunds awaiting settlement"
-    },
     "approvals": {
       "label": "Approvals",
       "caption": "New venues awaiting review"
@@ -2455,23 +2451,6 @@
       "none": "None"
     },
     "empty": "No bookings yet"
-  },
-  "AdminRefunds": {
-    "metaTitle": "Refund queue",
-    "metaDescription": "Manual refunds awaiting settlement, across every venue",
-    "title": "Refund queue",
-    "subtitle": "SePay has no refund API — every refund here is a manual bank transfer",
-    "pct": "{pct}% refund",
-    "settle": {
-      "button": "Mark settled",
-      "title": "Mark this refund settled?",
-      "description": "Record the bank-transfer reference once you've sent the refund by hand.",
-      "refLabel": "Transfer reference",
-      "refPlaceholder": "e.g. bank transaction id",
-      "cancel": "Back",
-      "confirm": "Mark settled"
-    },
-    "empty": "No refunds awaiting settlement"
   },
   "AdminApprovals": {
     "metaTitle": "Approvals",

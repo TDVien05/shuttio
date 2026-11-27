@@ -21,7 +21,6 @@ import type {
   AdminBrandGroup,
   AdminDiscountRow,
   AdminOverview,
-  AdminRefundRow,
 } from "@/features/admin/admin-types"
 
 // Where the Hono API lives. Server-side fetch only (no CORS concerns); override
@@ -259,10 +258,6 @@ export async function fetchAdminVenuesAndBrands(): Promise<AdminBrandGroup[]> {
 
 export async function fetchAdminBookings(): Promise<AdminBookingRow[]> {
   return apiFetch<AdminBookingRow[]>("/api/admin/bookings")
-}
-
-export async function fetchAdminRefunds(): Promise<AdminRefundRow[]> {
-  return apiFetch<AdminRefundRow[]>("/api/admin/refunds")
 }
 
 export async function fetchAdminComplaints(): Promise<RoomComplaintRow[]> {

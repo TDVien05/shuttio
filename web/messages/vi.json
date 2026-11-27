@@ -2330,10 +2330,6 @@
       "label": "Mã giảm giá",
       "caption": "Quản lý coupon và lượt dùng"
     },
-    "refunds": {
-      "label": "Hàng đợi hoàn tiền",
-      "caption": "Hoàn tiền thủ công đang chờ xử lý"
-    },
     "approvals": {
       "label": "Phê duyệt",
       "caption": "Venue mới đang chờ duyệt"
@@ -2455,23 +2451,6 @@
       "none": "Không"
     },
     "empty": "Chưa có lượt đặt sân nào"
-  },
-  "AdminRefunds": {
-    "metaTitle": "Hàng đợi hoàn tiền",
-    "metaDescription": "Hoàn tiền thủ công đang chờ xử lý, trên toàn hệ thống",
-    "title": "Hàng đợi hoàn tiền",
-    "subtitle": "SePay không có API hoàn tiền — mọi khoản hoàn tiền ở đây đều chuyển khoản thủ công",
-    "pct": "Hoàn {pct}%",
-    "settle": {
-      "button": "Đánh dấu đã xử lý",
-      "title": "Đánh dấu khoản hoàn tiền này đã xử lý?",
-      "description": "Ghi lại mã giao dịch chuyển khoản sau khi đã hoàn tiền thủ công.",
-      "refLabel": "Mã giao dịch chuyển khoản",
-      "refPlaceholder": "VD: mã giao dịch ngân hàng",
-      "cancel": "Quay lại",
-      "confirm": "Đánh dấu đã xử lý"
-    },
-    "empty": "Không có khoản hoàn tiền nào đang chờ"
   },
   "AdminApprovals": {
     "metaTitle": "Phê duyệt",
