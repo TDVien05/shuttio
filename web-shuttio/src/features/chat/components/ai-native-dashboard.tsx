@@ -187,25 +187,65 @@ const useIsomorphicLayoutEffect =
 
 // ─── Main view ───────────────────────────────────────────────────────────────
 
-/** The prompts the scripted demo conversation answers word for word. */
-const SCRIPTED_PROMPTS = [
-  m.ai_dashboard_prompts_badminton_near_me,
-  m.ai_dashboard_prompts_short_badminton_near_me,
-  m.ai_dashboard_prompts_book_tomorrow,
-  m.ai_dashboard_prompts_short_book_tomorrow,
-  m.ai_dashboard_prompts_same_level_players,
-  m.ai_dashboard_prompts_short_same_level_players,
-  m.ai_dashboard_prompts_quick_match,
-  m.ai_dashboard_prompts_short_quick_match,
+type ScriptedReply =
+  "courtsNearMe" | "bookTomorrow" | "sameLevelPlayers" | "quickMatch"
+
+/** The suggested prompts the demo answers word for word, and their reply. */
+const SCRIPTED_PROMPTS: ReadonlyArray<readonly [() => string, ScriptedReply]> =
+  [
+    [m.ai_dashboard_prompts_badminton_near_me, "courtsNearMe"],
+    [m.ai_dashboard_prompts_short_badminton_near_me, "courtsNearMe"],
+    [m.ai_dashboard_prompts_book_tomorrow, "bookTomorrow"],
+    [m.ai_dashboard_prompts_short_book_tomorrow, "bookTomorrow"],
+    [m.ai_dashboard_prompts_same_level_players, "sameLevelPlayers"],
+    [m.ai_dashboard_prompts_short_same_level_players, "sameLevelPlayers"],
+    [m.ai_dashboard_prompts_quick_match, "quickMatch"],
+    [m.ai_dashboard_prompts_short_quick_match, "quickMatch"],
+  ]
+
+/** Phrases that ask for courts, even when players are mentioned too. */
+const COURT_SEARCH_KEYWORDS = [
+  "tìm sân",
+  "kiếm sân",
+  "sân gần",
+  "sân trống",
+  "sân nào",
+  "find court",
+  "find a court",
+  "courts near",
+  "court near",
+]
+
+/** Phrases that ask to join an open game (a room), not for people. */
+const ROOM_KEYWORDS = [
+  "ghép trận",
+  "tham gia phòng",
+  "phòng chơi",
+  "quick match",
+  "join a game",
+]
+
+/** Phrases that ask for teammates or opponents. */
+const PLAYER_KEYWORDS = [
+  "người chơi",
+  "đồng đội",
+  "bạn chơi",
+  "đối thủ",
+  "cùng trình độ",
+  "ghép",
+  "tìm người",
+  "teammate",
+  "partner",
+  "player",
 ]
 
 /**
- * Lower-cased, trimmed, NFC text — so a prompt typed with a different
- * Vietnamese input method (precomposed vs. combining accents) or stray spaces
- * still matches its keyword.
+ * Lower-cased, trimmed, NFC text with whitespace runs collapsed — so a prompt
+ * typed with a different Vietnamese input method (precomposed vs. combining
+ * accents) or stray spaces still matches its keyword.
  */
 function normalizePrompt(text: string): string {
-  return text.normalize("NFC").trim().replace(/s+/g, " ").toLowerCase()
+  return text.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase()
 }
 
 /** Whether `text` contains any of the keywords. */
@@ -263,185 +303,120 @@ export function AiNativeDashboardView() {
   const levelRef = React.useRef(userLevelForSport("badminton"))
   levelRef.current = userLevelForSport("badminton")
 
-  // Predefined chat conversations via @shadcn/helpers/ai-sdk
-  const chat = React.useMemo(() => {
-    const c = createChat()
-
-    // 1. "Tìm sân cầu lông gần tôi"
-    c.user(m.ai_dashboard_prompts_badminton_near_me())
-    c.assistant(({ writer }) => {
-      writer.reasoning(
-        "Đang tìm kiếm các sân cầu lông gần bạn theo khoảng cách..."
-      )
-      writer.tool("findCourts", {
-        input: { sport: "badminton", sortBy: "distance" },
-        output: {
-          courts: courtsRef.current.slice(0, 4),
-          sortBy: "distance",
-          sport: "badminton",
-        },
-      })
-      writer.text(
-        "Dưới đây là các sân cầu lông gần vị trí của bạn nhất. Bạn có thể chọn sân và đặt trực tiếp:"
-      )
-    })
-
-    // 1b. Short alias: "Tìm sân gần tôi"
-    c.user(m.ai_dashboard_prompts_short_badminton_near_me())
-    c.assistant(({ writer }) => {
-      writer.reasoning(
-        "Đang tìm kiếm các sân cầu lông gần bạn theo khoảng cách..."
-      )
-      writer.tool("findCourts", {
-        input: { sport: "badminton", sortBy: "distance" },
-        output: {
-          courts: courtsRef.current.slice(0, 4),
-          sortBy: "distance",
-          sport: "badminton",
-        },
-      })
-      writer.text(
-        "Dưới đây là các sân cầu lông gần vị trí của bạn nhất. Bạn có thể chọn sân và đặt trực tiếp:"
-      )
-    })
-
-    // 2. "Đặt sân lúc 6 giờ tối mai"
-    c.user(m.ai_dashboard_prompts_book_tomorrow())
-    c.assistant(({ writer }) => {
-      writer.reasoning(
-        "Kiểm tra lịch sân trống vào khung giờ 18:00 ngày mai..."
-      )
-      writer.tool("findCourts", {
-        input: { sport: "badminton", date: "tomorrow", time: "18:00" },
-        output: {
-          courts: courtsRef.current.slice(0, 3),
-          sortBy: "rating",
-          sport: "badminton",
-        },
-      })
-      writer.text(
-        "Các sân sau đây còn trống vào lúc 18:00 ngày mai. Bạn có thể chọn đặt sân ngay:"
-      )
-    })
-
-    // 2b. Short alias: "Đặt sân ngày mai"
-    c.user(m.ai_dashboard_prompts_short_book_tomorrow())
-    c.assistant(({ writer }) => {
-      writer.reasoning(
-        "Kiểm tra lịch sân trống vào khung giờ 18:00 ngày mai..."
-      )
-      writer.tool("findCourts", {
-        input: { sport: "badminton", date: "tomorrow", time: "18:00" },
-        output: {
-          courts: courtsRef.current.slice(0, 3),
-          sortBy: "rating",
-          sport: "badminton",
-        },
-      })
-      writer.text(
-        "Các sân sau đây còn trống vào ngày mai. Bạn có thể chọn đặt sân ngay:"
-      )
-    })
-
-    // 3. "Ghép tôi với người chơi cùng trình độ"
-    c.user(m.ai_dashboard_prompts_same_level_players())
-    c.assistant(({ writer }) => {
-      writer.reasoning(
-        "Tìm kiếm các đối thủ và đồng đội có trình độ tương đương trong khu vực..."
-      )
-      const res = findMatchedPlayers(
-        "same level players tonight",
-        playersRef.current,
-        "badminton",
-        "intermediate"
-      )
-      writer.tool("findPlayers", {
-        input: { sport: "badminton" },
-        output: {
-          intent: res.intent,
-          players: res.matches.slice(0, 4),
-        },
-      })
-      writer.text(
-        "Tìm thấy những người chơi cùng trình độ đang tìm trận. Bạn có thể chọn người chơi để gửi lời mời ghép nhóm:"
-      )
-    })
-
-    // 3b. Short alias: "Ghép người chơi"
-    c.user(m.ai_dashboard_prompts_short_same_level_players())
-    c.assistant(({ writer }) => {
-      writer.reasoning(
-        "Tìm kiếm các đối thủ và đồng đội có trình độ tương đương trong khu vực..."
-      )
-      const res = findMatchedPlayers(
-        "same level players tonight",
-        playersRef.current,
-        "badminton",
-        "intermediate"
-      )
-      writer.tool("findPlayers", {
-        input: { sport: "badminton" },
-        output: {
-          intent: res.intent,
-          players: res.matches.slice(0, 4),
-        },
-      })
-      writer.text(
-        "Tìm thấy những người chơi cùng trình độ đang tìm trận. Bạn có thể chọn người chơi để gửi lời mời ghép nhóm:"
-      )
-    })
-
-    // 4. "Ghép trận nhanh gần tôi"
-    c.user(m.ai_dashboard_prompts_quick_match())
-    c.assistant(({ writer }) => {
-      writer.reasoning("Đang tìm kiếm các phòng ghép trận nhanh đang mở...")
-      writer.tool("findRooms", {
-        input: { sport: "badminton" },
-        output: {
-          rooms: roomsRef.current.slice(0, 3),
-          sport: "badminton",
-          level: "intermediate",
-        },
-      })
-      writer.text(
-        "Có các phòng ghép trận đang tìm người chơi. Bạn có thể tham gia ngay:"
-      )
-    })
-
-    // 4b. Short alias: "Ghép trận nhanh"
-    c.user(m.ai_dashboard_prompts_short_quick_match())
-    c.assistant(({ writer }) => {
-      writer.reasoning("Đang tìm kiếm các phòng ghép trận nhanh đang mở...")
-      writer.tool("findRooms", {
-        input: { sport: "badminton" },
-        output: {
-          rooms: roomsRef.current.slice(0, 3),
-          sport: "badminton",
-          level: "intermediate",
-        },
-      })
-      writer.text(
-        "Có các phòng ghép trận đang tìm người chơi. Bạn có thể tham gia ngay:"
-      )
-    })
-
-    return c
-  }, [])
-
-  // Local transport with smart fallback handler for unscripted queries
+  // One local transport for every message. The suggested prompts are looked
+  // up by their normalized text and everything else goes through the keyword
+  // matcher. Scripted turns are deliberately NOT registered with
+  // @shadcn/helpers: its transport picks a reply by the transcript's position
+  // in the script (the last scripted message id it sees), not by what was
+  // typed — so sending "Tìm sân gần tôi" a few times walked forward through
+  // the script and answered with players instead of courts.
   const transport = React.useMemo(() => {
-    const scripted = chat.transport({ delayMs: 25 })
-    // A chat with no scripted turns, so EVERY message reaches the keyword
-    // fallback below. The scripted chat can't be trusted with free text: when
-    // a message matches none of its prompts, the helper answers with the FIRST
-    // scripted reply (the "courts near me" one) instead of the fallback — which
-    // is why typing "ghép người chơi cùng trình độ" used to suggest courts.
-    const unscripted = createChat().transport({
+    const scriptedPrompts = new Map<string, ScriptedReply>(
+      SCRIPTED_PROMPTS.map(([prompt, reply]) => [
+        normalizePrompt(prompt()),
+        reply,
+      ])
+    )
+    const local = createChat().transport({
       delayMs: 25,
       fallback: ({ writer, messages: transcript }) => {
         const last = transcript[transcript.length - 1]
         const text = messageText(last)
 
+        const replyCourts = (options: {
+          reasoning: string
+          text: string
+          count: number
+          input?: Record<string, string>
+          sortBy?: string
+        }) => {
+          writer.reasoning(options.reasoning)
+          writer.tool("findCourts", {
+            input: { sport: "badminton", ...options.input },
+            output: {
+              courts: courtsRef.current.slice(0, options.count),
+              sortBy: options.sortBy ?? "rating",
+              sport: "badminton",
+            },
+          })
+          writer.text(options.text)
+        }
+
+        const replyCourtsNearMe = () =>
+          replyCourts({
+            reasoning:
+              "Đang tìm kiếm các sân cầu lông gần bạn theo khoảng cách...",
+            text: "Dưới đây là các sân cầu lông gần vị trí của bạn nhất. Bạn có thể chọn sân và đặt trực tiếp:",
+            count: 4,
+            input: { sortBy: "distance" },
+            sortBy: "distance",
+          })
+
+        const replyAnyCourts = () =>
+          replyCourts({
+            reasoning: "Đang tìm kiếm sân cầu lông phù hợp...",
+            text: "Dưới đây là các sân cầu lông phù hợp với yêu cầu của bạn:",
+            count: 4,
+          })
+
+        const replyPlayers = (query: string) => {
+          writer.reasoning(
+            "Tìm kiếm các đối thủ và đồng đội có trình độ tương đương trong khu vực..."
+          )
+          const res = findMatchedPlayers(
+            query,
+            playersRef.current,
+            "badminton",
+            levelRef.current
+          )
+          writer.tool("findPlayers", {
+            input: { sport: "badminton" },
+            output: {
+              intent: res.intent,
+              players: res.matches.slice(0, 4),
+            },
+          })
+          writer.text(
+            res.matches.length
+              ? "Dưới đây là những người chơi cầu lông phù hợp với bạn. Chọn người chơi để gửi lời mời ghép nhóm:"
+              : "Chưa tìm thấy người chơi phù hợp. Bạn thử bỏ bớt điều kiện (khu vực, thời gian) hoặc tạo phòng để người khác tham gia nhé."
+          )
+        }
+
+        const replyRooms = () => {
+          writer.reasoning("Đang tìm kiếm các phòng ghép trận đang mở...")
+          writer.tool("findRooms", {
+            input: { sport: "badminton" },
+            output: {
+              rooms: roomsRef.current.slice(0, 3),
+              sport: "badminton",
+              level: levelRef.current,
+            },
+          })
+          writer.text(
+            "Có các phòng ghép trận đang tìm người chơi. Bạn có thể tham gia ngay:"
+          )
+        }
+
+        // ── Suggested prompts, answered word for word ──
+        switch (scriptedPrompts.get(text)) {
+          case "courtsNearMe":
+            return replyCourtsNearMe()
+          case "bookTomorrow":
+            return replyCourts({
+              reasoning:
+                "Kiểm tra lịch sân trống vào khung giờ 18:00 ngày mai...",
+              text: "Các sân sau đây còn trống vào lúc 18:00 ngày mai. Bạn có thể chọn đặt sân ngay:",
+              count: 3,
+              input: { date: "tomorrow", time: "18:00" },
+            })
+          case "sameLevelPlayers":
+            return replyPlayers("same level players tonight")
+          case "quickMatch":
+            return replyRooms()
+        }
+
+        // ── Free text: keyword intent ──
         if (
           text.includes("đặt") ||
           text.includes("book") ||
@@ -476,83 +451,22 @@ export function AiNativeDashboardView() {
           }
         }
 
-        // Most specific intent first: "người chơi … gần sân" is about players,
-        // and "ghép trận" (join a game) is about rooms, not about people.
-        if (
-          includesAny(text, [
-            "ghép trận",
-            "tham gia phòng",
-            "phòng chơi",
-            "quick match",
-            "join a game",
-          ])
-        ) {
-          writer.reasoning("Đang tìm kiếm các phòng ghép trận đang mở...")
-          writer.tool("findRooms", {
-            input: { sport: "badminton" },
-            output: {
-              rooms: roomsRef.current.slice(0, 3),
-              sport: "badminton",
-              level: levelRef.current,
-            },
-          })
-          writer.text(
-            "Có các phòng ghép trận đang tìm người chơi. Bạn có thể tham gia ngay:"
-          )
-          return
+        // An explicit court search wins over any player keyword in the same
+        // sentence ("tìm sân cho 4 người chơi" is still about courts).
+        if (includesAny(text, COURT_SEARCH_KEYWORDS)) {
+          return includesAny(text, ["gần", "near"])
+            ? replyCourtsNearMe()
+            : replyAnyCourts()
         }
 
-        if (
-          includesAny(text, [
-            "người chơi",
-            "đồng đội",
-            "bạn chơi",
-            "đối thủ",
-            "cùng trình độ",
-            "ghép",
-            "tìm người",
-            "teammate",
-            "partner",
-            "player",
-          ])
-        ) {
-          writer.reasoning("Đang tìm kiếm người chơi phù hợp...")
-          const res = findMatchedPlayers(
-            text || "badminton player",
-            playersRef.current,
-            "badminton",
-            levelRef.current
-          )
-          writer.tool("findPlayers", {
-            input: { sport: "badminton" },
-            output: {
-              intent: res.intent,
-              players: res.matches.slice(0, 4),
-            },
-          })
-          writer.text(
-            res.matches.length
-              ? "Dưới đây là những người chơi cầu lông phù hợp với bạn. Chọn người chơi để gửi lời mời ghép nhóm:"
-              : "Chưa tìm thấy người chơi phù hợp. Bạn thử bỏ bớt điều kiện (khu vực, thời gian) hoặc tạo phòng để người khác tham gia nhé."
-          )
-          return
-        }
+        // Then the most specific intent: "ghép trận" (join a game) is about
+        // rooms, and "người chơi … gần sân" is about players, not courts.
+        if (includesAny(text, ROOM_KEYWORDS)) return replyRooms()
 
-        if (includesAny(text, ["sân", "court"])) {
-          writer.reasoning("Đang tìm kiếm sân cầu lông phù hợp...")
-          writer.tool("findCourts", {
-            input: { sport: "badminton" },
-            output: {
-              courts: courtsRef.current.slice(0, 4),
-              sortBy: "rating",
-              sport: "badminton",
-            },
-          })
-          writer.text(
-            "Dưới đây là các sân cầu lông phù hợp với yêu cầu của bạn:"
-          )
-          return
-        }
+        if (includesAny(text, PLAYER_KEYWORDS))
+          return replyPlayers(text || "badminton player")
+
+        if (includesAny(text, ["sân", "court"])) return replyAnyCourts()
 
         if (text.includes("đánh giá") || text.includes("assessment")) {
           writer.reasoning("Kiểm tra thông tin đánh giá trình độ...")
@@ -572,19 +486,11 @@ export function AiNativeDashboardView() {
         )
       },
     })
-    const scriptedPrompts = new Set(
-      SCRIPTED_PROMPTS.map((prompt) => normalizePrompt(prompt()))
-    )
     return {
-      sendMessages: (options) => {
-        const last = options.messages.at(-1)
-        const useScript =
-          last?.role === "user" && scriptedPrompts.has(messageText(last))
-        return (useScript ? scripted : unscripted).sendMessages(options)
-      },
+      sendMessages: (options) => local.sendMessages(options),
       reconnectToStream: () => Promise.resolve(null),
     } satisfies ChatTransport<UIMessage>
-  }, [chat])
+  }, [])
 
   const { messages, sendMessage, status, setMessages, error, regenerate } =
     useChat({ transport })
